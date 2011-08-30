@@ -13,6 +13,12 @@ import socket
 import struct
 import inspect
 
+# optional packages
+try:
+    import GeoIP
+except ImportError:
+    GeoIP = None
+
 # required debian packages:
 #   python-dpkt
 #   python-pypcap 
@@ -133,7 +139,7 @@ class PcapParser:
             packet = self.decode(pkt)
 
             if type(packet.data) != dpkt.ip.IP:
-                print >> sys.stderr, "not ipv4 or ipv6 - ignoring"
+                #sys.stderr.write("not ipv4 or ipv6 - ignoring\n")
                 continue
 
             self.callback(ts, packet.data)
@@ -141,6 +147,73 @@ class PcapParser:
 class Container:
     pass
 
+
+class Geoip:
+
+    def __init__(self, captcp):
+
+        self.captcp = captcp
+        self.parse_local_options()
+
+
+    def parse_local_options(self):
+
+        parser = optparse.OptionParser()
+        parser.usage = "xx"
+        parser.add_option(
+                "-v",
+                "--verbose",
+                dest="verbose",
+                default=False,
+                action="store_true",
+                help="show verbose")
+
+        parser.add_option(
+                "-p",
+                "--port",
+                dest="portnum",
+                default=80,
+                type="int",
+                help="port number to run on")
+
+        parser.add_option(
+                "-m",
+                "--match",
+                dest="match",
+                default=None,
+                type="string",
+                help="if statment is true the string is color in red")
+
+        parser.add_option(
+                "-s",
+                "--suppress-other",
+                dest="suppress",
+                default=False,
+                action="store_true",
+                help="don't display other packets")
+
+        self.opts, args = parser.parse_args(sys.argv[0:])
+        
+        if len(args) < 3:
+            sys.stderr.write("no IP address argument given, exiting\n")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+ 
+        if not self.opts.verbose:
+            sys.stderr = open(os.devnull, 'w')
+        
+        self.captcp.print_welcome()
+
+        self.ip_address = args[2]
+        sys.stderr.write("# ip address: \"%s\"\n" % self.ip_address)
+
+    def run(self):
+
+        if not GeoIP:
+            sys.stdout.write("GeoIP package not installed on system, exiting")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        gi = GeoIP.new(GeoIP.GEOIP_MEMORY_CACHE)
+        sys.stdout.write("Country Code: " + gi.country_code_by_addr(self.ip_address) + "\n")
 
 
 class Highlight:
@@ -382,7 +455,8 @@ class Highlight:
 class Captcp:
 
     modes = {
-            "highlight": "Highlight"
+            "highlight": "Highlight",
+            "geoip": "Geoip"
             }
 
     def print_welcome(self):
