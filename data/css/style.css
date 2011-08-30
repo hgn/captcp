@@ -157,7 +157,7 @@ mark {background-color: #ff6; color: #000; font-style: italic; font-weight: bold
 time {padding-right: 4px; font-size: 12px;}
 	time:after {content: ":";}
 
-code {color: #000; background: #ececec; padding: 0 4px;}
+code {color: #000; background: #ddd; text-shadow:0.2em 0.2em 0.2em rgba(255, 255, 255, 0.5); padding: 0 4px;}
 
 a {position: relative; -webkit-transition: all 0.3s ease; -moz-transition: all 0.3s ease; -o-transition: all 0.3s ease; transition: all 0.3s ease;}
 a:active {position: relative; top: 1px;}

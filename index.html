@@ -56,7 +56,6 @@
 				<li><a href="#about">About</a></li>
 				<li><a href="#modules">Modules</a></li>
 				<li><a href="#installation">Installtion</a></li>
-				<li><a href="#examples">Examples</a></li>
 			</ol>
 		</nav>
 	</header>
@@ -99,10 +98,42 @@
 
 		<p>
 		<ul class="links">
-			<li><strong>highlight</strong> - similar to tcpdump but with colorfull highlighting
-			and some other features</li>
+			<li><strong>highlight</strong> - similar to tcpdump but with colorful highlighting and some other features</li>
+			<li><strong>stats</strong> - print TCP flow statistics</li>
 		</ul>
 		</p>
+
+
+		<h2>Highlight Module</h2>
+
+		<p>
+		The Highlight module is show a similar output compared to tcpdump.
+		The difference is that streams are highlighted in different colors
+		to distinguish between different flows.
+		</p>
+
+		<p>
+		Another feature is to highlight the packet if something interesting
+		in the packet is detected. The user is free to specify all kinds of
+		packet characteristic. See option <code>eval</code> to match a
+		specific characteristic.
+		</p>
+
+		<p>Highlight packets with more then 2 SACK blocks</p>
+		<div class="codebox">
+			captcp highlight  --eval "opts.sackno &gt; 2" trace.pcap
+		</div>
+		</p>
+
+		<p>Highlight packets with source ip 192.168.1.1:</p>
+		<p>
+		<div class="codebox">
+			captcp highlight  --eval "ip.src == 192.168.1.1" trace.pcap
+		</div>
+		</p>
+
+
+		<h2>Stats Module</h2>
 
 		<h1 id="installation">Installation</h1>
 
@@ -121,23 +152,6 @@
 		</code>
 		</p>
 
-		<h1 id="examples">Examples</h1>
-
-		<h2>Highlighting Module</h2>
-
-		<p>Highlight packets with more then 2 SACK blocks:</p>
-		<p>
-		<div class="codebox">
-			captcp highlight  --eval "opts.sackno &gt; 2" trace.pcap
-		</div>
-		</p>
-
-		<p>Highlight packets with source ip 192.168.1.1:</p>
-		<p>
-		<div class="codebox">
-			captcp highlight  --eval "ip.src == 192.168.1.1" trace.pcap
-		</div>
-		</p>
 
 	</article>
 	<footer>
