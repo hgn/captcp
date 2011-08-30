@@ -30,9 +30,29 @@ class Highlight:
 
         parser = optparse.OptionParser()
         parser.usage = "xx"
-        parser.add_option("-v", "--verbose", dest="verbose", default=False, action="store_true", help="show verbose")
-        parser.add_option("-p", "--port", dest="portnum", default=80, type="int", help="port number to run on")
-        parser.add_option("-e", "--eval", dest="eval", default=None, type="string", help="evalutted string to color in red")
+        parser.add_option(
+                "-v",
+                "--verbose",
+                dest="verbose",
+                default=False,
+                action="store_true",
+                help="show verbose")
+
+        parser.add_option(
+                "-p",
+                "--port",
+                dest="portnum",
+                default=80,
+                type="int",
+                help="port number to run on")
+
+        parser.add_option(
+                "-e",
+                "--eval",
+                dest="eval",
+                default=None,
+                type="string",
+                help="evaluated string to color in red")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         
