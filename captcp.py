@@ -43,14 +43,15 @@ class ExitCodes:
 class Colors:
 
     colors = [
-        '\033[91m',
         '\033[92m',
         '\033[93m',
         '\033[94m',
         '\033[95m'
     ]
 
-    start = 0
+    RED = '\033[91m'
+
+    start = -1
 
     ENDC    = '\033[0m'
 
@@ -137,6 +138,9 @@ class PcapParser:
 
             self.callback(ts, packet.data)
 
+class Container:
+    pass
+
 
 
 class Highlight:
@@ -169,12 +173,12 @@ class Highlight:
                 help="port number to run on")
 
         parser.add_option(
-                "-e",
-                "--eval",
-                dest="eval",
+                "-m",
+                "--match",
+                dest="match",
                 default=None,
                 type="string",
-                help="evaluated string to color in red")
+                help="if statment is true the string is color in red")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         
@@ -198,9 +202,16 @@ class Highlight:
 
     def parse_tcp_options(self, tcp):
 
+        tcp_options = Container()
+        tcp_options.mss = 0
+        tcp_options.wsc = 0
+        tcp_options.tsval = 0
+        tcp_options.tsecr = 0
+        tcp_options.sackok = False
+        tcp_options.sackblocks = 0
+
         mss = 0
         wsc = 0
-        quirks = 0
         tstamp = 0
         t2 = 0
         sackok = False
@@ -215,16 +226,22 @@ class Highlight:
                 break
             if o == dpkt.tcp.TCP_OPT_MSS:
                 mss = struct.unpack('>H', d)[0]
+                tcp_options.mss = mss
             elif o == dpkt.tcp.TCP_OPT_WSCALE:
                 wsc = ord(d)
+                tcp_options.wsc = wsc
             elif o == dpkt.tcp.TCP_OPT_SACKOK:
                 sackok = True
+                tcp_options.sackok = True
             elif o == dpkt.tcp.TCP_OPT_SACK:
                 sack_blocks = int(len(d) / 4)
+                tcp_options.sackblocks = sack_blocks
                 ofmt="!%sI" % sack_blocks
                 sack = struct.unpack(ofmt, d)
             elif o == dpkt.tcp.TCP_OPT_TIMESTAMP:
                 tstamp = struct.unpack('>II', d)
+                tcp_options.tsval = tstamp[0]
+                tcp_options.tsecr = tstamp[1]
 
             opts.append(o)
 
@@ -236,7 +253,8 @@ class Highlight:
                 'sackok':sackok,
                 'sack':sack,
                 'tstamp':tstamp,
-                't2':t2 }
+                't2':t2,
+                'tcp_options':tcp_options}
 
     def create_connection_tupple(self, ip):
 
@@ -249,7 +267,7 @@ class Highlight:
         return tuppl
 
 
-    def pre_parse_packet(self, ts, packet):
+    def pre_process_packet(self, ts, packet):
 
         ip  = packet
         tcp = packet.data
@@ -266,7 +284,7 @@ class Highlight:
         self.tuppls[tuppl]["color"] = Colors.next_color()
 
 
-    def parse_packet(self, ts, packet):
+    def process_packet(self, ts, packet):
 
         ip = packet
         tcp = packet.data
@@ -281,30 +299,35 @@ class Highlight:
 
         tuppl = self.create_connection_tupple(ip)
 
-        c = self.tuppls[tuppl]["color"]
 
         opts = self.parse_tcp_options(tcp)
-        options = "[options: "
+        optionss = "[options: "
         if opts["wsc"]:
-            options += "wscale %d " % (opts["wsc"])
+            optionss += "wscale %d " % (opts["wsc"])
         if opts["sackok"]:
-            options += "sackOK "
+            optionss += "sackOK "
         if opts["mss"]:
-            options += "mss %s "  % (opts["mss"])
+            optionss += "mss %s "  % (opts["mss"])
         if opts["tstamp"]:
-            options += "tstamp %d:%d" % (opts["tstamp"][0], opts["tstamp"][1])
+            optionss += "tstamp %d:%d" % (opts["tstamp"][0], opts["tstamp"][1])
         if opts["sack"]:
-            options += "sack %d " % (len(opts["sack"]) / 2)
+            optionss += "sack %d " % (len(opts["sack"]) / 2)
             for i in range(len(opts["sack"])):
                 if i % 2 == 0:
-                    options += "{"
-                options += "%d" % (opts["sack"][i])
+                    optionss += "{"
+                optionss += "%d" % (opts["sack"][i])
                 if i % 2 == 0:
-                    options += ":"
+                    optionss += ":"
                 if i % 2 == 1:
-                    options += "} "
+                    optionss += "} "
 
-        options += "]"
+        optionss += "]"
+
+        c = self.tuppls[tuppl]["color"]
+        options = opts["tcp_options"]
+
+        if self.opts.match:
+            exec "if " + self.opts.match + ": c = Colors.RED"
 
         sys.stdout.write(c + '%lf: %s:%d > %s:%d %s\n' % (
                 float(ts),
@@ -312,7 +335,7 @@ class Highlight:
                 int(tcp.sport),
                 Converter.dpkt_addr_to_string(ip.dst),
                 int(tcp.dport),
-                options)
+                optionss)
                 + Colors.ENDC)
 
         dport = int(tcp.dport)
@@ -324,13 +347,13 @@ class Highlight:
 
         # parse the whole pcap file first
         pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
-        pcap_parser.register_callback(self.pre_parse_packet)
+        pcap_parser.register_callback(self.pre_process_packet)
         pcap_parser.run()
         del pcap_parser
 
         # and finally print all relevant stuff
         pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
-        pcap_parser.register_callback(self.parse_packet)
+        pcap_parser.register_callback(self.process_packet)
         pcap_parser.run()
         del pcap_parser
 
