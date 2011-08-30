@@ -161,7 +161,7 @@
 		other packets are NOT displayed (--suppress-other option):</p>
 		<p>
 		<div class="codebox">
-			captcp highlight --suppress-other --match 'tcp.flags &amp; TH_ACK and tcp.flags &amp; TH_SYN' trace.pcap
+			captcp.py highlight -s -m 'tcp.flags &amp; TH_ACK and tcp.flags &amp; TH_SYN' trace.pcap
 		</div>
 		</p>
 
