@@ -100,6 +100,43 @@ class Converter:
 
     ip_to_net_host = staticmethod(ip_to_net_host)
 
+class PcapInfo:
+    """ Container class """
+    pass
+
+
+class PcapParser:
+
+    def __init__(self, pcap_file_path, pcap_filter):
+
+        self.pcap_file = open(pcap_file_path)
+        self.pc = dpkt.pcap.Reader(self.pcap_file)
+        self.decode = { pcap.DLT_LOOP:dpkt.loopback.Loopback,
+                        pcap.DLT_NULL:dpkt.loopback.Loopback,
+                        pcap.DLT_EN10MB:dpkt.ethernet.Ethernet } [self.pc.datalink()]
+
+        if pcap_filter:
+            self.pc.setfilter(pcap_filter)
+
+    def __del__(self):
+
+        if self.pcap_file:
+            self.pcap_file.close()
+
+    def register_callback(self, callback):
+        self.callback = callback
+
+    def run(self):
+
+        for ts, pkt in self.pc:
+            packet = self.decode(pkt)
+
+            if type(packet.data) != dpkt.ip.IP:
+                print >> sys.stderr, "not ipv4 or ipv6 - ignoring"
+                continue
+
+            self.callback(ts, packet.data)
+
 
 
 class Highlight:
@@ -107,6 +144,7 @@ class Highlight:
     def __init__(self, captcp):
 
         self.captcp = captcp
+        self.tuppls = {}
         self.parse_local_options()
 
 
@@ -152,14 +190,149 @@ class Highlight:
         self.pcap_file_path = args[2]
         sys.stderr.write("# pcapfile: \"%s\"\n" % self.pcap_file_path)
 
+        self.pcap_filter = None
         if args[3:]:
-            self.filter = " ".join(args[3:])
-            sys.stderr.write("# pcap filter: \"" + self.filter + "\"\n")
+            self.pcap_filter = " ".join(args[3:])
+            sys.stderr.write("# pcap filter: \"" + self.pcap_filter + "\"\n")
 
+
+    def parse_tcp_options(self, tcp):
+
+        mss = 0
+        wsc = 0
+        quirks = 0
+        tstamp = 0
+        t2 = 0
+        sackok = False
+        sack = 0
+
+        opts = []
+        for opt in dpkt.tcp.parse_opts(tcp.opts):
+            try:
+                o, d = opt
+                if len(d) > 32: raise TypeError
+            except TypeError:
+                break
+            if o == dpkt.tcp.TCP_OPT_MSS:
+                mss = struct.unpack('>H', d)[0]
+            elif o == dpkt.tcp.TCP_OPT_WSCALE:
+                wsc = ord(d)
+            elif o == dpkt.tcp.TCP_OPT_SACKOK:
+                sackok = True
+            elif o == dpkt.tcp.TCP_OPT_SACK:
+                sack_blocks = int(len(d) / 4)
+                ofmt="!%sI" % sack_blocks
+                sack = struct.unpack(ofmt, d)
+            elif o == dpkt.tcp.TCP_OPT_TIMESTAMP:
+                tstamp = struct.unpack('>II', d)
+
+            opts.append(o)
+
+        return {
+                'opts':opts,
+                'mss':mss,
+                'wss':tcp.win,
+                'wsc':wsc,
+                'sackok':sackok,
+                'sack':sack,
+                'tstamp':tstamp,
+                't2':t2 }
+
+    def create_connection_tupple(self, ip):
+
+        tuppl = "%s-%s-%d-%d" % (
+                Converter.dpkt_addr_to_string(ip.src),
+                Converter.dpkt_addr_to_string(ip.dst),
+                int(ip.data.sport),
+                int(ip.data.dport))
+
+        return tuppl
+
+
+    def pre_parse_packet(self, ts, packet):
+
+        ip  = packet
+        tcp = packet.data
+
+        if type(tcp) != TCP:
+            return
+
+        tuppl = self.create_connection_tupple(ip)
+        
+        if tuppl in self.tuppls:
+            return
+
+        self.tuppls[tuppl] = {}
+        self.tuppls[tuppl]["color"] = Colors.next_color()
+
+
+    def parse_packet(self, ts, packet):
+
+        ip = packet
+        tcp = packet.data
+
+        if type(tcp) != TCP:
+            return
+ 
+
+        seq  = int(tcp.seq)
+        ack  = int(tcp.ack)
+        time = float(ts)
+
+        tuppl = self.create_connection_tupple(ip)
+
+        c = self.tuppls[tuppl]["color"]
+
+        opts = self.parse_tcp_options(tcp)
+        options = "[options: "
+        if opts["wsc"]:
+            options += "wscale %d " % (opts["wsc"])
+        if opts["sackok"]:
+            options += "sackOK "
+        if opts["mss"]:
+            options += "mss %s "  % (opts["mss"])
+        if opts["tstamp"]:
+            options += "tstamp %d:%d" % (opts["tstamp"][0], opts["tstamp"][1])
+        if opts["sack"]:
+            options += "sack %d " % (len(opts["sack"]) / 2)
+            for i in range(len(opts["sack"])):
+                if i % 2 == 0:
+                    options += "{"
+                options += "%d" % (opts["sack"][i])
+                if i % 2 == 0:
+                    options += ":"
+                if i % 2 == 1:
+                    options += "} "
+
+        options += "]"
+
+        sys.stdout.write(c + '%lf: %s:%d > %s:%d %s\n' % (
+                float(ts),
+                Converter.dpkt_addr_to_string(ip.src),
+                int(tcp.sport),
+                Converter.dpkt_addr_to_string(ip.dst),
+                int(tcp.dport),
+                options)
+                + Colors.ENDC)
+
+        dport = int(tcp.dport)
+        sport = int(tcp.sport)
 
     def run(self):
         
         sys.stderr.write("# initiate Highlight module\n")
+
+        # parse the whole pcap file first
+        pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
+        pcap_parser.register_callback(self.pre_parse_packet)
+        pcap_parser.run()
+        del pcap_parser
+
+        # and finally print all relevant stuff
+        pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
+        pcap_parser.register_callback(self.parse_packet)
+        pcap_parser.run()
+        del pcap_parser
 
         return ExitCodes.EXIT_SUCCESS
 
