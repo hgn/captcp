@@ -180,6 +180,14 @@ class Highlight:
                 type="string",
                 help="if statment is true the string is color in red")
 
+        parser.add_option(
+                "-s",
+                "--suppress-other",
+                dest="suppress",
+                default=False,
+                action="store_true",
+                help="don't display other packets")
+
         self.opts, args = parser.parse_args(sys.argv[0:])
         
         if len(args) < 3:
@@ -326,20 +334,31 @@ class Highlight:
         c = self.tuppls[tuppl]["color"]
         options = opts["tcp_options"]
 
+        ip.src = Converter.dpkt_addr_to_string(ip.src)
+        ip.dst = Converter.dpkt_addr_to_string(ip.dst)
+        dport  = int(tcp.dport)
+        sport  = int(tcp.sport)
+
+        match = False
+
         if self.opts.match:
-            exec "if " + self.opts.match + ": c = Colors.RED"
+            exec "if " + self.opts.match + ": match = True"
+
+        if match:
+            c = Colors.RED
+        else:
+            if self.opts.suppress:
+                return
 
         sys.stdout.write(c + '%lf: %s:%d > %s:%d %s\n' % (
                 float(ts),
-                Converter.dpkt_addr_to_string(ip.src),
-                int(tcp.sport),
-                Converter.dpkt_addr_to_string(ip.dst),
-                int(tcp.dport),
+                ip.src,
+                tcp.sport,
+                ip.dst,
+                tcp.dport,
                 optionss)
                 + Colors.ENDC)
 
-        dport = int(tcp.dport)
-        sport = int(tcp.sport)
 
     def run(self):
         
