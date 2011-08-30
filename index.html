@@ -27,20 +27,10 @@
 	<meta name="Copyright" content="Copyright Hagen Paul Pfeifer 2010,2011. All Rights Reserved.">
 
 	<!-- Dublin Core Metadata : http://dublincore.org/ -->
-	<meta name="DC.title" content="Project Name">
-	<meta name="DC.subject" content="What you're about.">
-	<meta name="DC.creator" content="Who made this site.">
+	<meta name="DC.title" content="PACTCP">
+	<meta name="DC.subject" content="Python network analyze tool">
+	<meta name="DC.creator" content="Hagen Paul Pfeifer">
 	
-	<!--  Mobile Viewport Fix
-	j.mp/mobileviewport & davidbcalhoun.com/2010/viewport-metatag 
-	device-width : Occupy full width of the screen in its current orientation
-	initial-scale = 1.0 retains dimensions instead of zooming out if page height > device height
-	maximum-scale = 1.0 retains dimensions instead of zooming in if page width < device width
-	-->
-	<!-- Uncomment to use; use thoughtfully!
-	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-	-->
-
 	<link rel="shortcut icon" href="data/images/favicon.ico">
 	<!-- This is the traditional favicon.
 		 - size: 16x16 or 32x32
@@ -53,22 +43,19 @@
 		 - To prevent iOS from applying its styles to the icon name it thusly: apple-touch-icon-precomposed.png
 		 - Transparency is not recommended (iOS will put a black BG behind the icon) -->
 	
-	<!-- CSS: screen, mobile & print are all in the same file -->
 	<link rel="stylesheet" href="data/css/style.css">
-	
-	<!-- all our JS is at the bottom of the page, except for Modernizr. -->
 	<script src="data/js/modernizr-1.7.min.js"></script>
 
 </head>
 <body>
-<div class="wrapper"><!-- not needed? up to you: http://camendesign.com/code/developpeurs_sans_frontieres -->
+<div class="wrapper">
 	<header>
 		<h1><a href="/">CAPTCP</a></h1>
 		<nav>
 			<ol>
 				<li><a href="#about">About</a></li>
-				<li><a href="#warstories">War Stories</a></li>
 				<li><a href="#installation">Installtion</a></li>
+				<li><a href="#examples">Examples</a></li>
 			</ol>
 		</nav>
 	</header>
@@ -100,6 +87,22 @@
 			<li></li>
 		</ul>
 
+		<h1 id="modules">Modules</h1>
+
+		<p>
+		The script functionality is splitted into submodules. Similar to
+		git, perf and kvm-tool. The following list provides an overview over
+		the currently supported list. If in doubt you can call
+		<code>captcp</code> without any argument to get the full list.
+		</p>
+
+		<p>
+		<ul class="links">
+			<li><strong>highlight</strong> - similar to tcpdump but with colorfull highlighting
+			and some other features</li>
+		</ul>
+		</p>
+
 		<h1 id="installation">Installation</h1>
 
 		<p>
@@ -110,12 +113,14 @@
 
 		<p>
 		The lattest version can be downloaded from github via:
+		</p>
+		<p>
 		<code>
 			git clone git://github.com/hgn/captcp.git
 		</code>
 		</p>
 
-		<h1 id="warstories">War Stories</h1>
+		<h1 id="examples">Examples</h1>
 
 		<h2>Highlighting Module</h2>
 
@@ -129,7 +134,7 @@
 		<p>Highlight packets with source ip 192.168.1.1:</p>
 		<p>
 		<div class="codebox">
-			captcp highlight  --eval "ip.src == 192.168.1.1"
+			captcp highlight  --eval "ip.src == 192.168.1.1" trace.pcap
 		</div>
 		</p>
 
