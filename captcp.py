@@ -100,9 +100,6 @@ class Converter:
 
     ip_to_net_host = staticmethod(ip_to_net_host)
 
-class PcapInfo:
-    """ Container class """
-    pass
 
 
 class PcapParser:
@@ -118,13 +115,16 @@ class PcapParser:
         if pcap_filter:
             self.pc.setfilter(pcap_filter)
 
+
     def __del__(self):
 
         if self.pcap_file:
             self.pcap_file.close()
 
+
     def register_callback(self, callback):
         self.callback = callback
+
 
     def run(self):
 
@@ -320,7 +320,7 @@ class Highlight:
 
     def run(self):
         
-        sys.stderr.write("# initiate Highlight module\n")
+        sys.stderr.write("# initiate highlight module\n")
 
         # parse the whole pcap file first
         pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
