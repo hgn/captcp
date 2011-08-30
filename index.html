@@ -149,10 +149,19 @@
 		</div>
 		</p>
 
-		<p>Highlight packets with source ip 192.168.1.1:</p>
+		<p>Highlight packets with source ip 192.168.1.1 (please note the
+		quotation marks for an IP address):</p>
 		<p>
 		<div class="codebox">
-			captcp highlight  --match "ip.src == 192.168.1.1" trace.pcap
+			captcp highlight  --match 'ip.src == "192.168.1.1"' trace.pcap
+		</div>
+		</p>
+
+		<p>Show only packets where the SYN and ACK packet is enabled. All
+		other packets are NOT displayed (--suppress-other option):</p>
+		<p>
+		<div class="codebox">
+			captcp highlight --suppress-other --match 'tcp.flags &amp; TH_ACK and tcp.flags &amp; TH_SYN' trace.pcap
 		</div>
 		</p>
 
