@@ -115,20 +115,45 @@
 		<p>
 		Another feature is to highlight the packet if something interesting
 		in the packet is detected. The user is free to specify all kinds of
-		packet characteristic. See option <code>eval</code> to match a
+		packet characteristic. See option <code>match</code> to match a
 		specific characteristic.
 		</p>
 
+		<h3>Options</h3>
+
+		<pre>
+		--match (-m) &lt;expression&gt;
+
+			sport
+			dport
+			ackno
+			seqno
+			options.wsc
+			options.mss
+			options.sackblocks
+			options.sackok
+			time
+
+		--verbose (-v)
+
+		--suppress-other (-s)
+			Suppress all other packets which do not match the match
+			expression.
+
+		</pre>
+
+		<h3>Examples</h3>
+
 		<p>Highlight packets with more then 2 SACK blocks</p>
 		<div class="codebox">
-			captcp highlight  --eval "opts.sackno &gt; 2" trace.pcap
+			captcp highlight  --match "opts.sackblocks &gt; 2" trace.pcap
 		</div>
 		</p>
 
 		<p>Highlight packets with source ip 192.168.1.1:</p>
 		<p>
 		<div class="codebox">
-			captcp highlight  --eval "ip.src == 192.168.1.1" trace.pcap
+			captcp highlight  --match "ip.src == 192.168.1.1" trace.pcap
 		</div>
 		</p>
 
