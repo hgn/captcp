@@ -139,6 +139,11 @@
 			Suppress all other packets which do not match the match
 			expression.
 
+		--nocolor (-c)
+		  This disables ANSI color sequences. This option is useful
+			in combination with "--suppress-other" and Terminals where
+			no ANSI color codes are available.
+
 		</pre>
 
 		<h3>Examples</h3>
@@ -161,7 +166,7 @@
 		other packets are NOT displayed (--suppress-other option):</p>
 		<p>
 		<div class="codebox">
-			captcp.py highlight -s -m 'tcp.flags &amp; TH_ACK and tcp.flags &amp; TH_SYN' trace.pcap
+			captcp highlight -s -m 'tcp.flags &amp; TH_ACK and tcp.flags &amp; TH_SYN' trace.pcap
 		</div>
 		</p>
 
