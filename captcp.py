@@ -152,11 +152,22 @@ class Template:
     payloadtimeport3d = \
 """
 set pm3d map; set palette rgbformulae 30,31,32;
-set xrange[0:4500]
-set xlabel 'Time [s]'; set ylabel 'Diffraction angle'
-splot '3ddata.dat' notitle
-set terminal png large transparent size 600,500;
-set out '3ddata.png'
+set terminal postscript eps enhanced color "Times" 30
+set output "plot.eps"
+set style line 99 linetype 1 linecolor rgb "#999999" lw 2
+set key right top
+set key box linestyle 99
+set key spacing 1.2
+set grid xtics ytics mytics
+set size 2
+set style line 1 lc rgb '#000' lt 1 lw 5 pt 0 pi -1 ps 3
+set style line 2 lc rgb '#000' lt 5 lw 5 pt 0 pi -1 ps 3
+set style line 4 lt -1 pi -4 pt 6 lw 2 ps 2
+set style line 5 lt -1 pi -3 pt 4 lw 2 ps 2
+set xrange[0:1500]
+set xlabel 'Time [s]';
+set ylabel 'Diffraction angle'
+splot 'out.data' notitle
 """
 
     gnuplot_makefile = \
@@ -427,11 +438,11 @@ class PayloadTimePort:
 
                 if port in timesortedtupel[1]:
                     avg = float(timesortedtupel[1][port]["sum"]) / float(timesortedtupel[1][port]["cnt"])
-                    print(str(time) + " " + str(port) + " " + str(avg))
+                    sys.stdout.write(str(time) + " " + str(port) + " " + str(avg) + "\n")
                 else:
-                    print(str(time) + " " + str(port) + " " + str(PayloadTimePort.DEFAULT_VAL))
+                    sys.stdout.write(str(time) + " " + str(port) + " " + str(PayloadTimePort.DEFAULT_VAL) + "\n")
 
-            print("\n")
+            sys.stdout.write("\n")
 
 
     def run(self):
