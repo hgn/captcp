@@ -310,14 +310,19 @@ class Geoip:
 
 class PayloadTimePort:
 
-    def __init__(self, captcp):
+    PORT_START = 0
+    PORT_END   = 65535
+    DEFAULT_VAL = 0.0
 
+
+    def __init__(self, captcp):
         self.captcp = captcp
         self.parse_local_options()
+        self.data = dict()
+        self.trace_start = None
 
 
     def parse_local_options(self):
-
         parser = optparse.OptionParser()
         parser.usage = "xx"
         parser.add_option(
@@ -348,7 +353,7 @@ class PayloadTimePort:
                 "-s",
                 "--sampling",
                 dest="sampling",
-                default=5,
+                default=1,
                 type="int",
                 help="sampling rate (default: 5 seconds)")
 
@@ -379,31 +384,54 @@ class PayloadTimePort:
             self.pcap_filter = " ".join(args[3:])
             sys.stderr.write("# pcap filter: \"" + self.pcap_filter + "\"\n")
 
-    def process_packet(self, ts, packet):
 
+    def process_packet(self, ts, packet):
         ip = packet
         tcp = packet.data
 
         if type(tcp) != TCP:
             return
- 
-        seq  = int(tcp.seq)
-        ack  = int(tcp.ack)
+
         time = float(ts)
 
-        ip.src = Converter.dpkt_addr_to_string(ip.src)
-        ip.dst = Converter.dpkt_addr_to_string(ip.dst)
+        if self.trace_start == None:
+            self.trace_start = time
+            self.time_offset = time
+            self.next_sampling_boundary = time + float(self.opts.sampling)
+
+        if time > self.next_sampling_boundary:
+            self.next_sampling_boundary = time + float(self.opts.sampling)
+
+
+        if self.next_sampling_boundary - self.time_offset not in self.data:
+            self.data[self.next_sampling_boundary - self.time_offset] = dict()
+
         dport  = int(tcp.dport)
         sport  = int(tcp.sport)
 
-        sys.stdout.write(c + '%lf: %s:%d > %s:%d %s\n' % (
-                float(ts),
-                ip.src,
-                tcp.sport,
-                ip.dst,
-                tcp.dport,
-                optionss)
-                + Colors.ENDC)
+        if dport not in self.data[self.next_sampling_boundary - self.time_offset]:
+            self.data[self.next_sampling_boundary - self.time_offset][dport] = dict()
+            self.data[self.next_sampling_boundary - self.time_offset][dport]["cnt"] = 0
+            self.data[self.next_sampling_boundary - self.time_offset][dport]["sum"] = 0
+
+        self.data[self.next_sampling_boundary - self.time_offset][dport]["sum"] += len(packet)
+        self.data[self.next_sampling_boundary - self.time_offset][dport]["cnt"] += 1
+ 
+
+
+    def print_data(self):
+        for timesortedtupel in sorted(self.data.iteritems(), key = lambda (k,v): float(k)):
+            time = timesortedtupel[0]
+            
+            for port in range(PayloadTimePort.PORT_END + 1):
+
+                if port in timesortedtupel[1]:
+                    avg = float(timesortedtupel[1][port]["sum"]) / float(timesortedtupel[1][port]["cnt"])
+                    print(str(time) + " " + str(port) + " " + str(avg))
+                else:
+                    print(str(time) + " " + str(port) + " " + str(PayloadTimePort.DEFAULT_VAL))
+
+            print("\n")
 
 
     def run(self):
@@ -414,6 +442,8 @@ class PayloadTimePort:
         pcap_parser.register_callback(self.process_packet)
         pcap_parser.run()
         del pcap_parser
+
+        self.print_data()
 
         return ExitCodes.EXIT_SUCCESS
 
