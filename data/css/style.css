@@ -141,7 +141,7 @@ body {
 	Bulletproof @font-face syntax: http://mky.be/font-face/bulletproof/ */
 
 a {color: #009;}
-a:hover {color: #66f;}
+a:hover {color: #ff0000;}
 
 /* Custom text-selection colors (remove any text shadows: twitter.com/miketaylr/status/12228805301) */
 ::-moz-selection {background: #ff6;}
@@ -164,7 +164,7 @@ time {padding-right: 4px; font-size: 12px;}
 
 code {color: #000; background: #ddd; text-shadow:0.2em 0.2em 0.2em rgba(255, 255, 255, 0.5); padding: 0 4px;}
 
-a {position: relative; -webkit-transition: all 0.3s ease; -moz-transition: all 0.3s ease; -o-transition: all 0.3s ease; transition: all 0.3s ease;}
+a {position: relative; -webkit-transition: all 0.9s ease; -moz-transition: all 0.9s ease; -o-transition: all 0.9s ease; transition: all 0.9s ease;}
 a:active {position: relative; top: 1px;}
 
 div.wrapper {width: 90%; max-width: 580px; margin: 0 auto;}
@@ -215,12 +215,6 @@ article {margin: 0 auto 50px;}
 		.ie article ul.links li.noStar {margin-left: 36px;}
 		.ie article ul.links li.noStar:before {content: "";}
 
-	article ul.screenshots {width: 100%; margin: 6px 0 18px;}
-		article ul.screenshots li {float: left; margin-right: 12px;}
-			article ul.screenshots li:last-child {margin-right: 0;}
-			
-			article ul.screenshots li a {display: block;}
-			article ul.screenshots li img {display: block; -webkit-border-radius: 5px; -moz-border-radius: 5px; border-radius: 5px;}
 
 	article figure {float: right; position: relative; margin: 0 -25% 12px 12px;}
 		article figure img {display: block; background: #f7f7f7; -webkit-border-radius: 5px; -moz-border-radius: 5px; border-radius: 5px;}
