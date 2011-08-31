@@ -54,7 +54,7 @@
 
 <div class="wrapper">
 	<header>
-		<h1><a href="/">CAPTCP</a></h1>
+		<h1><a href="/"><div class="Kaffeesatz">CAPTCP</div></a></h1>
 		<nav>
 			<ol>
 				<li><a href="#about">About</a></li>
@@ -106,6 +106,9 @@
 			<li><strong>highlight</strong> - similar to tcpdump but with colorful highlighting and some other features</li>
 			<li><strong>stats</strong> - print TCP flow statistics</li>
 			<li><strong>geoip</strong> - for a given IP address the location is returned</li>
+			<li><strong>template</strong> - provides a set of Gnuplot and Makefiles templare for post-processing</li>
+			<li><strong>payloadtimeport</strong> - analyze payload size distribution over time and port number</li>
+			<li><strong>payloadtime</strong> - Display the payload data over time, separated by services (ports) or protocols</li>
 		</ul>
 		</p>
 
@@ -206,6 +209,25 @@
 		<div class="codebox">
 			captcp geoip 78.120.0.1
 		</div>
+		</p>
+
+		<h2>Template Module</h2>
+
+		<p>
+		The template module provides an easy way to generate a bunch of
+		gnuplot and Makefiles for data visualization. It could be possible
+		to integrate this functionality in the other modules too but
+		mormally it is common to adjust the gnuplot template a little, set
+		x,y ranges, modify the title et cetera. Additionally the template
+		module is not limited to gnuplot.  It provides also Makefiles to
+		generate gnuplot files (PDF for LaTeX and PNG for web publishing).
+		</p>
+
+		<h2>Payloadtime Module</h2>
+
+		<p>
+		Display the payload data over time, separated by services (ports) or
+		protocols.
 		</p>
 
 

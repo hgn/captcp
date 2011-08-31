@@ -22,6 +22,18 @@ html, body, div, span, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pr
 	background: transparent;
 }									
 
+@font-face {
+  font-family: Kaffeesatz;
+	src: url(../fonts/YanoneKaffeesatz-Thin.otf) format("opentype");
+	
+}
+@font-face {
+  font-family: Kaffeesatz;
+	src: url(../fonts/YanoneKaffeesatz-Regular.otf) format("opentype");
+	font-weight:bold;
+	
+}
+
 article, aside, figure, footer, header, hgroup, nav, section {display: block;}
 
 /* Responsive images and other embedded objects
@@ -86,7 +98,7 @@ a:hover, a:active {outline: none;}
 
 small {font-size: 85%;}
 
-strong, th {font-weight: bold;}
+strong, th {font-weight: bold; }
 
 td, td img {vertical-align: top;} 
 
@@ -176,6 +188,7 @@ h1 {position: relative; width: 224px; margin: 0 0 18px; font: normal 51px/40px "
 	h1 strong {display: block; font-size: 56px;}
 	
 	h1 a {text-decoration: none; color: #000;}
+h1 a .Kaffeesatz {font-family: Kaffeesatz; font-weight:bold;}
 
 	.ie h1 {font-family: georgia, times, serif;}
 
@@ -184,7 +197,7 @@ nav {margin: 0 0 30px; padding-top: 12px; border-top: 3px solid #cecece; text-al
 	nav ol li {display: inline-block; margin-bottom: 6px; padding-right: 12px;}
 		nav ol li:last-child {padding-right: 0;}
 		
-		nav ol li a {text-decoration: none; font-size: 12px; text-transform: uppercase; color: #444; font-family: palatino, georgia, times, serif; white-space: nowrap;}
+		nav ol li a {text-decoration: none; font-size: 22px; text-transform: uppercase; color: #444; font-family: Kaffeesatz, palatino, georgia, times, serif; font-weight:bold; white-space: nowrap;}
 			nav ol li a:after {content: "\2605"; position: absolute; top: 100%; display: block; width: 100%; text-align: center; font-size: 10px; line-height: 10px; color: #f7f7f7; -webkit-transition: all 0.3s ease; -moz-transition: all 0.3s ease; -o-transition: all 0.3s ease; transition: all 0.3s ease;}
 			nav ol li a:hover:after {color: #009;}
 
@@ -192,9 +205,9 @@ hr {display: none; height: 0; width: 25%; margin: 50px auto 50px; border: 0; bor
 
 article {margin: 0 auto 50px;}
 
-	article h1 {width: auto; margin-top: 5px; padding-top: 10px; font-size: 24px; line-height: 24px; color: #222; font-family: palatino, georgia, times, serif;}
+	article h1 {width: auto; margin-top: 70px; padding-top: 10px; font-size: 24px; line-height: 24px; color: #222; font-family: Kaffeesatz, palatino, georgia, times, serif; font-weight:bold;}
 
-	article h2 {margin-top: 15px; margin-bottom: 12px; padding-top: 15px; font: normal 18px/18px palatino, georgia, times, serif; color: #222; text-transform: uppercase;}
+	article h2 {margin-top: 25px; margin-bottom: 12px; padding-top: 15px; font-family: Kaffeesatz, palatino, georgia, times, serif; font-weight:bold; font-size: 18px;  color: #222; text-transform: uppercase;}
 	
 	article p {margin-bottom: 18px;}
 	
