@@ -176,6 +176,24 @@
 
 		<h2>GeoIP Module</h2>
 
+		<p>
+		Sometimes for larger analysis and network anomalies it is helpful to
+		analyze from where a given packet is. What ISP, what counrty et
+		cetera. To provide fast information about the location the
+		<strong>geoip</strong> module can be used.
+		</p>
+
+		<h3>Note</h3>
+
+		<p>
+		This in an optional module. This module requires some third party
+		software. Under Debian a simple aptitude install is sufficient:
+		</p>
+
+		<pre>
+		aptitude install python-geoip
+		</pre>
+
 		<h3>Examples</h3>
 
 		<p>Print the location for a given IP address</p>
