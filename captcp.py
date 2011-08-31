@@ -147,7 +147,48 @@ class Container:
     pass
 
 
-class Geoip:
+class Template:
+
+    payloadtimeport3d = \
+"""
+set pm3d map; set palette rgbformulae 30,31,32;
+set xrange[0:4500]
+set xlabel 'Time [s]'; set ylabel 'Diffraction angle'
+splot '3ddata.dat' notitle
+set terminal png large transparent size 600,500;
+set out '3ddata.png'
+"""
+
+    gnuplot_makefile = \
+"""
+GNUPLOT_FILES = $(wildcard *.gpi)
+PNG_OBJ = $(patsubst %.gpi,%.png,  $(GNUPLOT_FILES))
+PDF_OBJ = $(patsubst %.gpi,%.pdf,  $(GNUPLOT_FILES))
+
+all: $(PDF_OBJ)
+png: $(PNG_OBJ)
+
+%.eps: %.gpi data
+	@ echo "compillation of "$<
+	@gnuplot $<
+
+%.pdf: %.eps 
+	@echo "conversion in pdf format"
+	@epstopdf --outfile=$*.pdf $<
+	@echo "end"
+
+%.png: %.pdf
+	@echo "conversion in png format"
+	@convert -density 300 $< $*.png 
+	@echo "end"
+
+preview: all
+	for i in $$(ls *.pdf); do xpdf -fullscreen $$i ; done
+
+clean:
+	@echo "cleaning ..."
+	@rm -rf *.eps *.png *.pdf *.data core
+"""
 
     def __init__(self, captcp):
 
@@ -158,61 +199,42 @@ class Geoip:
     def parse_local_options(self):
 
         parser = optparse.OptionParser()
-        parser.usage = "xx"
-        parser.add_option(
-                "-v",
-                "--verbose",
-                dest="verbose",
-                default=False,
-                action="store_true",
-                help="show verbose")
 
         parser.add_option(
-                "-p",
-                "--port",
-                dest="portnum",
-                default=80,
-                type="int",
-                help="port number to run on")
-
-        parser.add_option(
-                "-m",
-                "--match",
-                dest="match",
+                "-t",
+                "--template",
+                dest="template",
                 default=None,
                 type="string",
-                help="if statment is true the string is color in red")
-
-        parser.add_option(
-                "-s",
-                "--suppress-other",
-                dest="suppress",
-                default=False,
-                action="store_true",
-                help="don't display other packets")
+                help="template name")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         
-        if len(args) < 3:
-            sys.stderr.write("no IP address argument given, exiting\n")
-            sys.exit(ExitCodes.EXIT_CMD_LINE)
  
-        if not self.opts.verbose:
-            sys.stderr = open(os.devnull, 'w')
-        
-        self.captcp.print_welcome()
+        if not self.opts.template:
+            sys.stderr.write("no template name given, exiting\n")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
 
-        self.ip_address = args[2]
-        sys.stderr.write("# ip address: \"%s\"\n" % self.ip_address)
+    def usage(self):
+
+        sys.stderr.write("""supported modules:
+        payload-time-port-3d
+        gnuplot-makefile
+        \n""")
+
 
     def run(self):
 
-        if not GeoIP:
-            sys.stdout.write("GeoIP package not installed on system, exiting")
-            sys.exit(ExitCodes.EXIT_CMD_LINE)
+        if self.opts.template == "payload-time-port-3d":
+            sys.stdout.write(Template.payloadtimeport3d)
+        elif self.opts.template == "gnuplot-makefile":
+            sys.stdout.write(Template.gnuplot_makefile)
+        else:
+            self.usage()
 
-        gi = GeoIP.new(GeoIP.GEOIP_MEMORY_CACHE)
-        sys.stdout.write("Country Code: " + gi.country_code_by_addr(self.ip_address) + "\n")
+        return ExitCodes.EXIT_SUCCESS
+
+
 
 
 
