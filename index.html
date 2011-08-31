@@ -60,6 +60,7 @@
 				<li><a href="#about">About</a></li>
 				<li><a href="#modules">Modules</a></li>
 				<li><a href="#installation">Installtion</a></li>
+				<li><a href="#miscellaneous">Miscellaneous</a></li>
 			</ol>
 		</nav>
 	</header>
@@ -248,6 +249,40 @@
 		</code>
 		</p>
 
+
+		<h1 id="miscellaneous">Miscellaneous</h1>
+
+		<h2>Trace Files</h2>
+
+		<code>lftp ftp://wits.cs.waikato.ac.nz</code> waikato/1 
+
+		<h2>Convert traces from other formats</h2>
+
+
+		<p>
+		Libtrace comes with a program (traceconvert) that lets you convert
+		from any trace type that libtrace understands, to any trace type
+		libtrace can output. Under Debian simple type <code>aptitude install
+			libtrace-tools</code> to install the tool.
+		</p>
+
+		<p>
+		<code>
+			traceconvert legacyatm:auck4--0.gz pcapfile:auck4-0.pcap.gz
+			traceconvert legacypos:IPLS-KSCY-0.gz pcapfile:IPLS-KSCY--0.pcap.gz
+			traceconvert legacyeth:auck6-e0.gz pcapfile:auck6.pcap.gz
+			traceconvert erf:auck8-20031215-.gz pcapfile:auck8-20031215-.pcap.gz
+			traceconvert erf:leip1-20021121.gz pcapfile:leip1.pcap.gz
+		</code>
+		</p>
+
+		<h2>Merge Traces</h2>
+
+		<p>
+		<code>
+			tracemerge pcapfile:auck-22-combined.gz legacyatm:auck-22-0.gz legacyatm:auck-22-1.gz
+		</code>
+		</p>
 
 	</article>
 	<footer>
