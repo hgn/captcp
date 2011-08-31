@@ -2,7 +2,6 @@
 
 from __future__ import print_function
 
-
 import sys
 import os
 import logging
@@ -214,6 +213,115 @@ class Geoip:
 
         gi = GeoIP.new(GeoIP.GEOIP_MEMORY_CACHE)
         sys.stdout.write("Country Code: " + gi.country_code_by_addr(self.ip_address) + "\n")
+
+class PayloadTimePort:
+
+    def __init__(self, captcp):
+
+        self.captcp = captcp
+        self.parse_local_options()
+
+
+    def parse_local_options(self):
+
+        parser = optparse.OptionParser()
+        parser.usage = "xx"
+        parser.add_option(
+                "-v",
+                "--verbose",
+                dest="verbose",
+                default=False,
+                action="store_true",
+                help="show verbose")
+
+        parser.add_option(
+                "-f",
+                "--format",
+                dest="format",
+                default="3ddata",
+                type="string",
+                help="the data format for gnuplot")
+
+        parser.add_option(
+                "-p",
+                "--port",
+                dest="port",
+                default="sport",
+                type="string",
+                help="sport or dport")
+
+        parser.add_option(
+                "-s",
+                "--sampling",
+                dest="sampling",
+                default=5,
+                type="int",
+                help="sampling rate (default: 5 seconds)")
+
+        parser.add_option(
+                "-o",
+                "--outfile",
+                dest="outfile",
+                default="payload-time-port.data",
+                type="string",
+                help="name of the output file (default: payload-time-port.dat)")
+
+        self.opts, args = parser.parse_args(sys.argv[0:])
+        
+        if len(args) < 3:
+            sys.stderr.write("no pcap file argument given, exiting\n")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+ 
+        if not self.opts.verbose:
+            sys.stderr = open(os.devnull, 'w')
+        
+        self.captcp.print_welcome()
+
+        self.pcap_file_path = args[2]
+        sys.stderr.write("# pcapfile: \"%s\"\n" % self.pcap_file_path)
+
+        self.pcap_filter = None
+        if args[3:]:
+            self.pcap_filter = " ".join(args[3:])
+            sys.stderr.write("# pcap filter: \"" + self.pcap_filter + "\"\n")
+
+    def process_packet(self, ts, packet):
+
+        ip = packet
+        tcp = packet.data
+
+        if type(tcp) != TCP:
+            return
+ 
+        seq  = int(tcp.seq)
+        ack  = int(tcp.ack)
+        time = float(ts)
+
+        ip.src = Converter.dpkt_addr_to_string(ip.src)
+        ip.dst = Converter.dpkt_addr_to_string(ip.dst)
+        dport  = int(tcp.dport)
+        sport  = int(tcp.sport)
+
+        sys.stdout.write(c + '%lf: %s:%d > %s:%d %s\n' % (
+                float(ts),
+                ip.src,
+                tcp.sport,
+                ip.dst,
+                tcp.dport,
+                optionss)
+                + Colors.ENDC)
+
+
+    def run(self):
+        
+        sys.stderr.write("# initiate PayloadTimePort module\n")
+
+        pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
+        pcap_parser.register_callback(self.process_packet)
+        pcap_parser.run()
+        del pcap_parser
+
+        return ExitCodes.EXIT_SUCCESS
 
 
 class Highlight:
@@ -456,7 +564,8 @@ class Captcp:
 
     modes = {
             "highlight": "Highlight",
-            "geoip": "Geoip"
+            "geoip": "Geoip",
+            "payloadtimeport": "PayloadTimePort"
             }
 
     def print_welcome(self):
