@@ -131,7 +131,7 @@
 
 		<h3>Options</h3>
 
-		<pre>
+		<pre class="config">
 		--match (-m) &lt;expression&gt;
 
 			sport
@@ -160,25 +160,25 @@
 		<h3>Examples</h3>
 
 		<p>Highlight packets with more then 2 SACK blocks</p>
-		<div class="codebox">
-			captcp highlight  --match "opts.sackblocks &gt; 2" trace.pcap
-		</div>
+		<pre class="code">
+captcp highlight  --match "opts.sackblocks &gt; 2" trace.pcap
+		</pre>
 		</p>
 
 		<p>Highlight packets with source ip 192.168.1.1 (please note the
 		quotation marks for an IP address):</p>
 		<p>
-		<div class="codebox">
-			captcp highlight  --match 'ip.src == "192.168.1.1"' trace.pcap
-		</div>
+		<pre class="code">
+captcp highlight  --match 'ip.src == "192.168.1.1"' trace.pcap
+		</pre>
 		</p>
 
 		<p>Show only packets where the SYN and ACK packet is enabled. All
 		other packets are NOT displayed (--suppress-other option):</p>
 		<p>
-		<div class="codebox">
-			captcp highlight -s -m 'tcp.flags &amp; TH_ACK and tcp.flags &amp; TH_SYN' trace.pcap
-		</div>
+		<pre class="code">
+captcp highlight -s -m 'tcp.flags &amp; TH_ACK and tcp.flags &amp; TH_SYN' trace.pcap
+		</pre>
 		</p>
 
 
@@ -200,7 +200,7 @@
 		software. Under Debian a simple aptitude install is sufficient:
 		</p>
 
-		<pre>
+		<pre class="config">
 		aptitude install python-geoip
 		</pre>
 
@@ -267,21 +267,21 @@
 		</p>
 
 		<p>
-		<div class="codebox">
-			traceconvert legacyatm:auck4--0.gz pcapfile:auck4-0.pcap.gz
-			traceconvert legacypos:IPLS-KSCY-0.gz pcapfile:IPLS-KSCY--0.pcap.gz
-			traceconvert legacyeth:auck6-e0.gz pcapfile:auck6.pcap.gz
-			traceconvert erf:auck8-20031215-.gz pcapfile:auck8-20031215-.pcap.gz
-			traceconvert erf:leip1-20021121.gz pcapfile:leip1.pcap.gz
-		</div>
+		<pre class="code">
+traceconvert legacyatm:auck4--0.gz pcapfile:auck4-0.pcap.gz
+traceconvert legacypos:IPLS-KSCY-0.gz pcapfile:IPLS-KSCY--0.pcap.gz
+traceconvert legacyeth:auck6-e0.gz pcapfile:auck6.pcap.gz
+traceconvert erf:auck8-20031215-.gz pcapfile:auck8-20031215-.pcap.gz
+traceconvert erf:leip1-20021121.gz pcapfile:leip1.pcap.gz
+		</pre>
 		</p>
 
 		<h2>Merge Traces</h2>
 
 		<p>
-		<div class="codebox">
-			tracemerge pcapfile:auck-22-combined.gz legacyatm:auck-22-0.gz legacyatm:auck-22-1.gz
-		</div>
+		<pre class="code">
+tracemerge pcapfile:auck-comb.gz legacyatm:auck-0.gz legacyatm:auck-1.gz
+		</pre>
 		</p>
 
 	</article>
