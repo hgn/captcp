@@ -214,6 +214,78 @@ class Geoip:
         gi = GeoIP.new(GeoIP.GEOIP_MEMORY_CACHE)
         sys.stdout.write("Country Code: " + gi.country_code_by_addr(self.ip_address) + "\n")
 
+
+
+class Geoip:
+
+    def __init__(self, captcp):
+
+        self.captcp = captcp
+        self.parse_local_options()
+
+
+    def parse_local_options(self):
+
+        parser = optparse.OptionParser()
+        parser.usage = "xx"
+        parser.add_option(
+                "-v",
+                "--verbose",
+                dest="verbose",
+                default=False,
+                action="store_true",
+                help="show verbose")
+
+        parser.add_option(
+                "-p",
+                "--port",
+                dest="portnum",
+                default=80,
+                type="int",
+                help="port number to run on")
+
+        parser.add_option(
+                "-m",
+                "--match",
+                dest="match",
+                default=None,
+                type="string",
+                help="if statment is true the string is color in red")
+
+        parser.add_option(
+                "-s",
+                "--suppress-other",
+                dest="suppress",
+                default=False,
+                action="store_true",
+                help="don't display other packets")
+
+        self.opts, args = parser.parse_args(sys.argv[0:])
+        
+        if len(args) < 3:
+            sys.stderr.write("no IP address argument given, exiting\n")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+ 
+        if not self.opts.verbose:
+            sys.stderr = open(os.devnull, 'w')
+        
+        self.captcp.print_welcome()
+
+        self.ip_address = args[2]
+        sys.stderr.write("# ip address: \"%s\"\n" % self.ip_address)
+
+    def run(self):
+
+        if not GeoIP:
+            sys.stdout.write("GeoIP package not installed on system, exiting")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        gi = GeoIP.new(GeoIP.GEOIP_MEMORY_CACHE)
+        
+        sys.stdout.write("Country Code: " + gi.country_code_by_addr(self.ip_address) + "\n")
+
+
+
 class PayloadTimePort:
 
     def __init__(self, captcp):
@@ -565,7 +637,8 @@ class Captcp:
     modes = {
             "highlight": "Highlight",
             "geoip": "Geoip",
-            "payloadtimeport": "PayloadTimePort"
+            "payloadtimeport": "PayloadTimePort",
+            "template": "Template"
             }
 
     def print_welcome(self):
