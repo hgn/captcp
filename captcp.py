@@ -11,6 +11,7 @@ import pcap
 import socket
 import struct
 import inspect
+import math
 
 # optional packages
 try:
@@ -18,13 +19,24 @@ try:
 except ImportError:
     GeoIP = None
 
+try:
+    import cairo
+except ImportError:
+    cairo = None
+
+
 # required debian packages:
 #   python-dpkt
 #   python-pypcap 
 
-__author__  = "Hagen Paul Pfeifer"
-__version__ = "0.5"
-__license__ = "GPLv3"
+# optional debian packages:
+# 
+
+
+__programm__ = "captcp"
+__author__   = "Hagen Paul Pfeifer"
+__version__  = "0.5"
+__license__  = "GPLv3"
 
 
 # TCP flag constants
@@ -143,9 +155,6 @@ class PcapParser:
 
             self.callback(ts, packet.data)
 
-class Container:
-    pass
-
 
 class Template:
 
@@ -246,7 +255,76 @@ clean:
         return ExitCodes.EXIT_SUCCESS
 
 
+class SequenceGraph:
 
+    def __init__(self, captcp):
+
+        self.captcp = captcp
+        self.parse_local_options()
+
+
+    def parse_local_options(self):
+
+        parser = optparse.OptionParser()
+        parser.usage = "xx"
+        parser.add_option(
+                "-v",
+                "--verbose",
+                dest="verbose",
+                default=False,
+                action="store_true",
+                help="show verbose")
+
+        parser.add_option(
+                "-l",
+                "--local",
+                dest="localaddr",
+                default=None,
+                type="string",
+                help="specify list of local ip addresses")
+
+        parser.add_option(
+                "-r",
+                "--rtt",
+                dest="rtt",
+                default=10,
+                type="int",
+                help="specify the average RTT per connection (default 10 ms)")
+
+        self.opts, args = parser.parse_args(sys.argv[0:])
+        
+        if not self.opts.verbose:
+            sys.stderr = open(os.devnull, 'w')
+        
+        self.captcp.print_welcome()
+
+        self.ip_addresss = args[2]
+
+    def run(self):
+        WIDTH, HEIGHT = 256, 256
+
+        surface = cairo.ImageSurface (cairo.FORMAT_ARGB32, WIDTH, HEIGHT)
+        cr = cairo.Context (surface)
+
+        cr.set_source_rgb(1, 1, 1)
+        cr.rectangle(0, 0, WIDTH, HEIGHT)
+        cr.fill()
+
+        cr.set_line_width (1.00)
+
+        cr.set_source_rgb (0.0, 0.0, 0.0)
+        cr.move_to (0, 0)
+        cr.line_to (0.0, 100.0) # Line to (x,y)
+        cr.line_to (50.0, 100.0)
+        cr.close_path ()
+
+        cr.stroke ()
+
+        cr.set_font_size(10)
+        cr.move_to(20, 30)
+        cr.show_text("SYN / ACK")
+
+        surface.write_to_png ("example.png")
 
 
 class Geoip:
@@ -461,6 +539,8 @@ class PayloadTimePort:
 
 class Highlight:
 
+    class Container: pass
+
     def __init__(self, captcp):
 
         self.captcp = captcp
@@ -526,7 +606,7 @@ class Highlight:
 
     def parse_tcp_options(self, tcp):
 
-        tcp_options = Container()
+        tcp_options = Highlight.Container()
         tcp_options.mss = 0
         tcp_options.wsc = 0
         tcp_options.tsval = 0
@@ -694,20 +774,107 @@ class Highlight:
 
         return ExitCodes.EXIT_SUCCESS
 
+class Mod:
+
+    def register_captcp(self, captcp):
+        self.captcp = captcp
+
+    def __init__(self):
+        pass
+
+    def pre_initialize(self):
+        """ called at the very beginning of module lifetime"""
+        pass
+
+    def pre_process_packet(self, ts, packet):
+        """ similar to process_packet but one run ahead to do pre processing"""
+        pass
+
+    def pre_process_final(self):
+        """ single call between pre_process_packet and process_packet to do some calc"""
+        pass
+
+    def process_packet(self, ts, packet):
+        """ final packet round"""
+        pass
+
+    def process_final(self):
+        """ called at the end of packet processing"""
+        pass
+
+
+class StatisticMod(Mod):
+
+
+    def pre_initialize(self):
+        self.logger = logging.getLogger()
+        self.parse_local_options()
+
+    def parse_local_options(self):
+
+        parser = optparse.OptionParser()
+        parser.usage = "xx"
+        parser.add_option(
+                "-v",
+                "--verbose",
+                dest="verbose",
+                default=False,
+                action="store_true",
+                help="show verbose")
+
+        parser.add_option(
+                "-p",
+                "--port",
+                dest="portnum",
+                default=80,
+                type="int",
+                help="port number to run on")
+
+        self.opts, args = parser.parse_args(sys.argv[0:])
+        
+        if len(args) < 3:
+            self.logger.error("no pcap file argument given, exiting\n")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+ 
+        self.captcp.print_welcome()
+
+        self.captcp.pcap_file_path = args[2]
+        self.logger.info("pcapfile: \"%s\"" % self.captcp.pcap_file_path)
+
+        self.captcp.pcap_filter = None
+        if args[3:]:
+            self.captcp.pcap_filter = " ".join(args[3:])
+            self.logger.info("pcap filter: \"" + self.captcp.pcap_filter + "\"")
+
+
 
 class Captcp:
 
     modes = {
-            "highlight": "Highlight",
-            "geoip": "Geoip",
+            "highlight":       "Highlight",
+            "geoip":           "Geoip",
             "payloadtimeport": "PayloadTimePort",
-            "template": "Template"
+            "template":        "Template",
+            "statistic":       "StatisticMod"
             }
+
+    def __init__(self):
+        self.setup_logging()
+
+    def setup_logging(self):
+        self.logger = logging.getLogger()
+        self.logger.setLevel(logging.DEBUG)
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.INFO)
+        formatter = logging.Formatter("# %(message)s")
+        ch.setFormatter(formatter)
+        self.logger.addHandler(ch)
+
 
     def print_welcome(self):
         major, minor, micro, releaselevel, serial = sys.version_info
-        sys.stderr.write("# captcp 2010,2011 Hagen Paul Pfeifer (c)\n")
-        sys.stderr.write("# python: %s.%s.%s [releaselevel: %s, serial: %s]\n" %
+        self.logger.info("captcp 2010,2011 Hagen Paul Pfeifer (c)")
+        self.logger.info("python: %s.%s.%s [releaselevel: %s, serial: %s]" %
                 (major, minor, micro, releaselevel, serial))
 
 
@@ -718,18 +885,14 @@ class Captcp:
             return None
 
 
-        submodule = sys.argv[1]
+        submodule = sys.argv[1].lower()
 
-        if submodule.lower() not in Captcp.modes:
+        if submodule not in Captcp.modes:
             sys.stderr.write("module not known\n")
             return None
 
-        classname = Captcp.modes[submodule.lower()]
+        classname = Captcp.modes[submodule]
         return classname
-
-
-    def __init__(self):
-        pass
 
 
     def run(self):
@@ -737,8 +900,33 @@ class Captcp:
         if not classtring:
             return 1
 
-        classinstance = globals()[classtring](self)
-        return classinstance.run()
+        if classtring == "StatisticMod":
+
+            classinstance = globals()[classtring]()
+            classinstance.register_captcp(self)
+
+            classinstance.pre_initialize()
+
+
+            # parse the whole pcap file first
+            pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
+            pcap_parser.register_callback(classinstance.pre_process_packet)
+            pcap_parser.run()
+            del pcap_parser
+
+            classinstance.pre_process_final()
+
+            # and finally print all relevant stuff
+            pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
+            pcap_parser.register_callback(classinstance.process_packet)
+            pcap_parser.run()
+            del pcap_parser
+
+            return classinstance.process_final()
+
+        else:
+            classinstance = globals()[classtring](self)
+            return classinstance.run()
 
 
 
