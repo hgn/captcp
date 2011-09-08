@@ -14,6 +14,7 @@ import inspect
 import math
 import pprint
 import time
+import datetime
 
 # optional packages
 try:
@@ -772,7 +773,7 @@ class Mod:
 
     def __init__(self):
         self.captcp = None
-        self.cc = ConnectionContaier()
+        self.cc = ConnectionContainer()
 
     def internal_pre_process_packet(self, ts, packet):
         """ this is a hidden preprocessing function, called for every packet"""
@@ -803,10 +804,7 @@ class Mod:
 
 class SequenceGraphMod(Mod):
     
-    class Sequence:
-        def __init__(self):
-            self.startx = self.starty = self.endx = self.endy = 0
-
+    class Sequence: pass
 
     def pre_initialize(self):
 
@@ -820,6 +818,7 @@ class SequenceGraphMod(Mod):
         self.tracing_start = None
         self.tracing_end = None
 
+        self.ids = None
 
     def setup_cairo(self):
 
@@ -846,6 +845,12 @@ class SequenceGraphMod(Mod):
         self.cr.set_source_rgb(0.0, 0.0, 0.0)
         self.cr.set_line_width(1.25)
         self.cr.stroke()
+
+    def pre_process_final(self):
+
+        time_diff = self.cc.capture_time_end - self.cc.capture_time_start
+        time_diff = float(time_diff.seconds) + time_diff.microseconds / 1E6 + time_diff.days * 86400
+        self.scaling_factor = time_diff / (self.height + 2 * self.margin_top_bottom)
 
 
     def parse_local_options(self):
@@ -896,7 +901,40 @@ class SequenceGraphMod(Mod):
             self.logger.info("ID's: %s" % (str(self.ids)))
 
 
+    def local_generated_packet(self, packet):
+
+        if Converter.dpkt_addr_to_string(packet.src) == self.opts.localaddr:
+            return True
+        else:
+            return False
+
+
+    def ts_tofloat(self, ts):
+        return float(ts.seconds) + ts.microseconds / 1E6 + ts.days * 86400
+
+
+    def draw_sequence(self, sequence, text):
+
+        print("xs %d ys %d xe %d ye %d" % (sequence.xs, sequence.ys, sequence.xe, sequence.ye))
+
+        self.cr.set_source_rgb(0.0, 0.0, 0.0) # Solid color
+        self.cr.set_line_width(0.5)
+        self.cr.move_to(sequence.xs, sequence.ys)
+        self.cr.line_to(sequence.xe, sequence.ye) # Line to (x,y)
+        self.cr.stroke()
+
+        self.cr.set_font_size(12)
+
+        # draw test
+        x_bearing, y_bearing, width, height = self.cr.text_extents(text)[:4]
+        self.cr.move_to(5, height)
+        self.cr.show_text(text)
+        self.cr.stroke()
+
+
     def process_packet(self, ts, packet):
+
+        timestamp = datetime.datetime.fromtimestamp(ts)
 
         draw_packet = False
 
@@ -911,10 +949,34 @@ class SequenceGraphMod(Mod):
         if not draw_packet:
             return
 
-        print(time.localtime(ts))
+        print("%s" % timestamp)
 
+        s = SequenceGraphMod.Sequence
 
+        ts_diff = timestamp - self.cc.capture_time_start
 
+        if self.local_generated_packet(packet):
+
+            s.xs = self.margin_left_right
+            s.xe = self.width - self.margin_left_right
+
+            s.ys = self.ts_tofloat(ts_diff) / self.scaling_factor
+            s.ye = self.ts_tofloat(ts_diff) / self.scaling_factor
+
+        else:
+
+            s.xs = self.width - self.margin_left_right
+            s.xe = self.margin_left_right
+
+            s.ys = self.ts_tofloat(ts_diff) / self.scaling_factor
+            s.ye = self.ts_tofloat(ts_diff) / self.scaling_factor
+
+        s.ys += self.margin_top_bottom
+        s.ye += self.margin_top_bottom
+
+        print ("XXX: %f" % (s.ys ))
+
+        self.draw_sequence(s, "packet")
 
 
 
@@ -1084,14 +1146,13 @@ class ConnectionContainerStatistic:
         self.packets_tl_unknown  = 0
 
 
-class ConnectionContaier:
+class ConnectionContainer:
 
     def __init__(self):
         self.container = dict()
         self.statistic = ConnectionContainerStatistic()
         self.capture_time_start = None
         self.capture_time_end = None
-
 
 
     def __len__(self):
@@ -1127,6 +1188,11 @@ class ConnectionContaier:
 
         if type(packet.data) != dpkt.tcp.TCP:
             return
+
+        if self.capture_time_start == None:
+            self.capture_time_start = datetime.datetime.fromtimestamp(ts)
+
+        self.capture_time_end = datetime.datetime.fromtimestamp(ts)
 
         c = Connection(packet)
 
