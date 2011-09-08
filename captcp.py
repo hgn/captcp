@@ -30,13 +30,20 @@ except ImportError:
 #   python-pypcap 
 
 # optional debian packages:
-# 
+#   python-geoip
+#   python-cairo
 
 
 __programm__ = "captcp"
 __author__   = "Hagen Paul Pfeifer"
 __version__  = "0.5"
 __license__  = "GPLv3"
+
+# custom exceptions
+class ArgumentErrorException(Exception): pass
+class InternalException(Exception): pass
+class SequenceContainerException(InternalException): pass
+class InternalSequenceException(Exception): pass
 
 
 # TCP flag constants
@@ -56,6 +63,86 @@ class ExitCodes:
     EXIT_SUCCESS  = 0
     EXIT_ERROR    = 1
     EXIT_CMD_LINE = 2
+
+
+class SequenceContainer:
+
+    class Container: pass
+
+    def __init__(self):
+        self.sequnce_list = list()
+
+    def __len__(self):
+        return len(self.sequnce_list)
+
+    def print_list(self):
+        for i in self.sequnce_list:
+            sys.stdout.write(str(i.left_edge) + "-" +
+                    str(i.right_edge) + "\n" )
+
+    def add_sequence(self, array):
+        if len(array) != 2:
+            raise ArgumentErrorException("array must contain excatly 2 members")
+
+        new = SequenceContainer.Container()
+        new.left_edge  = array[0]
+        new.right_edge = array[1]
+
+        if len(self.sequnce_list) <= 0:
+            self.sequnce_list.append(new)
+            return
+
+        # if new element is the direct neighbour we merge
+        if new.left_edge == self.sequnce_list[-1].right_edge + 1:
+            self.sequnce_list[-1].right_edge = new.right_edge
+            del new
+            return
+
+        # if new element is far right we add it instantly
+        if self.sequnce_list[-1].right_edge < new.left_edge + 1:
+            self.sequnce_list.append(new)
+            return
+
+        # check
+        if not new.left_edge <= self.sequnce_list[-1].right_edge:
+            raise SequenceContainerException("internal error")
+
+        reverse_enumerate = lambda l: \
+                itertools.izip(xrange(len(l)-1, -1, -1), reversed(l))
+        it = reverse_enumerate(self.sequnce_list)
+
+        # ok, the new packet is within the packets
+        while True:
+            try:
+
+                (i, old) = it.next()
+
+                # match the segment exactply?
+                if (old.left_edge - 1 == new.right_edge and
+                        self.sequnce_list[i - 1].right_edge + 1 == new.left_edge):
+                    self.sequnce_list.remove(old)
+                    self.sequnce_list[i - 1].right_edge = old.right_edge
+                    return
+
+                # check if the new packet match between a gap
+                if (old.left_edge > new.right_edge and
+                        self.sequnce_list[i - 1].right_edge < new.left_edge):
+                    self.sequnce_list.insert(i, new)
+                    return
+
+                # can we merge one one side at least? (one end close, one new gap)
+                if old.left_edge - 1 == new.right_edge:
+                    if len(self.sequnce_list) <= 1:
+                        old.left_edge = new.left_edge
+                        del new
+                        return
+                    elif self.sequnce_list[i - 1].right_edge < new.left_edge:
+                        old.left_edge = new.left_edge
+                        del new
+                        return
+            except:
+                break
+
 
 class Colors:
 
