@@ -12,6 +12,7 @@ import socket
 import struct
 import inspect
 import math
+import pprint
 
 # optional packages
 try:
@@ -863,49 +864,17 @@ class Mod:
         self.captcp = captcp
 
     def __init__(self):
+        self.captcp = None
         self.cc = ConnectionContaier()
 
-    def _pre_pre_process_packet(self, ts, packet):
+    def _pre_process_packet(self, ts, packet):
+        """ this is a hidden preprocessing function, called for every packet"""
 
-        if self.cc.statistic.packets_processed == 728059:
-            print(type(packet))
-            print(type(packet.data))
+        assert(self.captcp != None)
 
+        self.cc.update(packet)
 
-        self.cc.statistic.packets_processed += 1
-
-        if type(packet) == dpkt.ip.IP:
-            self.cc.statistic.packets_nl_ipv4 += 1
-        elif type(packet) == dpkt.ip6.IP6:
-            self.cc.statistic.packets_nl_ipv6 += 1
-        elif type(packet) == dpkt.arp.ARP:
-            self.cc.statistic.packets_nl_arp += 1
-            return
-        else:
-            self.cc.statistic.packets_nl_unknown += 1
-            return
-
-        if type(packet.data) == dpkt.tcp.TCP:
-            self.cc.statistic.packets_tl_tcp += 1
-        elif type(packet.data) == dpkt.udp.UDP:
-            self.cc.statistic.packets_tl_udp += 1
-            return
-        elif type(packet.data) == dpkt.icmp.ICMP:
-            self.cc.statistic.packets_tl_icmp += 1
-            return
-        elif type(packet.data) == dpkt.icmp6.ICMP6:
-            self.cc.statistic.packets_tl_icmp6 += 1
-            return
-        else:
-            self.cc.statistic.packets_tl_unknown += 1
-            return
-
-        tcp = packet.data
-
-
-
-        
-        time = float(ts)
+        self.pre_process_packet(ts, packet)
 
 
 
@@ -913,12 +882,12 @@ class Mod:
         """ called at the very beginning of module lifetime"""
         pass
 
-    def pre_process_packet(self, ts, packet):
-        """ similar to process_packet but one run ahead to do pre processing"""
-        pass
-
     def pre_process_final(self):
         """ single call between pre_process_packet and process_packet to do some calc"""
+        pass
+
+    def pre_process_packet(self, ts, packet):
+        """ final packet round"""
         pass
 
     def process_packet(self, ts, packet):
@@ -939,99 +908,148 @@ class SubConnectionStatistic: pass
 class TcpConn:
 
     def __init__(self, packet):
+        ip = packet
+        tcp = packet.data
 
-        self.ipversion = packet.ipversion
-        self.sip       = packet.sip
-        self.dip       = packet.dip
-        self.sport     = packet.sport
-        self.dport     = packet.dport
+        self.ipversion = str(type(ip))
+        self.sip       = Converter.dpkt_addr_to_string(ip.src)
+        self.dip       = Converter.dpkt_addr_to_string(ip.dst)
+        self.sport     = str(int(tcp.sport))
+        self.dport     = str(int(tcp.dport))
+
+        self.sipnum = ip.src
+        self.dipnum = ip.dst
+
+
+        l = [ord(a) ^ ord(b) for a,b in zip(self.sipnum, self.dipnum)]
 
         self.uid = "%s:%s:%s" % (
                 str(self.ipversion),
-                str(long(self.sip) + long(self.dip)),
+                str(l),
                 str(long(self.sport) + long(self.dport)))
 
-        self.iuid = int((long(self.sip) + \
-                long(self.dip)) ^ (long(self.sport) + \
-                long(self.dport)))
+        self.iuid = ((self.sipnum) + \
+                (self.dipnum) + ((self.sport) + \
+                (self.dport)))
+
 
     def __hash__(self):
         return self.iuid
 
     def __repr__(self):
-        return "%s:%s->%s:%s (%s)" % (
+        return "%s:%s<->%s:%s" % (
                     self.sip,
                     self.sport,
                     self.dip,
-                    self.dport,
-                    self.ipversion)
+                    self.dport)
+
+
+
+class SubConnectionStatistic:
+
+    def __init__(self):
+        self.packets_processed = 0
+
 
 
 class SubConnection(TcpConn):
 
     def __init__(self, packet):
         TcpConn.__init__(self, packet)
+        self.statistic = SubConnectionStatistic()
 
 
     def __cmp__(self, other):
 
-        if (self.dip == other.dip and
-            self.sip == other.sip and
-            self.dport == other.dport and
-            self.sport == other.sport and
+        if other == None:
+            return True
+
+        if (self.dipnum == other.dipnum and
+            self.sipnum == other.sipnum and
+            self.dport  == other.dport and
+            self.sport  == other.sport and
             self.ipversion == other.ipversion):
-                return True
+                return False
         else:
-            return False
+            return True
+
+
+    def __repr__(self):
+        return "%s:%s -> %s:%s" % (
+                    self.sip,
+                    self.sport,
+                    self.dip,
+                    self.dport)
+
         
     def update(self, packet):
-        print("update subconnection")
+        self.statistic.packets_processed += 1
+
+
+class ConnectionStatistic:
+
+    def __init__(self):
+        self.packets_processed = 0
 
 
 
 class Connection(TcpConn):
 
+    static_connection_id = 1
+
     def __init__(self, packet):
         TcpConn.__init__(self, packet)
-        self.sub_connection = list()
+        (self.sc1, self.sc2) = (None, None)
+        self.connection_id = Connection.static_connection_id
+        Connection.static_connection_id += 1
+        self.statistic = ConnectionStatistic()
+
+    def __del__(self):
+        Connection.static_connection_id -= 1
 
     def __cmp__(self, other):
+
         if self.ipversion != other.ipversion:
             return False
-
-        if (self.dip == other.dip and
-            self.sip == other.sip and
-            self.dport == other.dport and
-            self.sport == other.sport):
+        if (self.dipnum == other.dipnum and
+            self.sipnum == other.sipnum and
+            self.dport  == other.dport and
+            self.sport  == other.sport):
                 return True
-        elif (self.dip == other.sip and
-             self.sip == other.dip and
-             self.dport == other.sport and
-             self.sport == other.dport):
+        elif (self.dipnum == other.sipnum and
+             self.sipnum  == other.dipnum and
+             self.dport   == other.sport and
+             self.sport   == other.dport):
                 return True
         else:
             return False
 
 
+    def update_statistic(self, packet):
+        self.statistic.packets_processed += 1
+
+
     def update(self, packet):
+
+        self.update_statistic(packet)
 
         sc = SubConnection(packet)
 
-        if len(self.sub_connection) <= 0:
-            self.sub_connection.append(sc)
-            sc.update(packet)
+        if self.sc1 == None:
+            self.sc1 = sc
+            self.sc1.update(packet)
             return
 
-        for i in self.sub_connection:
-            if i != sc:
-                i.update(packet)
-                return
+        if self.sc1 == sc:
+            self.sc1.update(packet)
+            return
 
-        self.sub_connection.append(sc)
+        if self.sc2 == sc:
+            self.sc2.update(packet)
+            return
+
+        self.sc2 = sc
         sc.update(packet)
-
-
-        assert(len(self.sub_connection) <= 2)
 
 
     def human_id(self):
@@ -1068,16 +1086,91 @@ class ConnectionContaier:
 
     def update(self, packet):
 
+        if type(packet) != dpkt.ip.IP and type(packet) != dpkt.ip6.IP6:
+            return
+
+        if type(packet.data) != dpkt.tcp.TCP:
+            return
+
         c = Connection(packet)
 
         if not c.uid in self.container.keys():
+            c.update(packet)
             self.container[c.uid] = c
         else:
-            c = self.container[c.uid]
+            cc = self.container[c.uid]
+            cc.update(packet)
 
-        c.update(packet)
 
+class ConnectionAnalyzeMod(Mod):
+
+    def pre_initialize(self):
+
+        self.logger = logging.getLogger()
+        parser = optparse.OptionParser()
+        parser.usage = "captcp connection"
+        parser.add_option(
+                "-v",
+                "--verbose",
+                dest="verbose",
+                default=False,
+                action="store_true",
+                help="show verbose")
+
+        self.opts, args = parser.parse_args(sys.argv[0:])
         
+        if len(args) < 3:
+            self.logger.error("no pcap file argument given, exiting\n")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+ 
+        self.captcp.pcap_file_path = args[2]
+
+        self.captcp.pcap_filter = None
+        if args[3:]:
+            self.captcp.pcap_filter = " ".join(args[3:])
+            self.logger.info("pcap filter: \"" + self.captcp.pcap_filter + "\"")
+
+
+    def process_final(self):
+
+        sys.stdout.write("digraph G {\nranksep=3.0;\nnodesep=2.0;\n")
+        # sys.stdout.write("\nsize=\"7.75,10.25\";\n orientation=\"landscape\"")
+
+        label = "\"%d\" [ label=\"%s\",style=filled,color=none,fontsize=6,fontname=Helvetica];  \n"
+
+        sys.stdout.write(label % (1, str("Connections")))
+
+        for key in self.cc.container.keys():
+            connection = self.cc.container[key]
+
+            sys.stdout.write(label % (abs(hash(connection.iuid)), str(connection)))
+
+
+            if connection.sc1 and connection.sc2:
+                sys.stdout.write(label % (abs(hash(connection.sc1.iuid) + 1), str(connection.sc1)))
+                sys.stdout.write(label % (abs(hash(connection.sc2.iuid) + 2), str(connection.sc2)))
+            elif connection.sc1:
+                sys.stdout.write(label % (abs(hash(connection.sc1.iuid) + 1), str(connection.sc1)))
+
+        # connect
+
+        label = "\"%s\" -> \"%s\" [ label=\" \",color=gray,arrowsize=0.4, penwidth=1.2 ];\n"
+
+        for key in self.cc.container.keys():
+
+
+            connection = self.cc.container[key]
+
+            sys.stdout.write(label % (1, (abs(hash(connection.iuid)))))
+
+
+            if connection.sc1 and connection.sc2:
+                sys.stdout.write(label % ((abs(hash(connection.iuid))), (abs(hash(connection.sc1.iuid) + 1))))
+                sys.stdout.write(label % ((abs(hash(connection.iuid))), (abs(hash(connection.sc2.iuid) + 2))))
+            elif connection.sc1:
+                sys.stdout.write(label % ((abs(hash(connection.iuid))), (abs(hash(connection.sc1.iuid) + 1))))
+
+        sys.stdout.write("}\n")
 
 
 class StatisticMod(Mod):
@@ -1126,7 +1219,35 @@ class StatisticMod(Mod):
 
 
     def pre_process_packet(self, ts, packet):
-        pass
+
+        self.cc.statistic.packets_processed += 1
+
+        if type(packet) == dpkt.ip.IP:
+            self.cc.statistic.packets_nl_ipv4 += 1
+        elif type(packet) == dpkt.ip6.IP6:
+            self.cc.statistic.packets_nl_ipv6 += 1
+        elif type(packet) == dpkt.arp.ARP:
+            self.cc.statistic.packets_nl_arp += 1
+            return
+        else:
+            self.cc.statistic.packets_nl_unknown += 1
+            return
+
+        if type(packet.data) == dpkt.tcp.TCP:
+            self.cc.statistic.packets_tl_tcp += 1
+        elif type(packet.data) == dpkt.udp.UDP:
+            self.cc.statistic.packets_tl_udp += 1
+            return
+        elif type(packet.data) == dpkt.icmp.ICMP:
+            self.cc.statistic.packets_tl_icmp += 1
+            return
+        elif type(packet.data) == dpkt.icmp6.ICMP6:
+            self.cc.statistic.packets_tl_icmp6 += 1
+            return
+        else:
+            self.cc.statistic.packets_tl_unknown += 1
+            return
+
 
     def pre_process_final(self):
         pass
@@ -1134,10 +1255,20 @@ class StatisticMod(Mod):
     def process_packet(self, ts, packet):
         pass
 
+
+    def print_two_column_sc_statistic(self, sc1, sc2):
+        sys.stdout.write("\n\t%s\t\t\t%s\n" % (sc1, sc2))
+        sys.stdout.write("\t\tpackets received: %d\t\tpackets received: %d\n" % (sc1.statistic.packets_processed, sc2.statistic.packets_processed))
+
+    def print_one_column_sc_statistic(self, sc):
+
+        sys.stdout.write("\n\t%s\n" % sc1)
+        sys.stdout.write("\t\tpackets received: %d\n" % (sc.statistic.packets_processed))
+
+
     def process_final(self):
 
         one_percent = float(self.cc.statistic.packets_processed) / 100
-
 
         prct_nl_arp     = float(self.cc.statistic.packets_nl_arp) / one_percent
         prct_nl_ip      = float(self.cc.statistic.packets_nl_ipv4) / one_percent
@@ -1168,6 +1299,35 @@ class StatisticMod(Mod):
         sys.stdout.write("\t   ICMPv6:    %8d (%7.3f%%)\n" % (self.cc.statistic.packets_tl_icmp6, prct_tl_icmp6))
         sys.stdout.write("\t   Unknown:   %8d (%7.3f%%)\n" % (self.cc.statistic.packets_tl_unknown, prct_tl_unknown))
 
+        sys.stdout.write("\nConnections:\n")
+
+
+        for key in self.cc.container.keys():
+
+            connection = self.cc.container[key]
+
+            sys.stdout.write("%d -- %s\n" % (connection.connection_id, connection))
+
+            # statistic
+            sys.stdout.write("\tpackets received: %d\n" % (connection.statistic.packets_processed))
+
+            sys.stdout.write("\n\tSub Connections:\n")
+
+            if connection.sc1 and connection.sc2:
+                sys.stdout.write("\n\t   Subconnection A: %s\n" % connection.sc1)
+                sys.stdout.write("\n\t   Subconnection B: %s\n" % connection.sc2)
+                self.print_two_column_sc_statistic(connection.sc1, connection.sc2)
+            elif connection.sc1:
+                sys.stdout.write("\n\t   Subconnection A: %s\n" % connection.sc1)
+                self.print_one_column_sc_statistic(connection.sc1)
+            else:
+                raise InternalException("sc1 should be the only one here")
+                sys.stdout.write("\n\t   Subconnection B: %s\n" % connection.sc1)
+                self.print_one_column_sc_statistic(connection.sc2)
+
+
+            sys.stdout.write("\n")
+
 
 class Captcp:
 
@@ -1176,7 +1336,8 @@ class Captcp:
             "geoip":           "Geoip",
             "payloadtimeport": "PayloadTimePort",
             "template":        "Template",
-            "statistic":       "StatisticMod"
+            "statistic":       "StatisticMod",
+            "connection":       "ConnectionAnalyzeMod"
             }
 
     def __init__(self):
@@ -1221,7 +1382,7 @@ class Captcp:
         if not classtring:
             return 1
 
-        if classtring == "StatisticMod":
+        if classtring == "StatisticMod" or classtring == "ConnectionAnalyzeMod":
 
             classinstance = globals()[classtring]()
             classinstance.register_captcp(self)
@@ -1230,13 +1391,7 @@ class Captcp:
 
             # parse the whole pcap file first
             pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
-            pcap_parser.register_callback(classinstance._pre_pre_process_packet)
-            pcap_parser.run()
-            del pcap_parser
-
-            # parse the whole pcap file first
-            pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
-            pcap_parser.register_callback(classinstance.pre_process_packet)
+            pcap_parser.register_callback(classinstance._pre_process_packet)
             pcap_parser.run()
             del pcap_parser
 
