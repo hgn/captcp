@@ -13,6 +13,7 @@ import struct
 import inspect
 import math
 import pprint
+import time
 
 # optional packages
 try:
@@ -339,77 +340,6 @@ clean:
         return ExitCodes.EXIT_SUCCESS
 
 
-class SequenceGraph:
-
-    def __init__(self, captcp):
-
-        self.captcp = captcp
-        self.parse_local_options()
-
-
-    def parse_local_options(self):
-
-        parser = optparse.OptionParser()
-        parser.usage = "xx"
-        parser.add_option(
-                "-v",
-                "--verbose",
-                dest="verbose",
-                default=False,
-                action="store_true",
-                help="show verbose")
-
-        parser.add_option(
-                "-l",
-                "--local",
-                dest="localaddr",
-                default=None,
-                type="string",
-                help="specify list of local ip addresses")
-
-        parser.add_option(
-                "-r",
-                "--rtt",
-                dest="rtt",
-                default=10,
-                type="int",
-                help="specify the average RTT per connection (default 10 ms)")
-
-        self.opts, args = parser.parse_args(sys.argv[0:])
-        
-        if not self.opts.verbose:
-            sys.stderr = open(os.devnull, 'w')
-        
-        self.captcp.print_welcome()
-
-        self.ip_addresss = args[2]
-
-    def run(self):
-        WIDTH, HEIGHT = 256, 256
-
-        surface = cairo.ImageSurface (cairo.FORMAT_ARGB32, WIDTH, HEIGHT)
-        cr = cairo.Context (surface)
-
-        cr.set_source_rgb(1, 1, 1)
-        cr.rectangle(0, 0, WIDTH, HEIGHT)
-        cr.fill()
-
-        cr.set_line_width (1.00)
-
-        cr.set_source_rgb (0.0, 0.0, 0.0)
-        cr.move_to (0, 0)
-        cr.line_to (0.0, 100.0) # Line to (x,y)
-        cr.line_to (50.0, 100.0)
-        cr.close_path ()
-
-        cr.stroke ()
-
-        cr.set_font_size(10)
-        cr.move_to(20, 30)
-        cr.show_text("SYN / ACK")
-
-        surface.write_to_png ("example.png")
-
 
 class Geoip:
 
@@ -636,37 +566,17 @@ class Highlight:
 
         parser = optparse.OptionParser()
         parser.usage = "xx"
-        parser.add_option(
-                "-v",
-                "--verbose",
-                dest="verbose",
-                default=False,
-                action="store_true",
-                help="show verbose")
+        parser.add_option( "-v", "--verbose", dest="verbose", default=False,
+                action="store_true", help="show verbose")
 
-        parser.add_option(
-                "-p",
-                "--port",
-                dest="portnum",
-                default=80,
-                type="int",
-                help="port number to run on")
+        parser.add_option( "-p", "--port", dest="portnum", default=80,
+                type="int", help="port number to run on")
 
-        parser.add_option(
-                "-m",
-                "--match",
-                dest="match",
-                default=None,
-                type="string",
-                help="if statment is true the string is color in red")
+        parser.add_option( "-m", "--match", dest="match", default=None,
+                type="string", help="if statment is true the string is color in red")
 
-        parser.add_option(
-                "-s",
-                "--suppress-other",
-                dest="suppress",
-                default=False,
-                action="store_true",
-                help="don't display other packets")
+        parser.add_option( "-s", "--suppress-other", dest="suppress", default=False,
+                action="store_true", help="don't display other packets")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         
@@ -698,12 +608,8 @@ class Highlight:
         tcp_options.sackok = False
         tcp_options.sackblocks = 0
 
-        mss = 0
-        wsc = 0
-        tstamp = 0
-        t2 = 0
+        mss = wsc = tstamp = t2 = sack = 0
         sackok = False
-        sack = 0
 
         opts = []
         for opt in dpkt.tcp.parse_opts(tcp.opts):
@@ -858,6 +764,7 @@ class Highlight:
 
         return ExitCodes.EXIT_SUCCESS
 
+
 class Mod:
 
     def register_captcp(self, captcp):
@@ -867,16 +774,11 @@ class Mod:
         self.captcp = None
         self.cc = ConnectionContaier()
 
-    def _pre_process_packet(self, ts, packet):
+    def internal_pre_process_packet(self, ts, packet):
         """ this is a hidden preprocessing function, called for every packet"""
-
         assert(self.captcp != None)
-
-        self.cc.update(packet)
-
+        self.cc.update(ts, packet)
         self.pre_process_packet(ts, packet)
-
-
 
     def pre_initialize(self):
         """ called at the very beginning of module lifetime"""
@@ -899,10 +801,125 @@ class Mod:
         pass
 
 
+class SequenceGraphMod(Mod):
+    
+    class Sequence:
+        def __init__(self):
+            self.startx = self.starty = self.endx = self.endy = 0
 
-class ConnectionStatistic: pass
-class SubConnectionStatistic: pass
 
+    def pre_initialize(self):
+
+        if cairo == None:
+            raise ImportError("Python Cairo module not available, exiting")
+
+        self.logger = logging.getLogger()
+        self.parse_local_options()
+        self.setup_cairo()
+
+        self.tracing_start = None
+        self.tracing_end = None
+
+
+    def setup_cairo(self):
+
+        surface = cairo.PDFSurface(self.opts.filename, self.width, self.height)
+        self.cr = cairo.Context(surface)
+        self.cr.set_source_rgb(1.0, 1.0, 1.0) # white
+        self.cr.rectangle(0, 0, self.width, self.height)
+        self.cr.stroke()
+        self.cr.move_to(0, 0)
+
+        self.margin_left_right = 50
+        self.margin_top_bottom = 50
+
+        # left
+        self.cr.move_to(self.margin_left_right, self.margin_top_bottom)
+        self.cr.line_to (self.margin_left_right, self.height - self.margin_top_bottom)
+        self.cr.set_source_rgb(0.0, 0.0, 0.0)
+        self.cr.set_line_width(1.25)
+        self.cr.stroke()
+
+        # right
+        self.cr.move_to(self.width - self.margin_left_right, self.margin_top_bottom)
+        self.cr.line_to (self.width - self.margin_left_right, self.height - self.margin_top_bottom)
+        self.cr.set_source_rgb(0.0, 0.0, 0.0)
+        self.cr.set_line_width(1.25)
+        self.cr.stroke()
+
+
+    def parse_local_options(self):
+
+        self.width = self.height = 0
+
+        parser = optparse.OptionParser()
+        parser.usage = "sequencegraph"
+        parser.add_option( "-v", "--verbose", dest="verbose", default=False,
+                action="store_true", help="show verbose")
+
+        parser.add_option( "-l", "--local", dest="localaddr", default=None,
+                type="string", help="specify list of local ip addresses")
+
+        parser.add_option( "-s", "--size", dest="size", default="600x1200",
+                type="string", help="specify the size of the image")
+
+        parser.add_option( "-r", "--delay", dest="delay", default=10,
+                type="int", help="specify the average delay per connection (default 10 ms)")
+
+        parser.add_option( "-f", "--filename", dest="filename", default="sequence.pdf",
+                type="string", help="specify the name of the generated PDF file (default: sequence.pdf)")
+
+        parser.add_option( "-i", "--connection-id", dest="connections", default=None,
+                type="string", help="specify the number of relevant ID's")
+
+        self.opts, args = parser.parse_args(sys.argv[0:])
+        
+        if len(args) < 3:
+            self.logger.error("no pcap file argument given, exiting\n")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+ 
+        self.captcp.pcap_file_path = args[2]
+
+        self.captcp.pcap_filter = None
+        if args[3:]:
+            self.captcp.pcap_filter = " ".join(args[3:])
+            self.logger.info("pcap filter: \"" + self.captcp.pcap_filter + "\"")
+
+        (self.width, self.height) = self.opts.size.split('x')
+        (self.width, self.height) = (int(self.width), int(self.height))
+
+        if self.width <= 0 or self.height <= 0:
+            raise ArgumentErrorException("size cannot smaller then 0px")
+
+        if self.opts.connections:
+            self.ids = self.opts.connections.split(',')
+            self.logger.info("ID's: %s" % (str(self.ids)))
+
+
+    def process_packet(self, ts, packet):
+
+        draw_packet = False
+
+        if self.ids:
+            for idss in self.ids:
+                if self.cc.is_packet_connection(packet, int(idss)):
+                    draw_packet = True
+        else:
+            # default: draw every packet
+            draw_packet = True
+
+        if not draw_packet:
+            return
+
+        print(time.localtime(ts))
+
+
+
+
+
+
+    def process_final(self):
+        self.cr.show_page()
 
 
 class TcpConn:
@@ -937,19 +954,14 @@ class TcpConn:
         return self.iuid
 
     def __repr__(self):
-        return "%s:%s<->%s:%s" % (
-                    self.sip,
-                    self.sport,
-                    self.dip,
-                    self.dport)
-
+        return "%s:%s<->%s:%s" % ( self.sip, self.sport,
+                    self.dip, self.dport)
 
 
 class SubConnectionStatistic:
 
     def __init__(self):
         self.packets_processed = 0
-
 
 
 class SubConnection(TcpConn):
@@ -982,7 +994,7 @@ class SubConnection(TcpConn):
                     self.dport)
 
         
-    def update(self, packet):
+    def update(self, ts, packet):
         self.statistic.packets_processed += 1
 
 
@@ -1029,7 +1041,7 @@ class Connection(TcpConn):
         self.statistic.packets_processed += 1
 
 
-    def update(self, packet):
+    def update(self, ts, packet):
 
         self.update_statistic(packet)
 
@@ -1037,19 +1049,19 @@ class Connection(TcpConn):
 
         if self.sc1 == None:
             self.sc1 = sc
-            self.sc1.update(packet)
+            self.sc1.update(ts, packet)
             return
 
         if self.sc1 == sc:
-            self.sc1.update(packet)
+            self.sc1.update(ts, packet)
             return
 
         if self.sc2 == sc:
-            self.sc2.update(packet)
+            self.sc2.update(ts, packet)
             return
 
         self.sc2 = sc
-        sc.update(packet)
+        sc.update(ts, packet)
 
 
     def human_id(self):
@@ -1072,19 +1084,43 @@ class ConnectionContainerStatistic:
         self.packets_tl_unknown  = 0
 
 
-
 class ConnectionContaier:
 
     def __init__(self):
         self.container = dict()
         self.statistic = ConnectionContainerStatistic()
+        self.capture_time_start = None
+        self.capture_time_end = None
+
 
 
     def __len__(self):
         return len(self.container)
 
 
-    def update(self, packet):
+    def is_packet_connection(self, packet, uid):
+
+        if type(packet) != dpkt.ip.IP and type(packet) != dpkt.ip6.IP6:
+            return False
+
+        if type(packet.data) != dpkt.tcp.TCP:
+            return False
+
+        c = Connection(packet)
+
+        if not c.uid in self.container.keys():
+            raise InternalException("packet MUST be in preprocesses container")
+        else:
+            cc = self.container[c.uid]
+
+        if cc.connection_id == uid:
+            return True
+        else:
+            return False
+
+
+
+    def update(self, ts, packet):
 
         if type(packet) != dpkt.ip.IP and type(packet) != dpkt.ip6.IP6:
             return
@@ -1095,11 +1131,11 @@ class ConnectionContaier:
         c = Connection(packet)
 
         if not c.uid in self.container.keys():
-            c.update(packet)
+            c.update(ts, packet)
             self.container[c.uid] = c
         else:
             cc = self.container[c.uid]
-            cc.update(packet)
+            cc.update(ts, packet)
 
 
 class ConnectionAnalyzeMod(Mod):
@@ -1136,7 +1172,7 @@ class ConnectionAnalyzeMod(Mod):
         sys.stdout.write("digraph G {\nranksep=3.0;\nnodesep=2.0;\n")
         # sys.stdout.write("\nsize=\"7.75,10.25\";\n orientation=\"landscape\"")
 
-        label = "\"%d\" [ label=\"%s\",style=filled,color=none,fontsize=6,fontname=Helvetica];  \n"
+        label = "\"%d\" [ label=\"%s\",style=filled,color=none,fontsize=6,fontname=Helvetica];\n"
 
         sys.stdout.write(label % (1, str("Connections")))
 
@@ -1171,6 +1207,7 @@ class ConnectionAnalyzeMod(Mod):
                 sys.stdout.write(label % ((abs(hash(connection.iuid))), (abs(hash(connection.sc1.iuid) + 1))))
 
         sys.stdout.write("}\n")
+        sys.stderr.write("# Tip: generate graphviz file with: \"twopi -onetwork.png -Tpng network.data\"\n")
 
 
 class StatisticMod(Mod):
@@ -1184,21 +1221,11 @@ class StatisticMod(Mod):
 
         parser = optparse.OptionParser()
         parser.usage = "xx"
-        parser.add_option(
-                "-v",
-                "--verbose",
-                dest="verbose",
-                default=False,
-                action="store_true",
-                help="show verbose")
+        parser.add_option( "-v", "--verbose", dest="verbose", default=False,
+                action="store_true", help="show verbose")
 
-        parser.add_option(
-                "-p",
-                "--port",
-                dest="portnum",
-                default=80,
-                type="int",
-                help="port number to run on")
+        parser.add_option( "-p", "--port", dest="portnum", default=80,
+                type="int", help="port number to run on")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         
@@ -1337,7 +1364,8 @@ class Captcp:
             "payloadtimeport": "PayloadTimePort",
             "template":        "Template",
             "statistic":       "StatisticMod",
-            "connection":       "ConnectionAnalyzeMod"
+            "connection":      "ConnectionAnalyzeMod",
+            "sequencegraph":   "SequenceGraphMod"
             }
 
     def __init__(self):
@@ -1382,7 +1410,9 @@ class Captcp:
         if not classtring:
             return 1
 
-        if classtring == "StatisticMod" or classtring == "ConnectionAnalyzeMod":
+        if (classtring == "StatisticMod" or
+                classtring == "ConnectionAnalyzeMod" or
+                classtring == "SequenceGraphMod"):
 
             classinstance = globals()[classtring]()
             classinstance.register_captcp(self)
@@ -1391,7 +1421,7 @@ class Captcp:
 
             # parse the whole pcap file first
             pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
-            pcap_parser.register_callback(classinstance._pre_process_packet)
+            pcap_parser.register_callback(classinstance.internal_pre_process_packet)
             pcap_parser.run()
             del pcap_parser
 
