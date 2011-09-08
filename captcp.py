@@ -149,10 +149,6 @@ class PcapParser:
         for ts, pkt in self.pc:
             packet = self.decode(pkt)
 
-            if type(packet.data) != dpkt.ip.IP:
-                #sys.stderr.write("not ipv4 or ipv6 - ignoring\n")
-                continue
-
             self.callback(ts, packet.data)
 
 
@@ -780,7 +776,51 @@ class Mod:
         self.captcp = captcp
 
     def __init__(self):
-        pass
+        self.cc = ConnectionContaier()
+
+    def _pre_pre_process_packet(self, ts, packet):
+
+        if self.cc.statistic.packets_processed == 728059:
+            print(type(packet))
+            print(type(packet.data))
+
+
+        self.cc.statistic.packets_processed += 1
+
+        if type(packet) == dpkt.ip.IP:
+            self.cc.statistic.packets_nl_ipv4 += 1
+        elif type(packet) == dpkt.ip6.IP6:
+            self.cc.statistic.packets_nl_ipv6 += 1
+        elif type(packet) == dpkt.arp.ARP:
+            self.cc.statistic.packets_nl_arp += 1
+            return
+        else:
+            self.cc.statistic.packets_nl_unknown += 1
+            return
+
+        if type(packet.data) == dpkt.tcp.TCP:
+            self.cc.statistic.packets_tl_tcp += 1
+        elif type(packet.data) == dpkt.udp.UDP:
+            self.cc.statistic.packets_tl_udp += 1
+            return
+        elif type(packet.data) == dpkt.icmp.ICMP:
+            self.cc.statistic.packets_tl_icmp += 1
+            return
+        elif type(packet.data) == dpkt.icmp6.ICMP6:
+            self.cc.statistic.packets_tl_icmp6 += 1
+            return
+        else:
+            self.cc.statistic.packets_tl_unknown += 1
+            return
+
+        tcp = packet.data
+
+
+
+        
+        time = float(ts)
+
+
 
     def pre_initialize(self):
         """ called at the very beginning of module lifetime"""
@@ -801,6 +841,156 @@ class Mod:
     def process_final(self):
         """ called at the end of packet processing"""
         pass
+
+
+
+class ConnectionStatistic: pass
+class SubConnectionStatistic: pass
+
+
+
+class TcpConn:
+
+    def __init__(self, packet):
+
+        self.ipversion = packet.ipversion
+        self.sip       = packet.sip
+        self.dip       = packet.dip
+        self.sport     = packet.sport
+        self.dport     = packet.dport
+
+        self.uid = "%s:%s:%s" % (
+                str(self.ipversion),
+                str(long(self.sip) + long(self.dip)),
+                str(long(self.sport) + long(self.dport)))
+
+        self.iuid = int((long(self.sip) + \
+                long(self.dip)) ^ (long(self.sport) + \
+                long(self.dport)))
+
+    def __hash__(self):
+        return self.iuid
+
+    def __repr__(self):
+        return "%s:%s->%s:%s (%s)" % (
+                    self.sip,
+                    self.sport,
+                    self.dip,
+                    self.dport,
+                    self.ipversion)
+
+
+class SubConnection(TcpConn):
+
+    def __init__(self, packet):
+        TcpConn.__init__(self, packet)
+
+
+    def __cmp__(self, other):
+
+        if (self.dip == other.dip and
+            self.sip == other.sip and
+            self.dport == other.dport and
+            self.sport == other.sport and
+            self.ipversion == other.ipversion):
+                return True
+        else:
+            return False
+        
+    def update(self, packet):
+        print("update subconnection")
+
+
+
+class Connection(TcpConn):
+
+    def __init__(self, packet):
+        TcpConn.__init__(self, packet)
+        self.sub_connection = list()
+
+    def __cmp__(self, other):
+        if self.ipversion != other.ipversion:
+            return False
+
+        if (self.dip == other.dip and
+            self.sip == other.sip and
+            self.dport == other.dport and
+            self.sport == other.sport):
+                return True
+        elif (self.dip == other.sip and
+             self.sip == other.dip and
+             self.dport == other.sport and
+             self.sport == other.dport):
+                return True
+        else:
+            return False
+
+
+    def update(self, packet):
+
+        sc = SubConnection(packet)
+
+        if len(self.sub_connection) <= 0:
+            self.sub_connection.append(sc)
+            sc.update(packet)
+            return
+
+        for i in self.sub_connection:
+            if i != sc:
+                i.update(packet)
+                return
+
+        self.sub_connection.append(sc)
+        sc.update(packet)
+
+
+        assert(len(self.sub_connection) <= 2)
+
+
+    def human_id(self):
+        return "1"
+
+class ConnectionContainerStatistic:
+
+    def __init__(self):
+        self.packets_processed = 0
+
+        self.packets_nl_arp  = 0
+        self.packets_nl_ipv4 = 0
+        self.packets_nl_ipv6 = 0
+        self.packets_nl_unknown = 0
+
+        self.packets_tl_tcp  = 0
+        self.packets_tl_udp  = 0
+        self.packets_tl_icmp  = 0
+        self.packets_tl_icmp6  = 0
+        self.packets_tl_unknown  = 0
+
+
+
+class ConnectionContaier:
+
+    def __init__(self):
+        self.container = dict()
+        self.statistic = ConnectionContainerStatistic()
+
+
+    def __len__(self):
+        return len(self.container)
+
+
+    def update(self, packet):
+
+        c = Connection(packet)
+
+        if not c.uid in self.container.keys():
+            self.container[c.uid] = c
+        else:
+            c = self.container[c.uid]
+
+        c.update(packet)
+
+        
 
 
 class StatisticMod(Mod):
@@ -846,6 +1036,50 @@ class StatisticMod(Mod):
             self.captcp.pcap_filter = " ".join(args[3:])
             self.logger.info("pcap filter: \"" + self.captcp.pcap_filter + "\"")
 
+
+
+    def pre_process_packet(self, ts, packet):
+        pass
+
+    def pre_process_final(self):
+        pass
+
+    def process_packet(self, ts, packet):
+        pass
+
+    def process_final(self):
+
+        one_percent = float(self.cc.statistic.packets_processed) / 100
+
+
+        prct_nl_arp     = float(self.cc.statistic.packets_nl_arp) / one_percent
+        prct_nl_ip      = float(self.cc.statistic.packets_nl_ipv4) / one_percent
+        prct_nl_ipv6    = float(self.cc.statistic.packets_nl_ipv6) / one_percent
+        prct_nl_unknown = float(self.cc.statistic.packets_nl_unknown) / one_percent
+
+        prct_tl_tcp     = float(self.cc.statistic.packets_tl_tcp) / one_percent
+        prct_tl_udp     = float(self.cc.statistic.packets_tl_udp) / one_percent
+        prct_tl_icmp    = float(self.cc.statistic.packets_tl_icmp) / one_percent
+        prct_tl_icmp6   = float(self.cc.statistic.packets_tl_icmp6) / one_percent
+        prct_tl_unknown = float(self.cc.statistic.packets_tl_unknown) / one_percent
+
+
+        sys.stdout.write("General:\n")
+
+        sys.stdout.write("\tPackets processed: %5d (%7.3f%%)\n" % (self.cc.statistic.packets_processed, float(100)))
+
+        sys.stdout.write("\tNetwork Layer\n")
+        sys.stdout.write("\t   ARP:       %8d (%7.3f%%)\n" % (self.cc.statistic.packets_nl_arp, prct_nl_arp))
+        sys.stdout.write("\t   IPv4:      %8d (%7.3f%%)\n" % (self.cc.statistic.packets_nl_ipv4, prct_nl_ip))
+        sys.stdout.write("\t   IPv6:      %8d (%7.3f%%)\n" % (self.cc.statistic.packets_nl_ipv6, prct_nl_ipv6))
+        sys.stdout.write("\t   Unknown:   %8d (%7.3f%%)\n" % (self.cc.statistic.packets_nl_unknown, prct_nl_unknown))
+
+        sys.stdout.write("\tTransport Layer\n")
+        sys.stdout.write("\t   TCP:       %8d (%7.3f%%)\n" % (self.cc.statistic.packets_tl_tcp, prct_tl_tcp))
+        sys.stdout.write("\t   UDP:       %8d (%7.3f%%)\n" % (self.cc.statistic.packets_tl_udp, prct_tl_udp))
+        sys.stdout.write("\t   ICMP:      %8d (%7.3f%%)\n" % (self.cc.statistic.packets_tl_icmp, prct_tl_icmp))
+        sys.stdout.write("\t   ICMPv6:    %8d (%7.3f%%)\n" % (self.cc.statistic.packets_tl_icmp6, prct_tl_icmp6))
+        sys.stdout.write("\t   Unknown:   %8d (%7.3f%%)\n" % (self.cc.statistic.packets_tl_unknown, prct_tl_unknown))
 
 
 class Captcp:
@@ -907,6 +1141,11 @@ class Captcp:
 
             classinstance.pre_initialize()
 
+            # parse the whole pcap file first
+            pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
+            pcap_parser.register_callback(classinstance._pre_pre_process_packet)
+            pcap_parser.run()
+            del pcap_parser
 
             # parse the whole pcap file first
             pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
