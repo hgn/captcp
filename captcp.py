@@ -27,6 +27,7 @@ try:
 except ImportError:
     cairo = None
 
+pp = pprint.PrettyPrinter(indent=4)
 
 # required debian packages:
 #   python-dpkt
@@ -117,9 +118,7 @@ class SequenceContainer:
         # ok, the new packet is within the packets
         while True:
             try:
-
                 (i, old) = it.next()
-
                 # match the segment exactply?
                 if (old.left_edge - 1 == new.right_edge and
                         self.sequnce_list[i - 1].right_edge + 1 == new.left_edge):
@@ -145,6 +144,79 @@ class SequenceContainer:
                         return
             except:
                 break
+
+
+
+class RainbowColor:
+
+    ANSI    = 0
+    HEX     = 1
+    DISABLE = 2
+
+
+    def __init__(self, mode=ANSI):
+        if mode == RainbowColor.ANSI:
+            self.init_color_ansi()
+        elif mode == RainbowColor.HEX:
+            self.init_color_hex()
+        elif mode == RainbowColor.DISABLE:
+            self.init_color_none()
+        else:
+            raise Exception()
+
+        # this color should not be printed
+        self.skip_list = ['red', 'end']
+
+        
+    def __getitem__(self, key):
+        return self.color_palette[key]
+
+
+    def init_color_none(self):
+        self.color_palette = {'red':'', 'green':'', 'end':'' }
+
+
+    def init_color_hex(self):
+        self.color_palette = {'red':'#ff0000', 'green':'#00ff00', 'end':''}
+
+    def init_color_ansi(self):
+        self.color_palette = { 'yellow':'\033[0;33;40m', 'foo':'\033[93m', 'red-white':'\033[0;31;47m',
+                 'black-white':'\033[0;30;47m', 
+                'red':'\033[91m', 'green':'\033[92m', 'blue':'\033[94m', 'end':'\033[0m'}
+
+
+    def next(self):
+        if self.color_palette_pos >= len(self.color_palette_flat):
+            raise StopIteration
+
+        retdata = self.color_palette_flat[self.color_palette_pos]
+        self.color_palette_pos  += 1
+
+        return retdata
+
+
+    def infinite_next(self):
+
+        while True:
+            found = True
+            retdata = self.color_palette_flat[self.color_palette_pos % \
+                    (len(self.color_palette_flat))]
+            self.color_palette_pos  += 1
+
+            for i in self.skip_list:
+                if i in self.color_palette and self.color_palette[i] == retdata:
+                    found = False
+                    break
+
+            if found:
+                return retdata
+
+
+    def __iter__(self):
+        self.color_palette_pos = 0
+        self.color_palette_flat = self.color_palette.values()
+        return self
+
 
 
 class Colors:
@@ -1349,6 +1421,7 @@ class StatisticMod(Mod):
 
 
     def pre_initialize(self):
+        self.color = RainbowColor(mode=RainbowColor.ANSI)
         self.logger = logging.getLogger()
         self.parse_local_options()
 
@@ -1419,13 +1492,13 @@ class StatisticMod(Mod):
 
 
     def print_two_column_sc_statistic(self, sc1, sc2):
-        sys.stdout.write("\n\t%s\t\t\t%s\n" % (sc1, sc2))
-        sys.stdout.write("\t\tpackets received: %d\t\tpackets received: %d\n" % (sc1.statistic.packets_processed, sc2.statistic.packets_processed))
+        sys.stdout.write("\n\tFlow A                          Flow B\n")
+        sys.stdout.write("\tPackets received: %-10d    Packets received: %d\n" % (sc1.statistic.packets_processed, sc2.statistic.packets_processed))
 
     def print_one_column_sc_statistic(self, sc):
 
-        sys.stdout.write("\n\t%s\n" % sc1)
-        sys.stdout.write("\t\tpackets received: %d\n" % (sc.statistic.packets_processed))
+        sys.stdout.write("\n\tFlow A\n")
+        sys.stdout.write("\tPackets received: %d\n" % (sc.statistic.packets_processed))
 
 
     def process_final(self):
@@ -1463,29 +1536,35 @@ class StatisticMod(Mod):
 
         sys.stdout.write("\nConnections:\n")
 
-
+        # first we sort in an separate dict
+        d = dict()
         for key in self.cc.container.keys():
-
             connection = self.cc.container[key]
+            d[connection.connection_id] = connection
 
-            sys.stdout.write("%d -- %s\n" % (connection.connection_id, connection))
+        for key in sorted(d.keys()):
+
+            connection = d[key]
+
+            sys.stdout.write("\n")
+
+            sys.stdout.write("%s %d %s %s%s\n\n" % (self.color["red"], connection.connection_id,
+                self.color["yellow"], connection, self.color["end"]))
 
             # statistic
-            sys.stdout.write("\tpackets received: %d\n" % (connection.statistic.packets_processed))
+            sys.stdout.write("\tPackets received: %d\n" % (connection.statistic.packets_processed))
 
-            sys.stdout.write("\n\tSub Connections:\n")
+            sys.stdout.write("\n")
 
             if connection.sc1 and connection.sc2:
-                sys.stdout.write("\n\t   Subconnection A: %s\n" % connection.sc1)
-                sys.stdout.write("\n\t   Subconnection B: %s\n" % connection.sc2)
+                sys.stdout.write("\tFlow A: %s\n" % connection.sc1)
+                sys.stdout.write("\tFlow B: %s\n" % connection.sc2)
                 self.print_two_column_sc_statistic(connection.sc1, connection.sc2)
             elif connection.sc1:
-                sys.stdout.write("\n\t   Subconnection A: %s\n" % connection.sc1)
+                sys.stdout.write("\tFlow A: %s\n" % connection.sc1)
                 self.print_one_column_sc_statistic(connection.sc1)
             else:
                 raise InternalException("sc1 should be the only one here")
-                sys.stdout.write("\n\t   Subconnection B: %s\n" % connection.sc1)
-                self.print_one_column_sc_statistic(connection.sc2)
 
 
             sys.stdout.write("\n")
