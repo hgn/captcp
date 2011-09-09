@@ -807,6 +807,7 @@ class SequenceGraphMod(Mod):
     class Sequence: pass
 
     def pre_initialize(self):
+        self.ids = None
 
         if cairo == None:
             raise ImportError("Python Cairo module not available, exiting")
@@ -818,7 +819,7 @@ class SequenceGraphMod(Mod):
         self.tracing_start = None
         self.tracing_end = None
 
-        self.ids = None
+        self.process_time_start = self.process_time_end = None
 
     def setup_cairo(self):
 
@@ -848,9 +849,39 @@ class SequenceGraphMod(Mod):
 
     def pre_process_final(self):
 
-        time_diff = self.cc.capture_time_end - self.cc.capture_time_start
-        time_diff = float(time_diff.seconds) + time_diff.microseconds / 1E6 + time_diff.days * 86400
-        self.scaling_factor = time_diff / (self.height + 2 * self.margin_top_bottom)
+        if self.ids:
+            time_start = time_end = None
+            for idss in self.ids:
+                conn = self.cc.connection_by_uid(int(idss))
+                if conn:
+                    if time_start == None:
+                        time_start = conn.capture_time_start
+
+                    if time_end == None:
+                        time_end = conn.capture_time_end
+
+                    if time_start > conn.capture_time_start:
+                        time_start = conn.capture_time_start
+
+                    if time_end < conn.capture_time_end:
+                        time_end = conn.capture_time_end
+
+            time_diff = time_end - time_start
+            time_diff = float(time_diff.seconds) + time_diff.microseconds / 1E6 + time_diff.days * 86400
+            time_diff += self.delay
+            self.scaling_factor = time_diff / (self.height - 2 * self.margin_top_bottom)
+
+            print(self.scaling_factor)
+
+            self.process_time_start = time_start
+            self.process_time_end   = time_end
+
+        else:
+
+            time_diff = self.cc.capture_time_end - self.cc.capture_time_start
+            time_diff = float(time_diff.seconds) + time_diff.microseconds / 1E6 + time_diff.days * 86400
+            time_diff += self.delay
+            self.scaling_factor = time_diff / (self.height - 2 * self.margin_top_bottom)
 
 
     def parse_local_options(self):
@@ -868,8 +899,8 @@ class SequenceGraphMod(Mod):
         parser.add_option( "-s", "--size", dest="size", default="600x1200",
                 type="string", help="specify the size of the image")
 
-        parser.add_option( "-r", "--delay", dest="delay", default=10,
-                type="int", help="specify the average delay per connection (default 10 ms)")
+        parser.add_option( "-r", "--rtt", dest="rtt", default=0.025,
+                type="float", help="specify the average rtt per connection (default 0.025s)")
 
         parser.add_option( "-f", "--filename", dest="filename", default="sequence.pdf",
                 type="string", help="specify the name of the generated PDF file (default: sequence.pdf)")
@@ -893,6 +924,8 @@ class SequenceGraphMod(Mod):
         (self.width, self.height) = self.opts.size.split('x')
         (self.width, self.height) = (int(self.width), int(self.height))
 
+        self.delay = self.opts.rtt / 2.0
+
         if self.width <= 0 or self.height <= 0:
             raise ArgumentErrorException("size cannot smaller then 0px")
 
@@ -903,10 +936,19 @@ class SequenceGraphMod(Mod):
 
     def local_generated_packet(self, packet):
 
-        if Converter.dpkt_addr_to_string(packet.src) == self.opts.localaddr:
-            return True
+        if type(packet) == dpkt.ip.IP:
+            if Converter.dpkt_addr_to_string(packet.src) == self.opts.localaddr:
+                return True
+            else:
+                return False
+        elif type(packet) == dpkt.ip6.IP6:
+            ipv6str = socket.inet_ntop(socket.AF_INET6, packet.src)
+            if ipv6str == self.opts.localaddr:
+                return True
+            else:
+                return False
         else:
-            return False
+            raise InternalException()
 
 
     def ts_tofloat(self, ts):
@@ -915,7 +957,7 @@ class SequenceGraphMod(Mod):
 
     def draw_sequence(self, sequence, text):
 
-        print("xs %d ys %d xe %d ye %d" % (sequence.xs, sequence.ys, sequence.xe, sequence.ye))
+        #print("xs %d ys %d xe %d ye %d" % (sequence.xs, sequence.ys, sequence.xe, sequence.ye))
 
         self.cr.set_source_rgb(0.0, 0.0, 0.0) # Solid color
         self.cr.set_line_width(0.5)
@@ -934,7 +976,24 @@ class SequenceGraphMod(Mod):
 
     def process_packet(self, ts, packet):
 
+        if type(packet) != dpkt.ip.IP and type(packet) != dpkt.ip6.IP6:
+            return
+
+        if type(packet.data) != dpkt.tcp.TCP:
+            return
+
         timestamp = datetime.datetime.fromtimestamp(ts)
+
+        if self.process_time_start and timestamp < self.process_time_start:
+            return
+
+        if self.process_time_end and timestamp > self.process_time_end:
+            return
+
+        if self.process_time_start:
+            ts_diff = timestamp - self.process_time_start
+        else:
+            ts_diff = timestamp - self.cc.capture_time_start
 
         draw_packet = False
 
@@ -949,11 +1008,7 @@ class SequenceGraphMod(Mod):
         if not draw_packet:
             return
 
-        print("%s" % timestamp)
-
         s = SequenceGraphMod.Sequence
-
-        ts_diff = timestamp - self.cc.capture_time_start
 
         if self.local_generated_packet(packet):
 
@@ -961,24 +1016,22 @@ class SequenceGraphMod(Mod):
             s.xe = self.width - self.margin_left_right
 
             s.ys = self.ts_tofloat(ts_diff) / self.scaling_factor
-            s.ye = self.ts_tofloat(ts_diff) / self.scaling_factor
+            s.ye = (self.ts_tofloat(ts_diff) + self.delay) / self.scaling_factor
 
         else:
 
             s.xs = self.width - self.margin_left_right
             s.xe = self.margin_left_right
 
-            s.ys = self.ts_tofloat(ts_diff) / self.scaling_factor
+            s.ys = (self.ts_tofloat(ts_diff) - self.delay) / self.scaling_factor
             s.ye = self.ts_tofloat(ts_diff) / self.scaling_factor
 
         s.ys += self.margin_top_bottom
         s.ye += self.margin_top_bottom
 
-        print ("XXX: %f" % (s.ys ))
+        print(timestamp)
 
         self.draw_sequence(s, "packet")
-
-
 
     def process_final(self):
         self.cr.show_page()
@@ -1078,6 +1131,9 @@ class Connection(TcpConn):
         Connection.static_connection_id += 1
         self.statistic = ConnectionStatistic()
 
+        self.capture_time_start = None
+        self.capture_time_end = None
+
     def __del__(self):
         Connection.static_connection_id -= 1
 
@@ -1108,6 +1164,11 @@ class Connection(TcpConn):
         self.update_statistic(packet)
 
         sc = SubConnection(packet)
+
+        if self.capture_time_start == None:
+            self.capture_time_start = datetime.datetime.fromtimestamp(ts)
+
+        self.capture_time_end = datetime.datetime.fromtimestamp(ts)
 
         if self.sc1 == None:
             self.sc1 = sc
@@ -1157,6 +1218,14 @@ class ConnectionContainer:
 
     def __len__(self):
         return len(self.container)
+
+    def connection_by_uid(self, uid):
+
+        for i in self.container.keys():
+            if self.container[i].connection_id == uid:
+                return self.container[i]
+
+        return None
 
 
     def is_packet_connection(self, packet, uid):
