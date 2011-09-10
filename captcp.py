@@ -163,7 +163,6 @@ class RainbowColor:
     HEX     = 1
     DISABLE = 2
 
-
     def __init__(self, mode=ANSI):
         if mode == RainbowColor.ANSI:
             self.init_color_ansi()
@@ -220,7 +219,6 @@ class RainbowColor:
         self.color_palette_pos = 0
         self.color_palette_flat = self.color_palette.values()
         return self
-
 
 
 class Colors:
@@ -361,21 +359,46 @@ class PacketInfo:
     def is_rst_flag(self):
         return self.tcp.flags & TH_RST
 
+    def is_ece_flag(self):
+        return self.tcp.flags & TH_ECE
+
+    def is_cwr_flag(self):
+        return self.tcp.flags & TH_CWR
+
     def create_flag_brakets(self):
         s = "["
-        if self.is_syn_flag():
-            s += "S"
-        if self.is_ack_flag():
-            s += "A"
+        if self.is_cwr_flag():
+            s += "C"
+        else:
+            s += "."
+        if self.is_ece_flag():
+            s += "E"
+        else:
+            s += "."
         if self.is_urg_flag():
             s += "U"
+        else:
+            s += "."
+        if self.is_ack_flag():
+            s += "A"
+        else:
+            s += "."
         if self.is_psh_flag():
             s += "P"
-        if self.is_fin_flag():
-            s += "F"
+        else:
+            s += "."
         if self.is_rst_flag():
             s += "R"
-
+        else:
+            s += "."
+        if self.is_syn_flag():
+            s += "S"
+        else:
+            s += "."
+        if self.is_fin_flag():
+            s += "F"
+        else:
+            s += "."
         s += "]"
 
         return s
