@@ -57,6 +57,8 @@ TH_PSH = dpkt.tcp.TH_PUSH
 TH_RST = dpkt.tcp.TH_RST
 TH_SYN = dpkt.tcp.TH_SYN
 TH_FIN = dpkt.tcp.TH_FIN
+TH_ECE = dpkt.tcp.TH_ECE
+TH_CWR = dpkt.tcp.TH_CWR
 
 # Protocols
 TCP = dpkt.tcp.TCP
