@@ -45,9 +45,10 @@ __license__  = "GPLv3"
 
 # custom exceptions
 class ArgumentErrorException(Exception): pass
+class InternalSequenceException(Exception): pass
 class InternalException(Exception): pass
 class SequenceContainerException(InternalException): pass
-class InternalSequenceException(Exception): pass
+class NotImplementedException(InternalException): pass
 
 
 # TCP flag constants
@@ -59,6 +60,13 @@ TH_SYN = dpkt.tcp.TH_SYN
 TH_FIN = dpkt.tcp.TH_FIN
 TH_ECE = dpkt.tcp.TH_ECE
 TH_CWR = dpkt.tcp.TH_CWR
+# "Robust Explicit Congestion Notification (ECN)
+# Signaling with Nonces" (RFC 3540) specifies an
+# additional ECN Flag: NS which is out of the 8 bit
+# flags section, shared with header length field. I
+# emailed Jon Oberheide to get some valuable solutions.
+#
+# See http://tools.ietf.org/html/rfc3540#section-9
 
 # Protocols
 TCP = dpkt.tcp.TCP
