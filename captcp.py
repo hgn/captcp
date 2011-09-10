@@ -167,14 +167,11 @@ class RainbowColor:
         # this color should not be printed
         self.skip_list = ['red', 'end']
 
-        
     def __getitem__(self, key):
         return self.color_palette[key]
 
-
     def init_color_none(self):
         self.color_palette = {'red':'', 'green':'', 'end':'' }
-
 
     def init_color_hex(self):
         self.color_palette = {'red':'#ff0000', 'green':'#00ff00', 'end':''}
@@ -184,7 +181,6 @@ class RainbowColor:
                  'black-white':'\033[0;30;47m', 
                 'red':'\033[91m', 'green':'\033[92m', 'blue':'\033[94m', 'end':'\033[0m'}
 
-
     def next(self):
         if self.color_palette_pos >= len(self.color_palette_flat):
             raise StopIteration
@@ -193,7 +189,6 @@ class RainbowColor:
         self.color_palette_pos  += 1
 
         return retdata
-
 
     def infinite_next(self):
 
@@ -210,7 +205,6 @@ class RainbowColor:
 
             if found:
                 return retdata
-
 
     def __iter__(self):
         self.color_palette_pos = 0
@@ -310,8 +304,22 @@ class PcapParser:
 
         for ts, pkt in self.pc:
             packet = self.decode(pkt)
+            dt = datetime.datetime.fromtimestamp(ts)
+            self.callback(dt, packet.data)
 
-            self.callback(ts, packet.data)
+
+class PacketInfo:
+
+    def __init__(self, packet):
+        ip = packet
+        tcp = packet.data
+
+        if type(tcp) != TCP:
+            return
+ 
+        self.seq  = int(tcp.seq)
+        self.ack  = int(tcp.ack)
+
 
 
 class Template:
@@ -425,38 +433,18 @@ class Geoip:
     def parse_local_options(self):
 
         parser = optparse.OptionParser()
-        parser.usage = "xx"
-        parser.add_option(
-                "-v",
-                "--verbose",
-                dest="verbose",
-                default=False,
-                action="store_true",
-                help="show verbose")
+        parser.usage = "geoip"
+        parser.add_option( "-v", "--verbose", dest="verbose", default=False,
+                action="store_true", help="show verbose")
 
-        parser.add_option(
-                "-p",
-                "--port",
-                dest="portnum",
-                default=80,
-                type="int",
-                help="port number to run on")
+        parser.add_option( "-p", "--port", dest="portnum", default=80,
+                type="int", help="port number to run on")
 
-        parser.add_option(
-                "-m",
-                "--match",
-                dest="match",
-                default=None,
-                type="string",
-                help="if statment is true the string is color in red")
+        parser.add_option( "-m", "--match", dest="match", default=None,
+                type="string", help="if statment is true the string is color in red")
 
-        parser.add_option(
-                "-s",
-                "--suppress-other",
-                dest="suppress",
-                default=False,
-                action="store_true",
-                help="don't display other packets")
+        parser.add_option( "-s", "--suppress-other", dest="suppress", default=False,
+                action="store_true", help="don't display other packets")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         
@@ -500,46 +488,21 @@ class PayloadTimePort:
 
     def parse_local_options(self):
         parser = optparse.OptionParser()
-        parser.usage = "xx"
-        parser.add_option(
-                "-v",
-                "--verbose",
-                dest="verbose",
-                default=False,
-                action="store_true",
-                help="show verbose")
+        parser.usage = "payloadtimeport"
+        parser.add_option( "-v", "--verbose", dest="verbose", default=False,
+                action="store_true", help="show verbose")
 
-        parser.add_option(
-                "-f",
-                "--format",
-                dest="format",
-                default="3ddata",
-                type="string",
-                help="the data format for gnuplot")
+        parser.add_option( "-f", "--format", dest="format", default="3ddata",
+                type="string", help="the data format for gnuplot")
 
-        parser.add_option(
-                "-p",
-                "--port",
-                dest="port",
-                default="sport",
-                type="string",
-                help="sport or dport")
+        parser.add_option( "-p", "--port", dest="port", default="sport",
+                type="string", help="sport or dport")
 
-        parser.add_option(
-                "-s",
-                "--sampling",
-                dest="sampling",
-                default=1,
-                type="int",
-                help="sampling rate (default: 5 seconds)")
+        parser.add_option( "-s", "--sampling", dest="sampling", default=1,
+                type="int", help="sampling rate (default: 5 seconds)")
 
-        parser.add_option(
-                "-o",
-                "--outfile",
-                dest="outfile",
-                default="payload-time-port.data",
-                type="string",
-                help="name of the output file (default: payload-time-port.dat)")
+        parser.add_option( "-o", "--outfile", dest="outfile", default="payload-time-port.data",
+                type="string", help="name of the output file (default: payload-time-port.dat)")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         
@@ -593,7 +556,6 @@ class PayloadTimePort:
         self.data[self.next_sampling_boundary - self.time_offset][dport]["sum"] += len(packet)
         self.data[self.next_sampling_boundary - self.time_offset][dport]["cnt"] += 1
  
-
 
     def print_data(self):
         for timesortedtupel in sorted(self.data.iteritems(), key = lambda (k,v): float(k)):
@@ -878,6 +840,10 @@ class SequenceGraphMod(Mod):
     
     class Sequence: pass
 
+    # more then PACKET_THRESH_FEW packets and the axis labeling
+    # is reduced
+    PACKET_LABELING_THRESH = 100
+
     def pre_initialize(self):
         self.ids = None
 
@@ -893,7 +859,15 @@ class SequenceGraphMod(Mod):
 
         self.process_time_start = self.process_time_end = None
 
+        self.packets_to_draw = 0
+
+        self.packet_timestamp_punchcard = dict()
+        self.packet_timestamp_punchcard[True]  = []
+        self.packet_timestamp_punchcard[False] = []
+
     def setup_cairo(self):
+
+        line_width = 1.6
 
         surface = cairo.PDFSurface(self.opts.filename, self.width, self.height)
         self.cr = cairo.Context(surface)
@@ -909,14 +883,32 @@ class SequenceGraphMod(Mod):
         self.cr.move_to(self.margin_left_right, self.margin_top_bottom)
         self.cr.line_to (self.margin_left_right, self.height - self.margin_top_bottom)
         self.cr.set_source_rgb(0.0, 0.0, 0.0)
-        self.cr.set_line_width(1.25)
+        self.cr.set_line_width(line_width)
         self.cr.stroke()
+
+        text = "LOCAL"
+        self.cr.set_font_size(12)
+        x_bearing, y_bearing, width, height = self.cr.text_extents(text)[:4]
+        x_off = self.margin_left_right - (width / 2)
+        y_off = self.margin_top_bottom - (height) - 10
+        self.cr.move_to(x_off, y_off)
+        self.cr.show_text(text)
+        self.cr.stroke()
+
 
         # right
         self.cr.move_to(self.width - self.margin_left_right, self.margin_top_bottom)
         self.cr.line_to (self.width - self.margin_left_right, self.height - self.margin_top_bottom)
-        self.cr.set_source_rgb(0.0, 0.0, 0.0)
-        self.cr.set_line_width(1.25)
+        self.cr.set_line_width(line_width)
+        self.cr.stroke()
+
+        text = "Remote"
+        self.cr.set_font_size(12)
+        x_bearing, y_bearing, width, height = self.cr.text_extents(text)[:4]
+        x_off = self.width - self.margin_left_right - (width / 2)
+        y_off = self.margin_top_bottom - (height) - 10
+        self.cr.move_to(x_off, y_off)
+        self.cr.show_text(text)
         self.cr.stroke()
 
     def pre_process_final(self):
@@ -943,8 +935,6 @@ class SequenceGraphMod(Mod):
             time_diff += self.delay
             self.scaling_factor = time_diff / (self.height - 2 * self.margin_top_bottom)
 
-            print(self.scaling_factor)
-
             self.process_time_start = time_start
             self.process_time_end   = time_end
 
@@ -954,6 +944,8 @@ class SequenceGraphMod(Mod):
             time_diff = float(time_diff.seconds) + time_diff.microseconds / 1E6 + time_diff.days * 86400
             time_diff += self.delay
             self.scaling_factor = time_diff / (self.height - 2 * self.margin_top_bottom)
+
+        self.logger.info("now draw %d packets" % self.packets_to_draw)
 
 
     def parse_local_options(self):
@@ -1027,83 +1019,165 @@ class SequenceGraphMod(Mod):
         return float(ts.seconds) + ts.microseconds / 1E6 + ts.days * 86400
 
 
-    def draw_sequence(self, sequence, text):
+
+    def reduced_labeling(self):
+        return self.packets_to_draw > SequenceGraphMod.PACKET_LABELING_THRESH
+
+
+
+    def draw_timestamp(self, sequence, ts, packet):
+
+        time = "%.5f" % (ts)
+
+        if sequence.local:
+            x_offset = 5
+        else:
+            x_offset = self.width - self.margin_left_right + 5
+
+        self.cr.set_font_size(6)
+
+        # draw test
+        x_bearing, y_bearing, width, height = self.cr.text_extents(time)[:4]
+        y_offset = sequence.ys + (height / 2)
+
+        # we check that there is no label somewhere in range
+        for val in self.packet_timestamp_punchcard[sequence.local]:
+            if (y_offset - height - 1) < val and (y_offset + height + 1) > val:
+                # skip drawing
+                return
+            
+        self.cr.move_to(x_offset, y_offset)
+        self.cr.show_text(time)
+        self.cr.stroke()
+
+        self.packet_timestamp_punchcard[sequence.local].append(y_offset)
+
+
+    def draw_labels(self, sequence, ts, packet):
+
+        local_margin_local = 3
+        local_margin_remote = 0
+
+        gegenkathete = sequence.ye - sequence.ys
+        ankathete = self.width - (self.margin_left_right * 2)
+        res = math.atan(gegenkathete/ankathete)
+
+        if not sequence.local:
+            res = (math.pi * 2) - res
+
+
+        pi = PacketInfo(packet)
+        text = "seq:%u ack:%u" % (pi.seq, pi.ack)
+
+        self.cr.save()
+
+        self.cr.set_font_size(9)
+        x_bearing, y_bearing, width, height = self.cr.text_extents(text)[:4]
+        x_off = (self.width / 2)  - (width / 2.0)
+
+        gk = math.atan(res) * (width / 2.0)
+
+        mid = (sequence.ys + (sequence.ye - sequence.ys) / 2.0)
+
+        if sequence.local:
+            y_off = (mid) - (height/2.0) - gk + local_margin_local
+        else:
+            y_off = (mid) + (height) - local_margin_remote
+            y_off = (mid) + (height) - local_margin_remote
+
+
+        self.cr.move_to(x_off, y_off)
+
+
+        self.cr.rotate(res)
+        self.cr.show_text(text)
+        self.cr.stroke()
+
+
+        self.cr.restore()
+
+
+    def draw_sequence(self, sequence, ts, packet):
 
         #print("xs %d ys %d xe %d ye %d" % (sequence.xs, sequence.ys, sequence.xe, sequence.ye))
 
+        self.draw_timestamp(sequence, ts, packet)
+
+        if not self.reduced_labeling():
+            self.draw_labels(sequence, ts, packet)
+
+        
         self.cr.set_source_rgb(0.0, 0.0, 0.0) # Solid color
         self.cr.set_line_width(0.5)
         self.cr.move_to(sequence.xs, sequence.ys)
         self.cr.line_to(sequence.xe, sequence.ye) # Line to (x,y)
         self.cr.stroke()
 
-        self.cr.set_font_size(12)
 
-        # draw test
-        x_bearing, y_bearing, width, height = self.cr.text_extents(text)[:4]
-        self.cr.move_to(5, height)
-        self.cr.show_text(text)
-        self.cr.stroke()
-
-
-    def process_packet(self, ts, packet):
+    def is_drawable_packet(self, ts, packet):
 
         if type(packet) != dpkt.ip.IP and type(packet) != dpkt.ip6.IP6:
-            return
+            return False
 
         if type(packet.data) != dpkt.tcp.TCP:
-            return
+            return False
 
-        timestamp = datetime.datetime.fromtimestamp(ts)
+        if self.process_time_start and ts < self.process_time_start:
+            return False
 
-        if self.process_time_start and timestamp < self.process_time_start:
-            return
-
-        if self.process_time_end and timestamp > self.process_time_end:
-            return
-
-        if self.process_time_start:
-            ts_diff = timestamp - self.process_time_start
-        else:
-            ts_diff = timestamp - self.cc.capture_time_start
-
-        draw_packet = False
+        if self.process_time_end and ts > self.process_time_end:
+            return False
 
         if self.ids:
             for idss in self.ids:
                 if self.cc.is_packet_connection(packet, int(idss)):
-                    draw_packet = True
+                    return True
         else:
-            # default: draw every packet
-            draw_packet = True
+            return True
 
-        if not draw_packet:
+        return False
+
+    def pre_process_packet(self, ts, packet):
+
+        if not self.is_drawable_packet(ts, packet):
             return
+
+        self.packets_to_draw += 1
+
+
+    def process_packet(self, ts, packet):
+
+        if not self.is_drawable_packet(ts, packet):
+            return
+
+        if self.process_time_start:
+            ts_diff = ts - self.process_time_start
+        else:
+            ts_diff = ts - self.cc.capture_time_start
+
 
         s = SequenceGraphMod.Sequence
 
         if self.local_generated_packet(packet):
-
+            s.local = True
             s.xs = self.margin_left_right
             s.xe = self.width - self.margin_left_right
-
             s.ys = self.ts_tofloat(ts_diff) / self.scaling_factor
             s.ye = (self.ts_tofloat(ts_diff) + self.delay) / self.scaling_factor
-
+            display_time = self.ts_tofloat(ts_diff)
         else:
-
+            s.local = False
             s.xs = self.width - self.margin_left_right
             s.xe = self.margin_left_right
-
             s.ys = (self.ts_tofloat(ts_diff) - self.delay) / self.scaling_factor
             s.ye = self.ts_tofloat(ts_diff) / self.scaling_factor
+            display_time = self.ts_tofloat(ts_diff) - self.delay
 
         s.ys += self.margin_top_bottom
         s.ye += self.margin_top_bottom
 
-        print(timestamp)
 
-        self.draw_sequence(s, "packet")
+        self.draw_sequence(s, display_time, packet)
 
     def process_final(self):
         self.cr.show_page()
@@ -1191,7 +1265,6 @@ class ConnectionStatistic:
         self.packets_processed = 0
 
 
-
 class Connection(TcpConn):
 
     static_connection_id = 1
@@ -1238,9 +1311,9 @@ class Connection(TcpConn):
         sc = SubConnection(packet)
 
         if self.capture_time_start == None:
-            self.capture_time_start = datetime.datetime.fromtimestamp(ts)
+            self.capture_time_start = ts
 
-        self.capture_time_end = datetime.datetime.fromtimestamp(ts)
+        self.capture_time_end = ts
 
         if self.sc1 == None:
             self.sc1 = sc
@@ -1331,9 +1404,9 @@ class ConnectionContainer:
             return
 
         if self.capture_time_start == None:
-            self.capture_time_start = datetime.datetime.fromtimestamp(ts)
+            self.capture_time_start = ts
 
-        self.capture_time_end = datetime.datetime.fromtimestamp(ts)
+        self.capture_time_end = ts
 
         c = Connection(packet)
 
@@ -1352,13 +1425,8 @@ class ConnectionAnalyzeMod(Mod):
         self.logger = logging.getLogger()
         parser = optparse.OptionParser()
         parser.usage = "captcp connection"
-        parser.add_option(
-                "-v",
-                "--verbose",
-                dest="verbose",
-                default=False,
-                action="store_true",
-                help="show verbose")
+        parser.add_option( "-v", "--verbose", dest="verbose",
+                default=False, action="store_true", help="show verbose")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         
@@ -1400,12 +1468,8 @@ class ConnectionAnalyzeMod(Mod):
         label = "\"%s\" -> \"%s\" [ label=\" \",color=gray,arrowsize=0.4, penwidth=1.2 ];\n"
 
         for key in self.cc.container.keys():
-
-
             connection = self.cc.container[key]
-
             sys.stdout.write(label % (1, (abs(hash(connection.iuid)))))
-
 
             if connection.sc1 and connection.sc2:
                 sys.stdout.write(label % ((abs(hash(connection.iuid))), (abs(hash(connection.sc1.iuid) + 1))))
@@ -1493,7 +1557,8 @@ class StatisticMod(Mod):
 
     def print_two_column_sc_statistic(self, sc1, sc2):
         sys.stdout.write("\n\tFlow A                          Flow B\n")
-        sys.stdout.write("\tPackets received: %-10d    Packets received: %d\n" % (sc1.statistic.packets_processed, sc2.statistic.packets_processed))
+        sys.stdout.write("\tPackets received: %-10d    Packets received: %d\n" %
+                (sc1.statistic.packets_processed, sc2.statistic.packets_processed))
 
     def print_one_column_sc_statistic(self, sc):
 
