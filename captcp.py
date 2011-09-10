@@ -310,16 +310,98 @@ class PcapParser:
 
 class PacketInfo:
 
+    class TcpOptions:
+
+        def __init__(self):
+            self.data = dict()
+
+        def __getitem__(self, key):
+            return self.data[key]
+
+        def __setitem__(self, key, val):
+            self.data[key] = val
+
+
     def __init__(self, packet):
-        ip = packet
-        tcp = packet.data
+        self.tcp = packet.data
 
-        if type(tcp) != TCP:
-            return
+        if type(self.tcp) != TCP:
+            raise InternalException("Only TCP packets are allowed")
  
-        self.seq  = int(tcp.seq)
-        self.ack  = int(tcp.ack)
+        self.seq  = int(self.tcp.seq)
+        self.ack  = int(self.tcp.ack)
 
+        self.options = self.parse_tcp_options()
+
+    def is_ack_flag(self):
+        return self.tcp.flags & TH_ACK
+
+    def is_syn_flag(self):
+        return self.tcp.flags & TH_SYN
+
+    def is_urg_flag(self):
+        return self.tcp.flags & TH_URG
+
+    def is_psh_flag(self):
+        return self.tcp.flags & TH_PSH
+
+    def is_fin_flag(self):
+        return self.tcp.flags & TH_FIN
+
+    def is_rst_flag(self):
+        return self.tcp.flags & TH_RST
+
+    def create_flag_brakets(self):
+        s = "["
+        if self.is_syn_flag():
+            s += "S"
+        if self.is_ack_flag():
+            s += "A"
+        if self.is_urg_flag():
+            s += "U"
+        if self.is_psh_flag():
+            s += "P"
+        if self.is_fin_flag():
+            s += "F"
+        if self.is_rst_flag():
+            s += "R"
+
+        s += "]"
+
+        return s
+
+
+    def parse_tcp_options(self):
+
+        tcp_options = PacketInfo.TcpOptions()
+        tcp_options['mss'] = 0
+        tcp_options['wsc'] = 0
+        tcp_options['ts'] = 0
+        tcp_options['sackok'] = 0
+        tcp_options['sackblocks'] = 0
+
+        opts = []
+        for opt in dpkt.tcp.parse_opts(self.tcp.opts):
+            try:
+                o, d = opt
+                if len(d) > 32: raise TypeError
+            except TypeError:
+                break
+            if o == dpkt.tcp.TCP_OPT_MSS:
+                tcp_options['mss'] = struct.unpack('>H', d)[0]
+            elif o == dpkt.tcp.TCP_OPT_WSCALE:
+                tcp_options['wsc'] = ord(d)
+            elif o == dpkt.tcp.TCP_OPT_SACKOK:
+                tcp_options['sackok'] = True
+            elif o == dpkt.tcp.TCP_OPT_SACK:
+                ofmt="!%sI" % int(len(d) / 4)
+                tcp_options['sackblocks'] = struct.unpack(ofmt, d)
+            elif o == dpkt.tcp.TCP_OPT_TIMESTAMP:
+                tcp_options['ts'] = struct.unpack('>II', d)
+
+            opts.append(o)
+
+        return tcp_options
 
 
 class Template:
@@ -354,7 +436,7 @@ PDF_OBJ = $(patsubst %.gpi,%.pdf,  $(GNUPLOT_FILES))
 all: $(PDF_OBJ)
 png: $(PNG_OBJ)
 
-%.eps: %.gpi data
+%.eps: %.gpi
 	@ echo "compillation of "$<
 	@gnuplot $<
 
@@ -373,7 +455,11 @@ preview: all
 
 clean:
 	@echo "cleaning ..."
-	@rm -rf *.eps *.png *.pdf *.data core
+	@rm -rf *.eps *.png *.pdf core
+
+distclean: clean
+    @echo "distcleaning"
+    @rm -rf *.data
 """
 
     def __init__(self, captcp):
@@ -383,20 +469,12 @@ clean:
 
 
     def parse_local_options(self):
-
         parser = optparse.OptionParser()
-
-        parser.add_option(
-                "-t",
-                "--template",
-                dest="template",
-                default=None,
-                type="string",
-                help="template name")
+        parser.add_option( "-t", "--template", dest="template", default=None,
+                type="string", help="template name")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         
- 
         if not self.opts.template:
             sys.stderr.write("no template name given, exiting\n")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
@@ -408,9 +486,7 @@ clean:
         gnuplot-makefile
         \n""")
 
-
     def run(self):
-
         if self.opts.template == "payload-time-port-3d":
             sys.stdout.write(Template.payloadtimeport3d)
         elif self.opts.template == "gnuplot-makefile":
@@ -948,20 +1024,35 @@ class SequenceGraphMod(Mod):
         self.logger.info("now draw %d packets" % self.packets_to_draw)
 
 
+    def set_opts_logevel(self):
+        if self.opts.loglevel == "debug":
+            self.logger.setLevel(logging.DEBUG)
+        elif self.opts.loglevel == "info":
+            self.logger.setLevel(logging.INFO)
+        elif self.opts.loglevel == "warning":
+            self.logger.setLevel(logging.WARNING)
+        elif self.opts.loglevel == "error":
+            self.logger.setLevel(logging.ERROR)
+        else:
+            raise ArgumentErrorException("loglevel \"%s\" not supported" % self.opts.loglevel)
+
+
+
     def parse_local_options(self):
 
         self.width = self.height = 0
 
         parser = optparse.OptionParser()
-        parser.usage = "sequencegraph"
-        parser.add_option( "-v", "--verbose", dest="verbose", default=False,
-                action="store_true", help="show verbose")
+        parser.usage = "sequencegraph [options] <pcapfile> [pcapfilter]"
+
+        parser.add_option( "-v", "--loglevel", dest="loglevel", default=None,
+                type="string", help="set the loglevel (info, debug, warning, error)")
 
         parser.add_option( "-l", "--local", dest="localaddr", default=None,
                 type="string", help="specify list of local ip addresses")
 
         parser.add_option( "-s", "--size", dest="size", default="600x1200",
-                type="string", help="specify the size of the image")
+                type="string", help="specify the size of the image (default: 600x1200)")
 
         parser.add_option( "-r", "--rtt", dest="rtt", default=0.025,
                 type="float", help="specify the average rtt per connection (default 0.025s)")
@@ -979,6 +1070,8 @@ class SequenceGraphMod(Mod):
             sys.exit(ExitCodes.EXIT_CMD_LINE)
  
         self.captcp.pcap_file_path = args[2]
+
+        self.set_opts_logevel()
 
         self.captcp.pcap_filter = None
         if args[3:]:
@@ -1019,10 +1112,8 @@ class SequenceGraphMod(Mod):
         return float(ts.seconds) + ts.microseconds / 1E6 + ts.days * 86400
 
 
-
     def reduced_labeling(self):
         return self.packets_to_draw > SequenceGraphMod.PACKET_LABELING_THRESH
-
 
 
     def draw_timestamp(self, sequence, ts, packet):
@@ -1055,8 +1146,7 @@ class SequenceGraphMod(Mod):
 
     def draw_labels(self, sequence, ts, packet):
 
-        local_margin_local = 3
-        local_margin_remote = 0
+        local_margin = 3
 
         gegenkathete = sequence.ye - sequence.ys
         ankathete = self.width - (self.margin_left_right * 2)
@@ -1065,9 +1155,8 @@ class SequenceGraphMod(Mod):
         if not sequence.local:
             res = (math.pi * 2) - res
 
-
         pi = PacketInfo(packet)
-        text = "seq:%u ack:%u" % (pi.seq, pi.ack)
+        text = "seq:%u ack:%u %s" % (pi.seq, pi.ack, pi.create_flag_brakets())
 
         self.cr.save()
 
@@ -1075,15 +1164,18 @@ class SequenceGraphMod(Mod):
         x_bearing, y_bearing, width, height = self.cr.text_extents(text)[:4]
         x_off = (self.width / 2)  - (width / 2.0)
 
-        gk = math.atan(res) * (width / 2.0)
 
         mid = (sequence.ys + (sequence.ye - sequence.ys) / 2.0)
 
         if sequence.local:
-            y_off = (mid) - (height/2.0) - gk + local_margin_local
+            gk = math.atan(res) * (width / 2.0)
+            y_off = (mid) - (height / 2.0) - gk + local_margin
         else:
-            y_off = (mid) + (height) - local_margin_remote
-            y_off = (mid) + (height) - local_margin_remote
+            res = math.atan(gegenkathete/ankathete)
+            gk = math.atan(res) * (width / 2.0)
+            if not sequence.local:
+                res = (math.pi * 2) - res
+            y_off = (mid) - (height / 2.0) + gk + local_margin
 
 
         self.cr.move_to(x_off, y_off)
@@ -1394,7 +1486,6 @@ class ConnectionContainer:
             return False
 
 
-
     def update(self, ts, packet):
 
         if type(packet) != dpkt.ip.IP and type(packet) != dpkt.ip6.IP6:
@@ -1648,16 +1739,20 @@ class Captcp:
             }
 
     def __init__(self):
+        self.captcp_starttime = datetime.datetime.today()
         self.setup_logging()
 
     def setup_logging(self):
-        self.logger = logging.getLogger()
-        self.logger.setLevel(logging.DEBUG)
+
         ch = logging.StreamHandler()
-        ch.setLevel(logging.INFO)
+
         formatter = logging.Formatter("# %(message)s")
         ch.setFormatter(formatter)
+
+        self.logger = logging.getLogger()
+        self.logger.setLevel(logging.ERROR)
         self.logger.addHandler(ch)
+
 
 
     def print_welcome(self):
@@ -1712,7 +1807,11 @@ class Captcp:
             pcap_parser.run()
             del pcap_parser
 
+            self.logger.info("processing end in %s" % (
+                datetime.datetime.today() - self.captcp_starttime))
+
             return classinstance.process_final()
+
 
         else:
             classinstance = globals()[classtring](self)
