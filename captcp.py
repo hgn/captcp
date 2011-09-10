@@ -336,8 +336,14 @@ class PacketInfo:
         if type(self.tcp) != TCP:
             raise InternalException("Only TCP packets are allowed")
  
-        self.seq  = int(self.tcp.seq)
-        self.ack  = int(self.tcp.ack)
+        self.sport = int(self.tcp.sport)
+        self.dport = int(self.tcp.dport)
+
+        self.seq = int(self.tcp.seq)
+        self.ack = int(self.tcp.ack)
+        self.win = int(self.tcp.win)
+        self.urp = int(self.tcp.urp)
+        self.sum = int(self.tcp.sum)
 
         self.options = self.parse_tcp_options()
 
@@ -369,36 +375,20 @@ class PacketInfo:
         s = "["
         if self.is_cwr_flag():
             s += "C"
-        else:
-            s += "."
         if self.is_ece_flag():
             s += "E"
-        else:
-            s += "."
         if self.is_urg_flag():
             s += "U"
-        else:
-            s += "."
         if self.is_ack_flag():
             s += "A"
-        else:
-            s += "."
         if self.is_psh_flag():
             s += "P"
-        else:
-            s += "."
         if self.is_rst_flag():
             s += "R"
-        else:
-            s += "."
         if self.is_syn_flag():
             s += "S"
-        else:
-            s += "."
         if self.is_fin_flag():
             s += "F"
-        else:
-            s += "."
         s += "]"
 
         return s
@@ -980,10 +970,11 @@ class SequenceGraphMod(Mod):
 
         surface = cairo.PDFSurface(self.opts.filename, self.width, self.height)
         self.cr = cairo.Context(surface)
+        self.cr.move_to(0, 0)
         self.cr.set_source_rgb(1.0, 1.0, 1.0) # white
         self.cr.rectangle(0, 0, self.width, self.height)
+        self.cr.fill()
         self.cr.stroke()
-        self.cr.move_to(0, 0)
 
         self.margin_left_right = 50
         self.margin_top_bottom = 50
@@ -1097,14 +1088,14 @@ class SequenceGraphMod(Mod):
                 type="string", help="specify the number of relevant ID's")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
+        self.set_opts_logevel()
         
         if len(args) < 3:
             self.logger.error("no pcap file argument given, exiting\n")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
- 
-        self.captcp.pcap_file_path = args[2]
 
-        self.set_opts_logevel()
+        self.captcp.pcap_file_path = args[2]
+        self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
 
         self.captcp.pcap_filter = None
         if args[3:]:
@@ -1121,7 +1112,7 @@ class SequenceGraphMod(Mod):
 
         if self.opts.connections:
             self.ids = self.opts.connections.split(',')
-            self.logger.info("ID's: %s" % (str(self.ids)))
+            self.logger.info("visualization limited to the following connections: %s" % (str(self.ids)))
 
 
     def local_generated_packet(self, packet):
@@ -1140,7 +1131,6 @@ class SequenceGraphMod(Mod):
         else:
             raise InternalException()
 
-
     def ts_tofloat(self, ts):
         return float(ts.seconds) + ts.microseconds / 1E6 + ts.days * 86400
 
@@ -1150,7 +1140,6 @@ class SequenceGraphMod(Mod):
 
 
     def draw_timestamp(self, sequence, ts, packet):
-
         time = "%.5f" % (ts)
 
         if sequence.local:
@@ -1177,6 +1166,22 @@ class SequenceGraphMod(Mod):
         self.packet_timestamp_punchcard[sequence.local].append(y_offset)
 
 
+    def construct_label_string(self, packet):
+        pi = PacketInfo(packet)
+        text = "%s seq:%u ack:%u win:%u urp:%u" % (
+                pi.create_flag_brakets(), pi.seq, pi.ack, pi.win, pi.urp)
+        text += " {"
+        if pi.options['mss']:
+            text += " mss: %d" % (pi.options['mss'])
+        if pi.options['wsc']:
+            text += " wsc: %d" % (pi.options['wsc'])
+        if pi.options['sackok']:
+            text += " sackok"
+        text += "}"
+
+        return text
+
+
     def draw_labels(self, sequence, ts, packet):
 
         local_margin = 3
@@ -1188,8 +1193,8 @@ class SequenceGraphMod(Mod):
         if not sequence.local:
             res = (math.pi * 2) - res
 
-        pi = PacketInfo(packet)
-        text = "seq:%u ack:%u %s" % (pi.seq, pi.ack, pi.create_flag_brakets())
+        text = self.construct_label_string(packet)
+
 
         self.cr.save()
 
@@ -1208,7 +1213,7 @@ class SequenceGraphMod(Mod):
             gk = math.atan(res) * (width / 2.0)
             if not sequence.local:
                 res = (math.pi * 2) - res
-            y_off = (mid) - (height / 2.0) + gk + local_margin
+            y_off = (mid) - (height / 2.0) + gk + local_margin 
 
 
         self.cr.move_to(x_off, y_off)
@@ -1829,21 +1834,28 @@ class Captcp:
             # parse the whole pcap file first
             pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
             pcap_parser.register_callback(classinstance.internal_pre_process_packet)
+            self.logger.debug("call pre_process_packet [1/4")
             pcap_parser.run()
             del pcap_parser
 
+            self.logger.debug("call pre_process_final [2/4]")
             classinstance.pre_process_final()
 
             # and finally print all relevant stuff
             pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
             pcap_parser.register_callback(classinstance.process_packet)
+            self.logger.debug("call process_packet [3/4]")
             pcap_parser.run()
             del pcap_parser
 
-            self.logger.info("processing end in %s" % (
-                datetime.datetime.today() - self.captcp_starttime))
+            self.logger.debug("call pre_process_final [4/4]")
+            ret = classinstance.process_final()
 
-            return classinstance.process_final()
+            time_diff = datetime.datetime.today() - self.captcp_starttime
+            time_diff_s = float(time_diff.seconds) + time_diff.microseconds / 1E6 + time_diff.days * 86400
+            self.logger.info("processing duration: %.4f seconds" % (time_diff_s))
+
+            return ret
 
 
         else:
@@ -1852,7 +1864,6 @@ class Captcp:
 
 
 
-    
 if __name__ == "__main__":
     captcp = Captcp()
     sys.exit(captcp.run())
