@@ -186,8 +186,7 @@ class RainbowColor:
         self.color_palette = {'red':'#ff0000', 'green':'#00ff00', 'end':''}
 
     def init_color_ansi(self):
-        self.color_palette = { 'yellow':'\033[0;33;40m', 'foo':'\033[93m', 'red-white':'\033[0;31;47m',
-                 'black-white':'\033[0;30;47m', 
+        self.color_palette = { 'yellow':'\033[0;33;40m', 'foo':'\033[93m',
                 'red':'\033[91m', 'green':'\033[92m', 'blue':'\033[94m', 'end':'\033[0m'}
 
     def next(self):
@@ -219,6 +218,13 @@ class RainbowColor:
         self.color_palette_pos = 0
         self.color_palette_flat = self.color_palette.values()
         return self
+
+
+class Utils:
+
+    @staticmethod
+    def ts_tofloat(ts):
+        return float(ts.seconds) + ts.microseconds / 1E6 + ts.days * 86400
 
 
 class Colors:
@@ -331,6 +337,7 @@ class PacketInfo:
 
 
     def __init__(self, packet):
+
         self.tcp = packet.data
 
         if type(self.tcp) != TCP:
@@ -934,6 +941,26 @@ class Mod:
         """ called at the end of packet processing"""
         pass
 
+    def set_opts_logevel(self):
+
+        if not self.opts:
+            raise InternalException("Cannot call set_opts_logevel() if no " +
+                    "options parsing was done")
+
+        if not self.opts.loglevel:
+            """ this is legitim: no loglevel specified"""
+            return
+
+        if self.opts.loglevel == "debug":
+            self.logger.setLevel(logging.DEBUG)
+        elif self.opts.loglevel == "info":
+            self.logger.setLevel(logging.INFO)
+        elif self.opts.loglevel == "warning":
+            self.logger.setLevel(logging.WARNING)
+        elif self.opts.loglevel == "error":
+            self.logger.setLevel(logging.ERROR)
+        else:
+            raise ArgumentErrorException("loglevel \"%s\" not supported" % self.opts.loglevel)
 
 class SequenceGraphMod(Mod):
     
@@ -1046,19 +1073,6 @@ class SequenceGraphMod(Mod):
             self.scaling_factor = time_diff / (self.height - 2 * self.margin_top_bottom)
 
         self.logger.info("now draw %d packets" % self.packets_to_draw)
-
-
-    def set_opts_logevel(self):
-        if self.opts.loglevel == "debug":
-            self.logger.setLevel(logging.DEBUG)
-        elif self.opts.loglevel == "info":
-            self.logger.setLevel(logging.INFO)
-        elif self.opts.loglevel == "warning":
-            self.logger.setLevel(logging.WARNING)
-        elif self.opts.loglevel == "error":
-            self.logger.setLevel(logging.ERROR)
-        else:
-            raise ArgumentErrorException("loglevel \"%s\" not supported" % self.opts.loglevel)
 
 
 
@@ -1409,6 +1423,11 @@ class Connection(TcpConn):
         self.capture_time_start = None
         self.capture_time_end = None
 
+        # module users could use this container
+        # to stick data to a connection
+        self.user_data = dict()
+
+
     def __del__(self):
         Connection.static_connection_id -= 1
 
@@ -1503,13 +1522,35 @@ class ConnectionContainer:
         return None
 
 
-    def is_packet_connection(self, packet, uid):
+    def tcp_check(self, packet):
 
         if type(packet) != dpkt.ip.IP and type(packet) != dpkt.ip6.IP6:
             return False
 
         if type(packet.data) != dpkt.tcp.TCP:
             return False
+
+        return True
+
+
+    def connection_by_packet(self, packet):
+
+        if not self.tcp_check(packet):
+            return None
+
+        c = Connection(packet)
+
+        if not c.uid in self.container.keys():
+            raise InternalException("packet MUST be in preprocesses container")
+        else:
+            return self.container[c.uid]
+
+
+
+    def is_packet_connection(self, packet, uid):
+
+        if not self.tcp_check(packet):
+            return None
 
         c = Connection(packet)
 
@@ -1608,6 +1649,98 @@ class ConnectionAnalyzeMod(Mod):
 
         sys.stdout.write("}\n")
         sys.stderr.write("# Tip: generate graphviz file with: \"twopi -onetwork.png -Tpng network.data\"\n")
+
+
+
+
+class ShowMod(Mod):
+
+
+    def pre_initialize(self):
+
+        self.logger = logging.getLogger()
+        self.parse_local_options()
+        self.color = RainbowColor(mode=RainbowColor.ANSI)
+        self.color_iter = self.color.__iter__()
+
+    def parse_local_options(self):
+
+        parser = optparse.OptionParser()
+        parser.usage = "show [options] <pcapfile> [pcapfilter]"
+
+        parser.add_option( "-v", "--loglevel", dest="loglevel", default=None,
+                type="string", help="set the loglevel (info, debug, warning, error)")
+
+        parser.add_option( "-i", "--connection-id", dest="connections", default=None,
+                type="string", help="specify the number of displayed ID's")
+
+        parser.add_option( "-m", "--match", dest="match", default=None,
+                type="string", help="if statment is true the string is color in red")
+
+        self.opts, args = parser.parse_args(sys.argv[0:])
+        self.set_opts_logevel()
+        
+        if len(args) < 3:
+            self.logger.error("no pcap file argument given, exiting\n")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        self.captcp.print_welcome()
+
+        self.captcp.pcap_file_path = args[2]
+        self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
+
+        self.captcp.pcap_filter = None
+        if args[3:]:
+            self.captcp.pcap_filter = " ".join(args[3:])
+            self.logger.info("pcap filter: \"" + self.captcp.pcap_filter + "\"")
+
+        if self.opts.connections:
+            self.ids = self.opts.connections.split(',')
+            self.logger.info("show limited to the following connections: %s" % (str(self.ids)))
+
+
+    def pre_process_packet(self, ts, packet):
+
+        connection = self.cc.connection_by_packet(packet)
+        # only for TCP flows this can be true, therefore
+        # no additional checks that this is TCP are required
+        # here
+        if not connection:
+            return
+
+        # check if we already assigned a color to this
+        # connection, if not we do it now
+        if "color" not in connection.user_data:
+            connection.user_data["color"] = self.color_iter.infinite_next()
+
+        pi = PacketInfo(packet)
+
+
+        # color init
+        line = connection.user_data["color"]
+
+        # time handling
+        time = ts - self.cc.capture_time_start
+        line += "%.5f" % (Utils.ts_tofloat(time))
+
+        # ip relefant stuff
+        line += " %d" % (pi.sport)
+
+        line += self.color["end"]
+        line += "\n"
+
+        sys.stdout.write(line)
+
+
+    def pre_process_final(self):
+        pass
+
+    def process_packet(self, ts, packet):
+        pass
+
+    def process_final(self):
+        pass
+
 
 
 class StatisticMod(Mod):
@@ -1773,7 +1906,8 @@ class Captcp:
             "template":        "Template",
             "statistic":       "StatisticMod",
             "connection":      "ConnectionAnalyzeMod",
-            "sequencegraph":   "SequenceGraphMod"
+            "sequencegraph":   "SequenceGraphMod",
+            "show":            "ShowMod"
             }
 
     def __init__(self):
@@ -1790,7 +1924,6 @@ class Captcp:
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.ERROR)
         self.logger.addHandler(ch)
-
 
 
     def print_welcome(self):
@@ -1824,6 +1957,7 @@ class Captcp:
 
         if (classtring == "StatisticMod" or
                 classtring == "ConnectionAnalyzeMod" or
+                classtring == "ShowMod" or
                 classtring == "SequenceGraphMod"):
 
             classinstance = globals()[classtring]()
@@ -1834,7 +1968,7 @@ class Captcp:
             # parse the whole pcap file first
             pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
             pcap_parser.register_callback(classinstance.internal_pre_process_packet)
-            self.logger.debug("call pre_process_packet [1/4")
+            self.logger.debug("call pre_process_packet [1/4]")
             pcap_parser.run()
             del pcap_parser
 
