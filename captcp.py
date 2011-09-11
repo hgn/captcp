@@ -342,6 +342,17 @@ class PacketInfo:
 
         if type(self.tcp) != TCP:
             raise InternalException("Only TCP packets are allowed")
+
+        if type(packet) == dpkt.ip.IP:
+            self.sip = Converter.dpkt_addr_to_string(packet.src)
+            self.dip = Converter.dpkt_addr_to_string(packet.dst)
+            self.ipversion = "IP "
+        elif type(packet) == dpkt.ip6.IP6:
+            self.sip = socket.inet_ntop(socket.AF_INET6, packet.src)
+            self.dip = socket.inet_ntop(socket.AF_INET6, packet.dst)
+            self.ipversion = "IP6"
+        else:
+            raise InternalException("unknown protocol")
  
         self.sport = int(self.tcp.sport)
         self.dport = int(self.tcp.dport)
@@ -1698,6 +1709,9 @@ class ShowMod(Mod):
             self.ids = self.opts.connections.split(',')
             self.logger.info("show limited to the following connections: %s" % (str(self.ids)))
 
+    def match(self, ts, packet):
+        pass
+
 
     def pre_process_packet(self, ts, packet):
 
@@ -1723,8 +1737,9 @@ class ShowMod(Mod):
         time = ts - self.cc.capture_time_start
         line += "%.5f" % (Utils.ts_tofloat(time))
 
-        # ip relefant stuff
-        line += " %d" % (pi.sport)
+        line += " %s %s:%d -> %s:%d" % (pi.ipversion, pi.sip, pi.sport, pi.dip, pi.dport)
+        line += " Flags: %s" % (pi.create_flag_brakets())
+        line += " seq: %u ack: %u win: %u urp: %u" % (pi.seq, pi.ack, pi.win, pi.urp)
 
         line += self.color["end"]
         line += "\n"
@@ -1999,5 +2014,10 @@ class Captcp:
 
 
 if __name__ == "__main__":
-    captcp = Captcp()
-    sys.exit(captcp.run())
+    try:
+        captcp = Captcp()
+        sys.exit(captcp.run())
+    except (KeyboardInterrupt, SystemExit):
+        sys.stderr.write("SIGINT received, exiting\n")
+        pass
+
