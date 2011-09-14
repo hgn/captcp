@@ -160,12 +160,15 @@ class SequenceContainer:
 class RainbowColor:
 
     ANSI    = 0
-    HEX     = 1
-    DISABLE = 2
+    ANSI256 = 1
+    HEX     = 2
+    DISABLE = 3
 
-    def __init__(self, mode=ANSI):
+    def __init__(self, mode=ANSI256):
         if mode == RainbowColor.ANSI:
             self.init_color_ansi()
+        elif mode == RainbowColor.ANSI256:
+            self.init_color_ansi256()
         elif mode == RainbowColor.HEX:
             self.init_color_hex()
         elif mode == RainbowColor.DISABLE:
@@ -184,6 +187,37 @@ class RainbowColor:
 
     def init_color_hex(self):
         self.color_palette = {'red':'#ff0000', 'green':'#00ff00', 'end':''}
+
+    def init_color_ansi256(self):
+        self.color_palette = dict()
+        for i in range(255):
+            i += 1
+            self.color_palette[i] = '\033[38;5;%dm' % (i)
+
+        self.color_palette['end'] = '\033[0m'
+        self.color_palette['red'] = '\033[91m'
+
+        del self.color_palette[1]
+        del self.color_palette[9]
+        del self.color_palette[52]
+        del self.color_palette[88]
+        del self.color_palette[89]
+
+        del self.color_palette[124]
+        del self.color_palette[125]
+        del self.color_palette[126]
+        del self.color_palette[127]
+
+        del self.color_palette[160]
+        del self.color_palette[161]
+        del self.color_palette[162]
+        del self.color_palette[163]
+
+        del self.color_palette[196]
+        del self.color_palette[197]
+        del self.color_palette[198]
+        del self.color_palette[199]
+        del self.color_palette[200]
 
     def init_color_ansi(self):
         self.color_palette = { 'yellow':'\033[0;33;40m', 'foo':'\033[93m',
@@ -363,7 +397,7 @@ class PacketInfo:
         self.urp = int(self.tcp.urp)
         self.sum = int(self.tcp.sum)
 
-        self.options = self.parse_tcp_options()
+        self.parse_tcp_options()
 
     def is_ack_flag(self):
         return self.tcp.flags & TH_ACK
@@ -411,15 +445,28 @@ class PacketInfo:
 
         return s
 
+    def construct_tcp_options_label(self):
+
+        ret = ""
+        if self.options['mss']:
+            ret += "mss: %d" % (self.options['mss'])
+        if self.options['wsc']:
+            ret += "wsc: %d" % (self.options['wsc'])
+        if self.options['tsval'] and self.options['tsecr']:
+            ret += "ts: %d:%d" % (self.options['tsval'], self.options['tsecr'])
+        if self.options['sackok']:
+            ret += "sackok"
+
 
     def parse_tcp_options(self):
 
-        tcp_options = PacketInfo.TcpOptions()
-        tcp_options['mss'] = 0
-        tcp_options['wsc'] = 0
-        tcp_options['ts'] = 0
-        tcp_options['sackok'] = 0
-        tcp_options['sackblocks'] = 0
+        self.options = PacketInfo.TcpOptions()
+        self.options['mss'] = False
+        self.options['wsc'] = False
+        self.options['tsval'] = False
+        self.options['tsecr'] = False
+        self.options['sackok'] = False
+        self.options['sackblocks'] = False
 
         opts = []
         for opt in dpkt.tcp.parse_opts(self.tcp.opts):
@@ -429,20 +476,18 @@ class PacketInfo:
             except TypeError:
                 break
             if o == dpkt.tcp.TCP_OPT_MSS:
-                tcp_options['mss'] = struct.unpack('>H', d)[0]
+                self.options['mss'] = struct.unpack('>H', d)[0]
             elif o == dpkt.tcp.TCP_OPT_WSCALE:
-                tcp_options['wsc'] = ord(d)
+                self.options['wsc'] = ord(d)
             elif o == dpkt.tcp.TCP_OPT_SACKOK:
-                tcp_options['sackok'] = True
+                self.options['sackok'] = True
             elif o == dpkt.tcp.TCP_OPT_SACK:
                 ofmt="!%sI" % int(len(d) / 4)
-                tcp_options['sackblocks'] = struct.unpack(ofmt, d)
+                self.options['sackblocks'] = struct.unpack(ofmt, d)
             elif o == dpkt.tcp.TCP_OPT_TIMESTAMP:
-                tcp_options['ts'] = struct.unpack('>II', d)
+                (self.options['tsval'], self.options['tsecr']) = struct.unpack('>II', d)
 
             opts.append(o)
-
-        return tcp_options
 
 
 class Template:
@@ -841,7 +886,6 @@ class Highlight:
 
         seq  = int(tcp.seq)
         ack  = int(tcp.ack)
-        time = float(ts)
 
         tuppl = self.create_connection_tupple(ip)
 
@@ -888,8 +932,8 @@ class Highlight:
             if self.opts.suppress:
                 return
 
-        sys.stdout.write(c + '%lf: %s:%d > %s:%d %s\n' % (
-                float(ts),
+        sys.stdout.write(c + '%s: %s:%d > %s:%d %s\n' % (
+                ts,
                 ip.src,
                 tcp.sport,
                 ip.dst,
@@ -1092,7 +1136,7 @@ class SequenceGraphMod(Mod):
         self.width = self.height = 0
 
         parser = optparse.OptionParser()
-        parser.usage = "sequencegraph [options] <pcapfile> [pcapfilter]"
+        parser.usage = "%prog sequencegraph [options] <pcapfile>"
 
         parser.add_option( "-v", "--loglevel", dest="loglevel", default=None,
                 type="string", help="set the loglevel (info, debug, warning, error)")
@@ -1116,8 +1160,11 @@ class SequenceGraphMod(Mod):
         self.set_opts_logevel()
         
         if len(args) < 3:
-            self.logger.error("no pcap file argument given, exiting\n")
+            parser.error("no pcap file argument given, exiting")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        if self.opts.localaddr == None:
+            self.logger.warning("No local IP address (--local) specified!")
 
         self.captcp.pcap_file_path = args[2]
         self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
@@ -1200,6 +1247,8 @@ class SequenceGraphMod(Mod):
             text += " mss: %d" % (pi.options['mss'])
         if pi.options['wsc']:
             text += " wsc: %d" % (pi.options['wsc'])
+        if pi.options['tsval']:
+            text += " tsval: %d" % (pi.options['tsval'])
         if pi.options['sackok']:
             text += " sackok"
         text += "}"
@@ -1254,18 +1303,16 @@ class SequenceGraphMod(Mod):
 
     def draw_sequence(self, sequence, ts, packet):
 
-        #print("xs %d ys %d xe %d ye %d" % (sequence.xs, sequence.ys, sequence.xe, sequence.ye))
-
         self.draw_timestamp(sequence, ts, packet)
 
         if not self.reduced_labeling():
             self.draw_labels(sequence, ts, packet)
 
         
-        self.cr.set_source_rgb(0.0, 0.0, 0.0) # Solid color
+        self.cr.set_source_rgb(0.0, 0.0, 0.0)
         self.cr.set_line_width(0.5)
         self.cr.move_to(sequence.xs, sequence.ys)
-        self.cr.line_to(sequence.xe, sequence.ye) # Line to (x,y)
+        self.cr.line_to(sequence.xe, sequence.ye)
         self.cr.stroke()
 
 
@@ -1382,8 +1429,9 @@ class SubConnectionStatistic:
 
 class SubConnection(TcpConn):
 
-    def __init__(self, packet):
+    def __init__(self, connection, packet):
         TcpConn.__init__(self, packet)
+        self.connection = connection
         self.statistic = SubConnectionStatistic()
 
 
@@ -1459,6 +1507,9 @@ class Connection(TcpConn):
         else:
             return False
 
+    def register_container(self, container):
+        self.container = container
+
 
     def update_statistic(self, packet):
         self.statistic.packets_processed += 1
@@ -1468,7 +1519,7 @@ class Connection(TcpConn):
 
         self.update_statistic(packet)
 
-        sc = SubConnection(packet)
+        sc = SubConnection(self, packet)
 
         if self.capture_time_start == None:
             self.capture_time_start = ts
@@ -1492,8 +1543,24 @@ class Connection(TcpConn):
         sc.update(ts, packet)
 
 
+    def get_subconnection(self, packet):
+
+        # we know that packet is a TCP packet
+
+        if self.sc1 == None:
+            raise InternalException("a connection without a subconnection?!")
+
+        if self.sc1.sport == packet.data.sport:
+            return self.sc1
+        else:
+            assert(self.sc2)
+            return self.sc2
+
+
     def human_id(self):
         return "1"
+
+
 
 class ConnectionContainerStatistic:
 
@@ -1512,7 +1579,9 @@ class ConnectionContainerStatistic:
         self.packets_tl_unknown  = 0
 
 
+
 class ConnectionContainer:
+
 
     def __init__(self):
         self.container = dict()
@@ -1523,6 +1592,7 @@ class ConnectionContainer:
 
     def __len__(self):
         return len(self.container)
+
 
     def connection_by_uid(self, uid):
 
@@ -1542,6 +1612,22 @@ class ConnectionContainer:
             return False
 
         return True
+
+
+    def sub_connection_by_packet(self, packet):
+
+        if not self.tcp_check(packet):
+            return None
+
+        c = Connection(packet)
+
+        if not c.uid in self.container.keys():
+            # this method SHOULD not be called if not
+            # sure that the packet is already in the
+            # container
+            raise InternalException("packet MUST be in preprocesses container")
+
+        return self.container[c.uid].get_subconnection(packet)
 
 
     def connection_by_packet(self, packet):
@@ -1591,9 +1677,12 @@ class ConnectionContainer:
 
         c = Connection(packet)
 
+        # this is the only place where a connetion
+        # is put into this container
         if not c.uid in self.container.keys():
             c.update(ts, packet)
             self.container[c.uid] = c
+            c.register_container(self)
         else:
             cc = self.container[c.uid]
             cc.update(ts, packet)
@@ -1671,7 +1760,7 @@ class ShowMod(Mod):
 
         self.logger = logging.getLogger()
         self.parse_local_options()
-        self.color = RainbowColor(mode=RainbowColor.ANSI)
+        self.color = RainbowColor(mode=RainbowColor.ANSI256)
         self.color_iter = self.color.__iter__()
 
     def parse_local_options(self):
@@ -1712,6 +1801,8 @@ class ShowMod(Mod):
     def match(self, ts, packet):
         pass
 
+    def seq_plus(self, seq, length):
+        return seq + length
 
     def pre_process_packet(self, ts, packet):
 
@@ -1728,6 +1819,7 @@ class ShowMod(Mod):
             connection.user_data["color"] = self.color_iter.infinite_next()
 
         pi = PacketInfo(packet)
+        data_len = len(packet.data.data)
 
 
         # color init
@@ -1737,9 +1829,11 @@ class ShowMod(Mod):
         time = ts - self.cc.capture_time_start
         line += "%.5f" % (Utils.ts_tofloat(time))
 
-        line += " %s %s:%d -> %s:%d" % (pi.ipversion, pi.sip, pi.sport, pi.dip, pi.dport)
+        line += " %s %s:%d > %s:%d" % (pi.ipversion, pi.sip, pi.sport, pi.dip, pi.dport)
         line += " Flags: %s" % (pi.create_flag_brakets())
-        line += " seq: %u ack: %u win: %u urp: %u" % (pi.seq, pi.ack, pi.win, pi.urp)
+        line += " seq: %u:%u ack: %u win: %u urp: %u" % (
+                pi.seq, self.seq_plus(pi.seq, data_len), pi.ack, pi.win, pi.urp)
+        line += " len: %d" % (len(packet.data.data))
 
         line += self.color["end"]
         line += "\n"
@@ -1937,7 +2031,7 @@ class Captcp:
         ch.setFormatter(formatter)
 
         self.logger = logging.getLogger()
-        self.logger.setLevel(logging.ERROR)
+        self.logger.setLevel(logging.WARNING)
         self.logger.addHandler(ch)
 
 
@@ -1947,18 +2041,29 @@ class Captcp:
         self.logger.info("python: %s.%s.%s [releaselevel: %s, serial: %s]" %
                 (major, minor, micro, releaselevel, serial))
 
+    def print_modules(self):
+        for i in Captcp.modes.keys():
+            sys.stderr.write("    %s\n" % (i))
 
     def parse_global_otions(self):
 
         if len(sys.argv) <= 1:
-            sys.stderr.write("usage: " + sys.argv[0] + " <modulename> [options] pcapfile [pcapfilter]\n")
+            sys.stderr.write("Usage: " + sys.argv[0] + " <modulename> [options] pcapfile [pcapfilter]\n")
+            sys.stderr.write("Available modules:\n")
+            self.print_modules()
             return None
-
 
         submodule = sys.argv[1].lower()
 
+        if submodule == "-h" or submodule == "--help":
+            sys.stderr.write("Usage: captcp [-h] modulename [modulename-options] <pcap-file>\n")
+            sys.stderr.write("Available modules:\n")
+            self.print_modules()
+            return None
+
         if submodule not in Captcp.modes:
-            sys.stderr.write("module not known\n")
+            sys.stderr.write("Module \"%s\" not known, available modules are:\n" % (submodule))
+            self.print_modules()
             return None
 
         classname = Captcp.modes[submodule]
@@ -2017,7 +2122,5 @@ if __name__ == "__main__":
     try:
         captcp = Captcp()
         sys.exit(captcp.run())
-    except (KeyboardInterrupt, SystemExit):
+    except KeyboardInterrupt:
         sys.stderr.write("SIGINT received, exiting\n")
-        pass
-
