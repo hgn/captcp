@@ -230,6 +230,35 @@ captcp highlight -s -m 'tcp.flags &amp; TH_ACK and tcp.flags &amp; TH_SYN' trace
 
 		<h2>Sequence Graph Module</h2>
 
+		<figure>
+		<img src="data/images/trace-one-http-session-seq-small.png" alt="All connection from one trace file visualized" />
+		</figure> 
+
+		<pre class="config">
+Usage: captcp sequencegraph [options] <pcapfile>
+
+Options:
+  -h, --help            show this help message and exit
+  -v LOGLEVEL, --loglevel=LOGLEVEL
+                        set the loglevel (info, debug, warning, error)
+  -l LOCALADDR, --local=LOCALADDR
+                        specify list of local ip addresses
+  -s SIZE, --size=SIZE  specify the size of the image (default: 600x1200)
+  -r RTT, --rtt=RTT     specify the average rtt per connection (default
+                        0.025s)
+  -f FILENAME, --filename=FILENAME
+                        specify the name of the generated PDF file (default:
+                        sequence.pdf)
+  -i CONNECTIONS, --connection-id=CONNECTIONS
+                        specify the number of relevant ID's
+  -y STYLE, --style=STYLE
+                        specify the style of the labels (normal or minimal)
+  -p LOCALLABEL, --locallabel=LOCALLABEL
+                        the default string left axis (default: Local)
+  -q REMOTELABEL, --remotelabel=REMOTELABEL
+                        the default string right axis (default: Remote)
+		</pre>
+
 		The illustation provides another nice visualization of data. Not the
 		pure amount of data can be seen, rather a nice feeling of how many
 		packets are transmitted and received at a given time.
