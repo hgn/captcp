@@ -1156,6 +1156,9 @@ class SequenceGraphMod(Mod):
         parser.add_option( "-i", "--connection-id", dest="connections", default=None,
                 type="string", help="specify the number of relevant ID's")
 
+        parser.add_option( "-y", "--style", dest="style", default="normal",
+                type="string", help="specify the style of the labels (normal or minimal)")
+
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
         
@@ -1240,18 +1243,24 @@ class SequenceGraphMod(Mod):
 
     def construct_label_string(self, packet):
         pi = PacketInfo(packet)
-        text = "%s seq:%u ack:%u win:%u urp:%u" % (
-                pi.create_flag_brakets(), pi.seq, pi.ack, pi.win, pi.urp)
-        text += " {"
-        if pi.options['mss']:
-            text += " mss: %d" % (pi.options['mss'])
-        if pi.options['wsc']:
-            text += " wsc: %d" % (pi.options['wsc'])
-        if pi.options['tsval']:
-            text += " tsval: %d" % (pi.options['tsval'])
-        if pi.options['sackok']:
-            text += " sackok"
-        text += "}"
+
+        if self.opts.style == "minimal":
+            text = "%s seq:%u ack:%u len: %u" % ( pi.create_flag_brakets(),
+                    pi.seq, pi.ack, len(packet.data.data))
+        else:
+            # including "normal" style
+            text = "%s seq:%u ack:%u win:%u urp:%u" % (
+                    pi.create_flag_brakets(), pi.seq, pi.ack, pi.win, pi.urp)
+            text += " {"
+            if pi.options['mss']:
+                text += " mss: %d" % (pi.options['mss'])
+            if pi.options['wsc']:
+                text += " wsc: %d" % (pi.options['wsc'])
+            if pi.options['tsval']:
+                text += " tsval: %d" % (pi.options['tsval'])
+            if pi.options['sackok']:
+                text += " sackok"
+            text += "}"
 
         return text
 
