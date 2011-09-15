@@ -328,7 +328,14 @@ class PcapParser:
 
     def __init__(self, pcap_file_path, pcap_filter):
 
-        self.pcap_file = open(pcap_file_path)
+        self.logger = logging.getLogger()
+        self.pcap_file = False
+
+        try:
+            self.pcap_file = open(pcap_file_path)
+        except IOError:
+            self.logger.error("Cannot open pcap file: %s" % (pcap_file_path))
+            sys.exit(ExitCodes.EXIT_ERROR)
         self.pc = dpkt.pcap.Reader(self.pcap_file)
         self.decode = { pcap.DLT_LOOP:dpkt.loopback.Loopback,
                         pcap.DLT_NULL:dpkt.loopback.Loopback,
@@ -339,7 +346,6 @@ class PcapParser:
 
 
     def __del__(self):
-
         if self.pcap_file:
             self.pcap_file.close()
 
@@ -1068,7 +1074,7 @@ class SequenceGraphMod(Mod):
         self.cr.set_line_width(line_width)
         self.cr.stroke()
 
-        text = "LOCAL"
+        text = self.opts.locallabel
         self.cr.set_font_size(12)
         x_bearing, y_bearing, width, height = self.cr.text_extents(text)[:4]
         x_off = self.margin_left_right - (width / 2)
@@ -1084,7 +1090,7 @@ class SequenceGraphMod(Mod):
         self.cr.set_line_width(line_width)
         self.cr.stroke()
 
-        text = "Remote"
+        text = self.opts.remotelabel
         self.cr.set_font_size(12)
         x_bearing, y_bearing, width, height = self.cr.text_extents(text)[:4]
         x_off = self.width - self.margin_left_right - (width / 2)
@@ -1158,6 +1164,12 @@ class SequenceGraphMod(Mod):
 
         parser.add_option( "-y", "--style", dest="style", default="normal",
                 type="string", help="specify the style of the labels (normal or minimal)")
+
+        parser.add_option( "-p", "--locallabel", dest="locallabel", default="Local",
+                type="string", help="the default string left axis (default: Local)")
+
+        parser.add_option( "-q", "--remotelabel", dest="remotelabel", default="Remote",
+                type="string", help="the default string right axis (default: Remote)")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
