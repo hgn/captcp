@@ -2069,7 +2069,7 @@ class Captcp:
     def parse_global_otions(self):
 
         if len(sys.argv) <= 1:
-            sys.stderr.write("Usage: " + sys.argv[0] + " <modulename> [options] pcapfile [pcapfilter]\n")
+            sys.stderr.write("Usage: " + sys.argv[0] + " <modulename> [options] pcapfile\n")
             sys.stderr.write("Available modules:\n")
             self.print_modules()
             return None
