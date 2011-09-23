@@ -518,6 +518,39 @@ set xlabel 'Time [s]';
 set ylabel 'Diffraction angle'
 splot 'out.data' notitle
 """
+    throughput = \
+"""
+set terminal postscript eps enhanced color "Times" 30
+set output "throughput.eps"
+set title "Throughput Graph"
+
+set style line 99 linetype 1 linecolor rgb "#999999" lw 2
+set key right bottom
+set key box linestyle 99
+set key spacing 1.2
+set nokey
+
+set grid xtics ytics mytics
+
+#set xrange [1:60]
+
+set size 2
+set size ratio 0.5
+
+set ylabel "Data [byte]"
+set xlabel "Time [seconds]"
+
+set style line 1 lc rgb '#0060ad' lt 1 lw 10 pt 0 pi -1 ps 3
+set style line 2 lc rgb '#0060ad' lt 1 lw 10 pt 7 ps 3.5
+
+# grayscale
+set style line 1 lc rgb '#000' lt -1 pi 0 pt 6 lw 4 ps 4
+
+
+plot \
+  "throughput.data" using 1:2 title "rtt" with linespoints ls 1
+"""
+
 
     gnuplot_makefile = \
 """
@@ -550,8 +583,8 @@ clean:
 	@rm -rf *.eps *.png *.pdf core
 
 distclean: clean
-    @echo "distcleaning"
-    @rm -rf *.data
+	@echo "distcleaning"
+	@rm -rf *.data
 """
 
     def __init__(self, captcp):
@@ -583,6 +616,8 @@ distclean: clean
             sys.stdout.write(Template.payloadtimeport3d)
         elif self.opts.template == "gnuplot-makefile":
             sys.stdout.write(Template.gnuplot_makefile)
+        elif self.opts.template == "throughput":
+            sys.stdout.write(Template.throughput)
         else:
             self.usage()
 
