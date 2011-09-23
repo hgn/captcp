@@ -72,6 +72,16 @@ TH_CWR = dpkt.tcp.TH_CWR
 TCP = dpkt.tcp.TCP
 UDP = dpkt.udp.UDP
 
+# Units (bit):
+# kilobit (kbit) 10^3 - kibibit (Kibit) 2^10
+# megabit (Mbit) 10^6 - mebibit (Mibit) 2^20
+# gigabit (Gbit) 10^9 - gibibit (Gibit) 2^30
+#
+# Units (byte):
+# kilobyte (kB) 10^3 - kibibyte (KiB) 2^10
+# megabyte (MB) 10^6 - mebibyte (MiB) 2^20
+# gigabyte (GB) 10^9 - gibibyte (GiB) 2^30
+
 
 class ExitCodes:
     EXIT_SUCCESS  = 0
@@ -155,6 +165,39 @@ class SequenceContainer:
             except:
                 break
 
+
+class UtilMod:
+    
+    @staticmethod
+    def byte_to_unit(byte, unit):
+        if unit == "kB" or unit == "kilobyte":
+            return byte / 1000
+        if unit == "MB" or unit == "megabyte":
+            return byte / (1000 * 1000)
+        if unit == "GB" or unit == "gigabyte":
+            return byte / (1000 * 1000 * 1000)
+
+        if unit == "KiB" or unit == "kibibyte":
+            return byte / 1024
+        if unit == "MiB" or unit == "mebibyte":
+            return byte / (1024 * 1024)
+        if unit == "GiB" or unit == "gibibyte":
+            return byte / (1024 * 1024 * 1024)
+
+
+        if unit == "kbit" or unit == "kilobit":
+            return byte * 8 / 1000
+        if unit == "Mbit" or unit == "megabit":
+            return byte * 8 / (1000 * 1000)
+        if unit == "Gbit" or unit == "gigabit":
+            return byte * 8 / (1000 * 1000 * 1000)
+
+        if unit == "KiBit" or unit == "kibibit":
+            return byte * 8 / 1024
+        if unit == "MiBit" or unit == "mebibit":
+            return byte * 8 / (1024 * 1024)
+        if unit == "GiBit" or unit == "gibibit":
+            return byte * 8 / (1024 * 1024 * 1024)
 
 
 class RainbowColor:
@@ -535,7 +578,7 @@ set grid xtics ytics mytics
 #set xrange [1:60]
 
 set size 2
-set size ratio 0.5
+set size ratio 0.4
 
 set ylabel "Data [byte]"
 set xlabel "Time [seconds]"
@@ -544,8 +587,7 @@ set style line 1 lc rgb '#0060ad' lt 1 lw 10 pt 0 pi -1 ps 3
 set style line 2 lc rgb '#0060ad' lt 1 lw 10 pt 7 ps 3.5
 
 # grayscale
-set style line 1 lc rgb '#000' lt -1 pi 0 pt 6 lw 4 ps 4
-
+set style line 1 lc rgb '#000' lt 1 pi 0 pt 6 lw 8 ps 4
 
 plot \
   "throughput.data" using 1:2 title "rtt" with linespoints ls 1
