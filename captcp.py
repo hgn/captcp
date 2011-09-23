@@ -1483,6 +1483,24 @@ class SubConnection(TcpConn):
     def update(self, ts, packet):
         self.statistic.packets_processed += 1
 
+    def set_subconnection_id(self, sub_connection_id):
+        self.sub_connection_id = sub_connection_id
+
+    def is_in(self, ids):
+
+        for i in ids:
+            if i.find('.') != -1:
+                assert(i.count('.') == 1)
+                (major, minor) = i.split('.')
+                if (int(major) == self.connection.connection_id and
+                        int(minor) == self.sub_connection_id):
+                    return True
+            else:
+                if int(i) == self.connection.connection_id:
+                    return True
+
+        return False
+
 
 class ConnectionStatistic:
 
@@ -1551,6 +1569,7 @@ class Connection(TcpConn):
         if self.sc1 == None:
             self.sc1 = sc
             self.sc1.update(ts, packet)
+            self.sc1.set_subconnection_id(1)
             return
 
         if self.sc1 == sc:
@@ -1563,6 +1582,7 @@ class Connection(TcpConn):
 
         self.sc2 = sc
         sc.update(ts, packet)
+        sc.set_subconnection_id(2)
 
 
     def get_subconnection(self, packet):
@@ -1783,6 +1803,8 @@ class ShowMod(Mod):
 
     def parse_local_options(self):
 
+        self.ids = False
+
         parser = optparse.OptionParser()
         parser.usage = "show [options] <pcapfile> [pcapfilter]"
 
@@ -1840,14 +1862,21 @@ class ShowMod(Mod):
         if not sub_connection:
             return
 
+        # if the user applied a filter, we check it here
+        if self.ids:
+            if not sub_connection.is_in(self.ids):
+                return
+
         # check if we already assigned a color to this
         # sub_connection, if not we do it now
         if self.opts.differentiate == "connection":
             if "color" not in sub_connection.connection.user_data:
-                sub_connection.connection.user_data["color"] = self.color_iter.infinite_next()
+                sub_connection.connection.user_data["color"] = \
+                        self.color_iter.infinite_next()
         elif self.opts.differentiate == "sub-connection":
             if "color" not in sub_connection.user_data:
-                sub_connection.user_data["color"] = self.color_iter.infinite_next()
+                sub_connection.user_data["color"] = \
+                        self.color_iter.infinite_next()
 
         pi = PacketInfo(packet)
         data_len = len(packet.data.data)
@@ -1863,10 +1892,12 @@ class ShowMod(Mod):
         time = ts - self.cc.capture_time_start
         line += "%.5f" % (Utils.ts_tofloat(time))
 
-        line += " %s %s:%d > %s:%d" % (pi.ipversion, pi.sip, pi.sport, pi.dip, pi.dport)
+        line += " %s %s:%d > %s:%d" % (pi.ipversion,
+                pi.sip, pi.sport, pi.dip, pi.dport)
         line += " Flags: %s" % (pi.create_flag_brakets())
         line += " seq: %u:%u ack: %u win: %u urp: %u" % (
-                pi.seq, self.seq_plus(pi.seq, data_len), pi.ack, pi.win, pi.urp)
+                pi.seq, self.seq_plus(pi.seq, data_len),
+                pi.ack, pi.win, pi.urp)
         line += " len: %d" % (len(packet.data.data))
 
         line += self.color["end"]
@@ -1960,14 +1991,14 @@ class StatisticMod(Mod):
         pass
 
 
-    def print_two_column_sc_statistic(self, sc1, sc2):
-        sys.stdout.write("\n\tFlow A                          Flow B\n")
+    def print_two_column_sc_statistic(self, cid, sc1, sc2):
+        sys.stdout.write("\n\tFlow %s.1                          Flow %s.2\n" % (cid, cid))
         sys.stdout.write("\tPackets received: %-10d    Packets received: %d\n" %
                 (sc1.statistic.packets_processed, sc2.statistic.packets_processed))
 
-    def print_one_column_sc_statistic(self, sc):
+    def print_one_column_sc_statistic(self, cid, sc):
 
-        sys.stdout.write("\n\tFlow A\n")
+        sys.stdout.write("\n\tFlow %s.1\n" % (cid))
         sys.stdout.write("\tPackets received: %d\n" % (sc.statistic.packets_processed))
 
 
@@ -2027,12 +2058,12 @@ class StatisticMod(Mod):
             sys.stdout.write("\n")
 
             if connection.sc1 and connection.sc2:
-                sys.stdout.write("\tFlow A: %s\n" % connection.sc1)
-                sys.stdout.write("\tFlow B: %s\n" % connection.sc2)
-                self.print_two_column_sc_statistic(connection.sc1, connection.sc2)
+                sys.stdout.write("\tFlow %s.1:  %s\n" % (connection.connection_id, connection.sc1))
+                sys.stdout.write("\tFlow %s.2:  %s\n" % (connection.connection_id, connection.sc2))
+                self.print_two_column_sc_statistic(connection.connection_id, connection.sc1, connection.sc2)
             elif connection.sc1:
-                sys.stdout.write("\tFlow A: %s\n" % connection.sc1)
-                self.print_one_column_sc_statistic(connection.sc1)
+                sys.stdout.write("\tFlow %s.1:  %s\n" % (connection.connection_id, connection.sc1))
+                self.print_one_column_sc_statistic(connection.connection_id, connection.sc1)
             else:
                 raise InternalException("sc1 should be the only one here")
 
