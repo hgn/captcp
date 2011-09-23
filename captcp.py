@@ -1454,6 +1454,7 @@ class SubConnection(TcpConn):
         TcpConn.__init__(self, packet)
         self.connection = connection
         self.statistic = SubConnectionStatistic()
+        self.user_data = dict()
 
 
     def __cmp__(self, other):
@@ -1571,7 +1572,7 @@ class Connection(TcpConn):
         if self.sc1 == None:
             raise InternalException("a connection without a subconnection?!")
 
-        if self.sc1.sport == packet.data.sport:
+        if str(self.sc1.sport) == str(packet.data.sport):
             return self.sc1
         else:
             assert(self.sc2)
@@ -1580,7 +1581,6 @@ class Connection(TcpConn):
 
     def human_id(self):
         return "1"
-
 
 
 class ConnectionContainerStatistic:
@@ -1795,6 +1795,9 @@ class ShowMod(Mod):
         parser.add_option( "-i", "--connection-id", dest="connections", default=None,
                 type="string", help="specify the number of displayed ID's")
 
+        parser.add_option( "-d", "--differentiate", dest="differentiate", default="connection",
+                type="string", help="specify if connection or sub-connections should be colored")
+
         parser.add_option( "-m", "--match", dest="match", default=None,
                 type="string", help="if statment is true the string is color in red")
 
@@ -1819,32 +1822,45 @@ class ShowMod(Mod):
             self.ids = self.opts.connections.split(',')
             self.logger.info("show limited to the following connections: %s" % (str(self.ids)))
 
+        if self.opts.differentiate != "connection" and self.opts.differentiate != "sub-connection":
+            self.logger.error("only connection or sub-connection allowed for --d")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+            
+
     def match(self, ts, packet):
         pass
+
 
     def seq_plus(self, seq, length):
         return seq + length
 
     def pre_process_packet(self, ts, packet):
 
-        connection = self.cc.connection_by_packet(packet)
+        sub_connection = self.cc.sub_connection_by_packet(packet)
         # only for TCP flows this can be true, therefore
         # no additional checks that this is TCP are required
         # here
-        if not connection:
+        if not sub_connection:
             return
 
         # check if we already assigned a color to this
-        # connection, if not we do it now
-        if "color" not in connection.user_data:
-            connection.user_data["color"] = self.color_iter.infinite_next()
+        # sub_connection, if not we do it now
+        if self.opts.differentiate == "connection":
+            if "color" not in sub_connection.connection.user_data:
+                sub_connection.connection.user_data["color"] = self.color_iter.infinite_next()
+        elif self.opts.differentiate == "sub-connection":
+            if "color" not in sub_connection.user_data:
+                sub_connection.user_data["color"] = self.color_iter.infinite_next()
 
         pi = PacketInfo(packet)
         data_len = len(packet.data.data)
 
 
         # color init
-        line = connection.user_data["color"]
+        if self.opts.differentiate == "connection":
+            line = sub_connection.connection.user_data["color"]
+        else:
+            line = sub_connection.user_data["color"]
 
         # time handling
         time = ts - self.cc.capture_time_start
