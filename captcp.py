@@ -1579,9 +1579,6 @@ class Connection(TcpConn):
             return self.sc2
 
 
-    def human_id(self):
-        return "1"
-
 
 class ConnectionContainerStatistic:
 
