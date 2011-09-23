@@ -44,7 +44,7 @@ __version__  = "0.5"
 __license__  = "GPLv3"
 
 # custom exceptions
-class ArgumentErrorException(Exception): pass
+class ArgumentException(Exception): pass
 class InternalSequenceException(Exception): pass
 class InternalException(Exception): pass
 class SequenceContainerException(InternalException): pass
@@ -96,7 +96,7 @@ class SequenceContainer:
 
     def add_sequence(self, array):
         if len(array) != 2:
-            raise ArgumentErrorException("array must contain excatly 2 members")
+            raise ArgumentException("array must contain excatly 2 members")
 
         new = SequenceContainer.Container()
         new.left_edge  = array[0]
@@ -1021,7 +1021,7 @@ class Mod:
         elif self.opts.loglevel == "error":
             self.logger.setLevel(logging.ERROR)
         else:
-            raise ArgumentErrorException("loglevel \"%s\" not supported" % self.opts.loglevel)
+            raise ArgumentException("loglevel \"%s\" not supported" % self.opts.loglevel)
 
 class SequenceGraphMod(Mod):
     
@@ -1195,7 +1195,7 @@ class SequenceGraphMod(Mod):
         self.delay = self.opts.rtt / 2.0
 
         if self.width <= 0 or self.height <= 0:
-            raise ArgumentErrorException("size cannot smaller then 0px")
+            raise ArgumentException("size cannot smaller then 0px")
 
         if self.opts.connections:
             self.ids = self.opts.connections.split(',')
@@ -1789,6 +1789,102 @@ class ConnectionAnalyzeMod(Mod):
         sys.stderr.write("# Tip: generate graphviz file with: \"twopi -onetwork.png -Tpng network.data\"\n")
 
 
+class ThroughputMod(Mod):
+
+
+    def pre_initialize(self):
+
+        self.logger = logging.getLogger()
+        self.parse_local_options()
+        self.start_time = False
+
+    def parse_local_options(self):
+
+        self.ids = False
+
+        parser = optparse.OptionParser()
+        parser.usage = "show [options] <pcapfile> [pcapfilter]"
+
+        parser.add_option( "-v", "--loglevel", dest="loglevel", default=None,
+                type="string", help="set the loglevel (info, debug, warning, error)")
+
+        parser.add_option( "-i", "--connection-id", dest="connections", default=None,
+                type="string", help="specify the number of displayed ID's")
+
+        parser.add_option( "-s", "--samplelenght", dest="samplelenght", default=1.0,
+                type="float", help="length in seconds (float) where data is accumulated (1.0)")
+
+        parser.add_option( "-m", "--mode", dest="mode", default="goodput",
+                type="string", help="layer where the data len measurement is taken (default: goodput")
+
+        parser.add_option( "-u", "--unit", dest="unit", default="byte",
+                type="string", help="unit: byte, kbyte, mbyte")
+
+        self.opts, args = parser.parse_args(sys.argv[0:])
+        self.set_opts_logevel()
+        
+        if len(args) < 3:
+            self.logger.error("no pcap file argument given, exiting\n")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        self.captcp.print_welcome()
+
+        self.captcp.pcap_file_path = args[2]
+        self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
+
+        if self.opts.connections:
+            self.ids = self.opts.connections.split(',')
+            self.logger.info("show limited to the following connections: %s" % (str(self.ids)))
+
+
+    def pre_process_packet(self, ts, packet):
+
+        sub_connection = self.cc.sub_connection_by_packet(packet)
+        # only for TCP flows this can be true, therefore
+        # no additional checks that this is TCP are required
+        # here
+        if not sub_connection:
+            return
+
+        # if the user applied a filter, we check it here
+        if self.ids:
+            if not sub_connection.is_in(self.ids):
+                return
+
+        pi = PacketInfo(packet)
+
+        if self.opts.mode == "goodput":
+            data_len = len(packet.data.data)
+        else:
+            raise NotImplementedException("only goodput mode is supported")
+
+        # time handling
+        if not self.start_time:
+            self.start_time = ts
+            self.last_sample = 0.0
+            self.data = 0
+            #line += "%.5f" % (Utils.ts_tofloat(time))
+
+        timediff = Utils.ts_tofloat(ts - self.start_time)
+
+        self.data += data_len
+
+        if timediff > self.last_sample + self.opts.samplelenght:
+
+            if self.opts.unit == 'byte':
+                amount = self.data
+            else:
+                raise ArgumentException("unit %s not supported" % (self.opts.unit))
+
+            # time to print the data
+            sys.stdout.write("%.5f %d\n" % (self.last_sample + self.opts.samplelenght,
+                amount))
+            self.data  = 0
+
+            self.last_sample += self.opts.samplelenght
+        
+
+
 
 
 class ShowMod(Mod):
@@ -1993,13 +2089,13 @@ class StatisticMod(Mod):
 
     def print_two_column_sc_statistic(self, cid, sc1, sc2):
         sys.stdout.write("\n\tFlow %s.1                          Flow %s.2\n" % (cid, cid))
-        sys.stdout.write("\tPackets received: %-10d    Packets received: %d\n" %
+        sys.stdout.write("\tPackets: %-10d    \t\tPackets: %d\n" %
                 (sc1.statistic.packets_processed, sc2.statistic.packets_processed))
 
     def print_one_column_sc_statistic(self, cid, sc):
 
         sys.stdout.write("\n\tFlow %s.1\n" % (cid))
-        sys.stdout.write("\tPackets received: %d\n" % (sc.statistic.packets_processed))
+        sys.stdout.write("\t\tPackets: %d\n" % (sc.statistic.packets_processed))
 
 
     def process_final(self):
@@ -2081,12 +2177,14 @@ class Captcp:
             "statistic":       "StatisticMod",
             "connection":      "ConnectionAnalyzeMod",
             "sequencegraph":   "SequenceGraphMod",
-            "show":            "ShowMod"
+            "show":            "ShowMod",
+            "throughtput":     "ThroughputMod"
             }
 
     def __init__(self):
         self.captcp_starttime = datetime.datetime.today()
         self.setup_logging()
+        self.pcap_filter = None
 
     def setup_logging(self):
 
@@ -2143,6 +2241,7 @@ class Captcp:
         if (classtring == "StatisticMod" or
                 classtring == "ConnectionAnalyzeMod" or
                 classtring == "ShowMod" or
+                classtring == "ThroughputMod" or
                 classtring == "SequenceGraphMod"):
 
             classinstance = globals()[classtring]()
