@@ -170,6 +170,14 @@ class UtilMod:
     
     @staticmethod
     def byte_to_unit(byte, unit):
+
+        byte = float(byte)
+
+        if unit == "byte" or unit == "Byte":
+            return byte
+        if unit == "bit" or unit == "Bit":
+            return byte * 8
+
         if unit == "kB" or unit == "kilobyte":
             return byte / 1000
         if unit == "MB" or unit == "megabyte":
@@ -198,6 +206,8 @@ class UtilMod:
             return byte * 8 / (1024 * 1024)
         if unit == "GiBit" or unit == "gibibit":
             return byte * 8 / (1024 * 1024 * 1024)
+
+        raise ArgumentException("unit %s not known" % (unit))
 
 
 class RainbowColor:
@@ -1948,13 +1958,11 @@ class ThroughputMod(Mod):
 
         if timediff > self.last_sample + self.opts.samplelenght:
 
-            if self.opts.unit == 'byte':
-                amount = self.data
-            else:
-                raise ArgumentException("unit %s not supported" % (self.opts.unit))
+
+            amount = UtilMod.byte_to_unit(self.data, self.opts.unit)
 
             # time to print the data
-            sys.stdout.write("%.5f %d\n" % (self.last_sample + self.opts.samplelenght,
+            sys.stdout.write("%.5f %.3f\n" % (self.last_sample + self.opts.samplelenght,
                 amount))
             self.data  = 0
 
