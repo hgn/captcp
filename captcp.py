@@ -644,7 +644,6 @@ distclean: clean
         self.captcp = captcp
         self.parse_local_options()
 
-
     def parse_local_options(self):
         parser = optparse.OptionParser()
         parser.add_option( "-t", "--template", dest="template", default=None,
@@ -1120,6 +1119,7 @@ class SequenceGraphMod(Mod):
 
     def pre_initialize(self):
         self.ids = None
+        self.timeframe_start = self.timeframe_end = False
 
         if cairo == None:
             raise ImportError("Python Cairo module not available, exiting")
@@ -1138,6 +1138,8 @@ class SequenceGraphMod(Mod):
         self.packet_timestamp_punchcard = dict()
         self.packet_timestamp_punchcard[True]  = []
         self.packet_timestamp_punchcard[False] = []
+
+        self.reference_time = False
 
     def setup_cairo(self):
 
@@ -1215,10 +1217,31 @@ class SequenceGraphMod(Mod):
 
         else:
 
-            time_diff = self.cc.capture_time_end - self.cc.capture_time_start
-            time_diff = float(time_diff.seconds) + time_diff.microseconds / 1E6 + time_diff.days * 86400
-            time_diff += self.delay
-            self.scaling_factor = time_diff / (self.height - 2 * self.margin_top_bottom)
+            if self.timeframe_start and self.timeframe_end:
+
+                self.logger.debug("calculate page coordinated ans scale factor")
+
+                timedelta_s = datetime.timedelta(seconds=self.timeframe_start)
+                timedelta_e = datetime.timedelta(seconds=self.timeframe_end)
+
+                self.capture_time_start = self.reference_time + timedelta_s
+                self.capture_time_end   = self.reference_time + timedelta_e
+
+                self.process_time_start = self.capture_time_start
+                self.process_time_end   = self.capture_time_end
+
+                time_diff = self.process_time_end - self.process_time_start
+                time_diff = float(time_diff.seconds) + time_diff.microseconds / 1E6 + time_diff.days * 86400
+                time_diff += self.delay
+                self.scaling_factor = time_diff / (self.height - 2 * self.margin_top_bottom)
+
+            else:
+                # this is the _normal_ case: the user didn't specified
+                # a connection id nor a timestart, timeend limit
+                time_diff = self.cc.capture_time_end - self.cc.capture_time_start
+                time_diff = float(time_diff.seconds) + time_diff.microseconds / 1E6 + time_diff.days * 86400
+                time_diff += self.delay
+                self.scaling_factor = time_diff / (self.height - 2 * self.margin_top_bottom)
 
         self.logger.info("now draw %d packets" % self.packets_to_draw)
 
@@ -1243,8 +1266,8 @@ class SequenceGraphMod(Mod):
         parser.add_option( "-r", "--rtt", dest="rtt", default=0.025,
                 type="float", help="specify the average rtt per connection (default 0.025s)")
 
-        parser.add_option( "-f", "--filename", dest="filename", default="sequence.pdf",
-                type="string", help="specify the name of the generated PDF file (default: sequence.pdf)")
+        parser.add_option( "-f", "--filename", dest="filename", default="seq-graph.pdf",
+                type="string", help="specify the name of the generated PDF file (default: seq-graph.pdf)")
 
         parser.add_option( "-i", "--connection-id", dest="connections", default=None,
                 type="string", help="specify the number of relevant ID's")
@@ -1258,6 +1281,9 @@ class SequenceGraphMod(Mod):
         parser.add_option( "-q", "--remotelabel", dest="remotelabel", default="Remote",
                 type="string", help="the default string right axis (default: Remote)")
 
+        parser.add_option( "-t", "--time", dest="timeframe", default=None,
+                type="string", help="select range of displayed packet (-t <start:stop>)")
+
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
         
@@ -1265,16 +1291,19 @@ class SequenceGraphMod(Mod):
             parser.error("no pcap file argument given, exiting")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
+        self.captcp.print_welcome()
+
         if self.opts.localaddr == None:
-            self.logger.warning("No local IP address (--local) specified!")
+            self.logger.warning("No local IP address (--local <ip-addr>) specified!")
+
+        if self.opts.timeframe:
+            self.logger.debug("split timeframe options: %s" % (self.opts.timeframe))
+            (start, end) = self.opts.timeframe.split(':')
+            (self.timeframe_start, self.timeframe_end) = (float(start), float(end))
+            self.logger.debug("%s %s" %(self.timeframe_start, self.timeframe_end))
 
         self.captcp.pcap_file_path = args[2]
         self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
-
-        self.captcp.pcap_filter = None
-        if args[3:]:
-            self.captcp.pcap_filter = " ".join(args[3:])
-            self.logger.info("pcap filter: \"" + self.captcp.pcap_filter + "\"")
 
         (self.width, self.height) = self.opts.size.split('x')
         (self.width, self.height) = (int(self.width), int(self.height))
@@ -1448,6 +1477,11 @@ class SequenceGraphMod(Mod):
         return False
 
     def pre_process_packet(self, ts, packet):
+
+        if not self.reference_time:
+            # time time where the first packet is
+            # captured
+            self.reference_time = ts
 
         if not self.is_drawable_packet(ts, packet):
             return
@@ -1957,7 +1991,6 @@ class ThroughputMod(Mod):
         self.data += data_len
 
         if timediff > self.last_sample + self.opts.samplelenght:
-
 
             amount = UtilMod.byte_to_unit(self.data, self.opts.unit)
 
