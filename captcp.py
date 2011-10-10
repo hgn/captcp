@@ -104,6 +104,33 @@ class SequenceContainer:
             sys.stdout.write(str(i.left_edge) + "-" +
                     str(i.right_edge) + "\n" )
 
+    # is there an other way in python to do some
+    # unsigned arithmetic? Not sure but numpy seems adequate
+    import numpy
+
+    def before(self, seq1, seq2):
+        s1 = numpy.array(seq1, dtype=numpy.np.dtype('uint32'))
+        s2 = numpy.array(seq2, dtype=numpy.np.dtype('uint32'))
+        res = numpy.array((s1 - s2), dtype=numpy.np.dtype('int32'))
+        if res < 0:
+            return True
+        else:
+            return False
+
+    def after(self,  seq1, seq2):
+        return self.before(seq2, seq1)
+
+    # is s2 <= s1 <= s3
+    def between(self, seq1, seq2, seq3):
+        s1 = numpy.array(seq1, dtype=numpy.np.dtype('uint32'))
+        s2 = numpy.array(seq2, dtype=numpy.np.dtype('uint32'))
+        s3 = numpy.array(seq3, dtype=numpy.np.dtype('uint32'))
+
+        if s3 - s2 >= s1 - s2:
+            return True
+        else:
+            return False
+
     def add_sequence(self, array):
         if len(array) != 2:
             raise ArgumentException("array must contain excatly 2 members")
