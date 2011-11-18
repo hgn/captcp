@@ -1215,6 +1215,31 @@ class SequenceGraphMod(Mod):
         self.cr.show_text(text)
         self.cr.stroke()
 
+
+    def draw_background_grid(self):
+
+        grid_line_width = 0.1
+
+        left  = self.margin_left_right
+        right = self.width - self.margin_left_right
+
+        i = self.margin_top_bottom
+
+        while True:
+
+            self.cr.move_to(left, i)
+            self.cr.line_to (right, i)
+            self.cr.set_source_rgb(0.9, 0.9, 0.9)
+            self.cr.set_line_width(grid_line_width)
+            self.cr.stroke()
+
+            i += 20
+
+            if i > self.height - self.margin_top_bottom:
+                break
+
+
+
     def pre_process_final(self):
 
         if self.ids:
@@ -1270,6 +1295,9 @@ class SequenceGraphMod(Mod):
                 time_diff += self.delay
                 self.scaling_factor = time_diff / (self.height - 2 * self.margin_top_bottom)
 
+        if self.opts.grid:
+            self.draw_background_grid()
+
         self.logger.info("now draw %d packets" % self.packets_to_draw)
 
 
@@ -1307,6 +1335,9 @@ class SequenceGraphMod(Mod):
 
         parser.add_option( "-q", "--remotelabel", dest="remotelabel", default="Remote",
                 type="string", help="the default string right axis (default: Remote)")
+
+        parser.add_option( "-g", "--grid", dest="grid", default=False,
+                type="string", help="draw background grid (default: no)")
 
         parser.add_option( "-t", "--time", dest="timeframe", default=None,
                 type="string", help="select range of displayed packet (-t <start:stop>)")
@@ -1473,7 +1504,6 @@ class SequenceGraphMod(Mod):
             self.draw_labels(sequence, ts, packet)
 
         
-        self.cr.set_source_rgb(0.0, 0.0, 0.0)
         self.cr.set_line_width(0.5)
         self.cr.move_to(sequence.xs, sequence.ys)
         self.cr.line_to(sequence.xe, sequence.ye)
@@ -1548,6 +1578,7 @@ class SequenceGraphMod(Mod):
         s.ye += self.margin_top_bottom
 
 
+        self.cr.set_source_rgb(0.0, 0.0, 0.0)
         self.draw_sequence(s, display_time, packet)
 
     def process_final(self):
