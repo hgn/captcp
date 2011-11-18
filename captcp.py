@@ -1301,6 +1301,14 @@ class SequenceGraphMod(Mod):
         self.logger.info("now draw %d packets" % self.packets_to_draw)
 
 
+    def rttbw_to_bits(self):
+        if "mbps" in self.opts.rttbw.lower():
+            return float(self.opts.rttbw.lower().replace("mbps",""))*1000000
+        if "kbps" in self.opts.rttbw.lower():
+            return float(self.opts.rttbw.lower().replace("kbps",""))*1000
+        if "bps" in self.opts.rttbw.lower():
+            return float(self.opts.rttbw.lower().replace("bps",""))
+
 
     def parse_local_options(self):
 
@@ -1320,6 +1328,9 @@ class SequenceGraphMod(Mod):
 
         parser.add_option( "-r", "--rtt", dest="rtt", default=0.025,
                 type="float", help="specify the average rtt per connection (default 0.025s)")
+
+        parser.add_option( "-b", "--rtt-bw", dest="rttbw", default="100Mbps", type="string",
+                          help="specify the used bandwidth for your connection (default 100Mbps)")
 
         parser.add_option( "-f", "--filename", dest="filename", default="seq-graph.pdf",
                 type="string", help="specify the name of the generated PDF file (default: seq-graph.pdf)")
@@ -1367,6 +1378,7 @@ class SequenceGraphMod(Mod):
         (self.width, self.height) = (int(self.width), int(self.height))
 
         self.delay = self.opts.rtt / 2.0
+        self.bandwidth = self.rttbw_to_bits()
 
         if self.width <= 0 or self.height <= 0:
             raise ArgumentException("size cannot smaller then 0px")
@@ -1391,6 +1403,7 @@ class SequenceGraphMod(Mod):
                 return False
         else:
             raise InternalException()
+
 
     def ts_tofloat(self, ts):
         return float(ts.seconds) + ts.microseconds / 1E6 + ts.days * 86400
@@ -1469,8 +1482,8 @@ class SequenceGraphMod(Mod):
 
         self.cr.set_font_size(9)
         x_bearing, y_bearing, width, height = self.cr.text_extents(text)[:4]
-        x_off = (self.width / 2)  - (width / 2.0)
 
+        x_off = (self.width / 2)  - (width / 2.0)
 
         mid = (sequence.ys + (sequence.ye - sequence.ys) / 2.0)
 
@@ -1508,6 +1521,59 @@ class SequenceGraphMod(Mod):
         self.cr.move_to(sequence.xs, sequence.ys)
         self.cr.line_to(sequence.xe, sequence.ye)
         self.cr.stroke()
+
+
+    def draw_arrows(self, sequence):
+
+        if ((sequence.xe-sequence.xs) > 0) and ((sequence.ye-sequence.ys) > 0):
+            interim_angle=math.pi/2-(math.atan((sequence.ye-sequence.ys)/(sequence.xe-sequence.xs)))-0.4
+            xsp = sequence.xe - (6*math.sin(interim_angle))
+            ysp = sequence.ye - (6*math.cos(interim_angle))
+
+            interim_angle=math.pi/2-(math.atan((sequence.xe-sequence.xs)/(sequence.ye-sequence.ys)))-0.4
+            xep = sequence.xe - (6*math.cos(interim_angle))
+            yep = sequence.ye - (6*math.sin(interim_angle))
+
+        if ((sequence.xe-sequence.xs) > 0) and ((sequence.ye-sequence.ys) < 0):
+            interim_angle=math.pi/2-(math.atan((sequence.xe-sequence.xs)/(sequence.ys-sequence.ye)))-0.4
+            xsp = sequence.xe - (6*math.cos(interim_angle))
+            ysp = sequence.ye + (6*math.sin(interim_angle))
+ 
+            interim_angle=math.pi/2-(math.atan((sequence.ys-sequence.ye)/(sequence.ye-sequence.ys)))-0.4
+            xep = sequence.xe - (6*math.sin(interim_angle))
+            yep = sequence.ye + (6*math.cos(interim_angle))
+
+        if ((sequence.xe-sequence.xs) < 0) and ((sequence.ye-sequence.ys) < 0):
+            interim_angle=math.pi/2-(math.atan((sequence.ys-sequence.ye)/(sequence.xs-sequence.xe)))-0.4
+            xsp = sequence.xe + (6*math.sin(interim_angle))
+            ysp = sequence.ye + (6*math.cos(interim_angle))
+
+            interim_angle=math.pi/2-(math.atan((sequence.xs-sequence.xe)/(sequence.ys-sequence.ye)))-0.4
+            xep = sequence.xe + (6*math.cos(interim_angle))
+            yep = sequence.ye + (6*math.sin(interim_angle))
+
+        if ((sequence.xe-sequence.xs) < 0) and ((sequence.ye-sequence.ys) > 0):
+            interim_angle=math.pi/2-(math.atan((sequence.ye-sequence.ys)/(sequence.xs-sequence.xe)))-0.4
+            xsp = sequence.xe + (6*math.sin(interim_angle))
+            ysp = sequence.ye - (6*math.cos(interim_angle))
+
+            interim_angle=math.pi/2-(math.atan((sequence.xs-sequence.xe)/(sequence.ye-sequence.ys)))-0.4
+            xep = sequence.xe + (6*math.cos(interim_angle))
+            yep = sequence.ye - (6*math.sin(interim_angle))
+            
+        if (xsp and ysp):
+
+            self.cr.set_source_rgb(0.0,0.0,0.0)
+            self.cr.set_line_width(0.5)
+            self.cr.move_to(sequence.xe, sequence.ye)
+            self.cr.line_to(xsp, ysp)
+            self.cr.line_to(xep, yep)
+            self.cr.line_to(sequence.xe, sequence.ye)
+            self.cr.close_path()
+            self.cr.fill()
+
+            
+
 
 
     def is_drawable_packet(self, ts, packet):
@@ -1564,15 +1630,15 @@ class SequenceGraphMod(Mod):
             s.xs = self.margin_left_right
             s.xe = self.width - self.margin_left_right
             s.ys = self.ts_tofloat(ts_diff) / self.scaling_factor
-            s.ye = (self.ts_tofloat(ts_diff) + self.delay) / self.scaling_factor
+            s.ye = (self.ts_tofloat(ts_diff) + (len(packet)/self.bandwidth) + self.delay) / self.scaling_factor
             display_time = self.ts_tofloat(ts_diff)
         else:
             s.local = False
             s.xs = self.width - self.margin_left_right
             s.xe = self.margin_left_right
-            s.ys = (self.ts_tofloat(ts_diff) - self.delay) / self.scaling_factor
+            s.ys = (self.ts_tofloat(ts_diff) - (len(packet)/self.bandwidth) - self.delay) /self.scaling_factor
             s.ye = self.ts_tofloat(ts_diff) / self.scaling_factor
-            display_time = self.ts_tofloat(ts_diff) - self.delay
+            display_time = self.ts_tofloat(ts_diff) - (len(packet)/self.bandwidth) - self.delay
 
         s.ys += self.margin_top_bottom
         s.ye += self.margin_top_bottom
@@ -1580,6 +1646,8 @@ class SequenceGraphMod(Mod):
 
         self.cr.set_source_rgb(0.0, 0.0, 0.0)
         self.draw_sequence(s, display_time, packet)
+        self.draw_arrows(s) 
+
 
     def process_final(self):
         self.cr.show_page()
