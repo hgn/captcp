@@ -1600,18 +1600,15 @@ class SequenceGraphMod(Mod):
             s.xs = self.margin_left_right
             s.xe = self.width - self.margin_left_right
             s.ys = self.ts_tofloat(ts_diff) / self.scaling_factor
-            #s.ye = (self.ts_tofloat(ts_diff) + self.delay) / self.scaling_factor
-            s.ye = (self.ts_tofloat(ts_diff) + (len(packet)/self.bandwidth)) / self.scaling_factor
+            s.ye = (self.ts_tofloat(ts_diff) + (len(packet)/self.bandwidth) + self.delay) / self.scaling_factor
             display_time = self.ts_tofloat(ts_diff)
         else:
             s.local = False
             s.xs = self.width - self.margin_left_right
             s.xe = self.margin_left_right
-            #s.ys = (self.ts_tofloat(ts_diff) - self.delay) / self.scaling_factor
-            s.ys = (self.ts_tofloat(ts_diff) - (len(packet)/self.bandwidth)) /self.scaling_factor
+            s.ys = (self.ts_tofloat(ts_diff) - (len(packet)/self.bandwidth) - self.delay) /self.scaling_factor
             s.ye = self.ts_tofloat(ts_diff) / self.scaling_factor
-            #display_time = self.ts_tofloat(ts_diff) - self.delay
-            display_time = self.ts_tofloat(ts_diff) - (len(packet)/self.bandwidth)
+            display_time = self.ts_tofloat(ts_diff) - (len(packet)/self.bandwidth) - self.delay
 
         s.ys += self.margin_top_bottom
         s.ye += self.margin_top_bottom
