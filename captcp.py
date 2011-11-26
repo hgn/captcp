@@ -630,6 +630,38 @@ plot \
   "throughput.data" using 1:2 title "rtt" with linespoints ls 1
 """
 
+    timesequence = \
+"""
+set terminal postscript eps enhanced color "Times" 30
+set output "timesequence.eps"
+set title "Time Sequence Graph"
+
+set style line 99 linetype 1 linecolor rgb "#999999" lw 2
+set key right bottom
+set key box linestyle 99
+set key spacing 1.2
+set nokey
+
+set grid xtics ytics mytics
+
+#set xrange [1:60]
+
+set size 2
+set size ratio 0.4
+
+set ylabel "Data [byte]"
+set xlabel "Time [seconds]"
+
+set style line 1 lc rgb '#0060ad' lt 1 lw 10 pt 0 pi -1 ps 3
+set style line 2 lc rgb '#0060ad' lt 1 lw 10 pt 7 ps 3.5
+
+# grayscale
+set style line 1 lc rgb '#000' lt 1 pi 0 pt 6 lw 8 ps 4
+
+plot \
+  "timesequence.data" using 1:2 title "Sequence Number" with linespoints ls 1
+"""
+
 
     gnuplot_makefile = \
 """
@@ -687,6 +719,7 @@ distclean: clean
         sys.stderr.write("""supported modules:
         payload-time-port-3d
         gnuplot-makefile
+        timesequence
         \n""")
 
     def run(self):
@@ -696,6 +729,8 @@ distclean: clean
             sys.stdout.write(Template.gnuplot_makefile)
         elif self.opts.template == "throughput":
             sys.stdout.write(Template.throughput)
+        elif self.opts.template == "timesequence":
+            sys.stdout.write(Template.timesequence)
         else:
             self.usage()
 
@@ -1136,6 +1171,128 @@ class Mod:
         else:
             raise ArgumentException("loglevel \"%s\" not supported" % self.opts.loglevel)
 
+
+
+class TimeSequenceMod(Mod):
+    
+    class Sequence: pass
+
+    def pre_initialize(self):
+
+        self.logger = logging.getLogger()
+
+        self.ids = None
+
+        self.parse_local_options()
+        self.process_time_start = self.process_time_end = None
+        self.reference_time = False
+
+        
+        sys.stderr.write("# Tip 1: generate gnuplot template with "
+                "\"./captcp.py template -t timesequence > timesequence.gpi\"\n")
+        sys.stderr.write("# Tip 2: generate Makefile template with "
+                "\"./captcp.py template -t gnuplot-makefile > Makefile\"\n")
+
+
+    def parse_local_options(self):
+
+        self.width = self.height = 0
+
+        parser = optparse.OptionParser()
+        parser.usage = "%prog timesequence [options] <pcapfile>"
+
+        parser.add_option( "-v", "--loglevel", dest="loglevel", default=None,
+                type="string", help="set the loglevel (info, debug, warning, error)")
+
+        parser.add_option( "-i", "--data-flow", dest="connections", default=None,
+                type="string", help="specify the number of relevant ID's")
+
+        parser.add_option( "-t", "--time", dest="timeframe", default=None,
+                type="string", help="select range of displayed packet (-t <start:stop>)")
+
+        self.opts, args = parser.parse_args(sys.argv[0:])
+        self.set_opts_logevel()
+        
+        if len(args) < 3:
+            parser.error("no pcap file argument given, exiting")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        self.captcp.print_welcome()
+
+        if self.opts.timeframe:
+            self.logger.debug("split timeframe options: %s" % (self.opts.timeframe))
+            (start, end) = self.opts.timeframe.split(':')
+            (self.timeframe_start, self.timeframe_end) = (float(start), float(end))
+            self.logger.debug("%s %s" %(self.timeframe_start, self.timeframe_end))
+
+        self.captcp.pcap_file_path = args[2]
+        self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
+
+
+        if self.opts.connections:
+            self.ids = self.opts.connections.split(',')
+            self.logger.info("visualization limited to the following connections: %s" % (str(self.ids)))
+
+
+    def is_drawable_packet(self, ts, packet):
+        
+        if type(packet) != dpkt.ip.IP and type(packet) != dpkt.ip6.IP6:
+            return False
+
+        if type(packet.data) != dpkt.tcp.TCP:
+            return False
+
+        if self.process_time_start and ts < self.process_time_start:
+            return False
+
+        if self.process_time_end and ts > self.process_time_end:
+            return False
+
+        sub_connection = self.cc.sub_connection_by_packet(packet)
+        # only for TCP flows this can be true, therefore
+        # no additional checks that this is TCP are required
+        # here
+        if not sub_connection:
+            return False
+
+        # if the user applied a filter, we check it here
+        if self.ids:
+            if not sub_connection.is_in(self.ids):
+                return False
+
+            return True
+
+        return True
+
+
+    def pre_process_packet(self, ts, packet):
+
+        if not self.is_drawable_packet(ts, packet):
+            return
+
+        if not self.reference_time:
+            # time time where the first packet is
+            # captured
+            self.reference_time = ts
+            self.reference_sequence_number = PacketInfo(packet).seq
+
+
+    def calculate_offset_time(self, ts):
+
+        time_diff = ts - self.reference_time
+        return float(time_diff.seconds) + time_diff.microseconds / 1E6 + time_diff.days * 86400
+
+
+    def process_packet(self, ts, packet):
+
+        if not self.is_drawable_packet(ts, packet):
+            return
+
+        pi = PacketInfo(packet)
+
+        print("%lf %s" % (self.calculate_offset_time(ts), pi.seq))
+
+
 class SequenceGraphMod(Mod):
     
     class Sequence: pass
@@ -1271,7 +1428,7 @@ class SequenceGraphMod(Mod):
 
             if self.timeframe_start and self.timeframe_end:
 
-                self.logger.debug("calculate page coordinated ans scale factor")
+                self.logger.debug("calculate page coordinated and scale factor")
 
                 timedelta_s = datetime.timedelta(seconds=self.timeframe_start)
                 timedelta_e = datetime.timedelta(seconds=self.timeframe_end)
@@ -2421,6 +2578,7 @@ class Captcp:
             "statistic":       "StatisticMod",
             "connection":      "ConnectionAnalyzeMod",
             "sequencegraph":   "SequenceGraphMod",
+            "timesequence":    "TimeSequenceMod",
             "show":            "ShowMod",
             "throughtput":     "ThroughputMod"
             }
@@ -2486,6 +2644,7 @@ class Captcp:
                 classtring == "ConnectionAnalyzeMod" or
                 classtring == "ShowMod" or
                 classtring == "ThroughputMod" or
+                classtring == "TimeSequenceMod" or
                 classtring == "SequenceGraphMod"):
 
             classinstance = globals()[classtring]()
