@@ -630,6 +630,36 @@ plot \
   "throughput.data" using 1:2 title "rtt" with linespoints ls 1
 """
 
+    timesequence = \
+"""
+set terminal postscript eps enhanced color "Times" 30
+set output "time-sequence.eps"
+set title "Time Sequence Graph"
+
+set style line 99 linetype 1 linecolor rgb "#999999" lw 2
+set key right bottom
+set key box linestyle 99
+set key spacing 1.2
+
+set grid xtics ytics mytics
+
+set size 2
+#set size ratio 0.4
+
+set format y "%.0f"
+
+set ylabel "Sequence Number"
+set xlabel "Time [seconds]"
+
+set style line 1 lc rgb '#00004d' lt 1 lw 1
+set style line 2 lc rgb '#0060ad' lt 1 lw 1
+
+
+plot  \
+	"seq.data" using 1:2 title "Sequence Number" with linespoints ls 1, \
+	"ack.data" using 1:2 title "ACK Number" with linespoints ls 2 \
+"""
+
 
     gnuplot_makefile = \
 """
@@ -687,6 +717,7 @@ distclean: clean
         sys.stderr.write("""supported modules:
         payload-time-port-3d
         gnuplot-makefile
+        timesequence
         \n""")
 
     def run(self):
@@ -696,6 +727,8 @@ distclean: clean
             sys.stdout.write(Template.gnuplot_makefile)
         elif self.opts.template == "throughput":
             sys.stdout.write(Template.throughput)
+        elif self.opts.template == "timesequence":
+            sys.stdout.write(Template.timesequence)
         else:
             self.usage()
 
@@ -1143,6 +1176,209 @@ class Mod:
         else:
             raise ArgumentException("loglevel \"%s\" not supported" % self.opts.loglevel)
 
+
+
+class TimeSequenceMod(Mod):
+
+    # usage:
+    #
+    #   generate gnuplot template and Makefile template
+    #   $ captcp timesequence --init --output-dir foo-dir
+    #
+    #   generate data files sequence.data and ack.data in foo-dir
+    #   for flow 1.1 (flow 1.2 is considered as ACK flow)
+    #   $ captcp timesequence generate --data-flow 1.1 --output-dir foo-dir
+    #
+    #   re-gerate the data files; gnuplot and Makefile are left untouched
+    #   $ captcp timesequence generate --data-flow 1.1 --output-dir foo-dir
+
+    # m = re.match(r"(\w+) (\w+)", "Isaac Newton, physicist")
+    # m.group(0)
+    
+    class Sequence: pass
+
+    def pre_initialize(self):
+
+        self.logger = logging.getLogger()
+
+        self.ids = None
+        self.timeframe_start = self.timeframe_end = None
+        self.reference_time = False
+
+        self.parse_local_options()
+
+        sys.stderr.write("# ADVICE: capture the data at sender side!\n")
+
+
+    def create_files(self):
+
+        self.data_flow_filepath = "%s/%s" % (self.opts.outputdir, "seq.data")
+        self.ack_flow_filepath  = "%s/%s" % (self.opts.outputdir, "ack.data")
+        
+        self.data_flow_file = open(self.data_flow_filepath, 'w')
+        self.ack_flow_file = open(self.ack_flow_filepath, 'w')
+
+
+    def close_files(self):
+
+        self.data_flow_file.close()
+        self.ack_flow_file.close()
+
+
+    def create_gnuplot_environment(self):
+
+        gnuplot_filename = "time-sequence.gpi"
+        makefile_filename = "Makefile"
+
+        filepath = "%s/%s" % (self.opts.outputdir, gnuplot_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (Template.timesequence))
+        fd.close()
+
+        filepath = "%s/%s" % (self.opts.outputdir, makefile_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (Template.gnuplot_makefile))
+        fd.close()
+
+
+    def parse_local_options(self):
+
+        self.width = self.height = 0
+
+        parser = optparse.OptionParser()
+        parser.usage = "%prog timesequence [options] <pcapfile>"
+
+        parser.add_option( "-v", "--loglevel", dest="loglevel", default=None,
+                type="string", help="set the loglevel (info, debug, warning, error)")
+
+        parser.add_option( "-o", "--output-dir", dest="outputdir", default=None,
+                type="string", help="specify the output directory")
+
+        parser.add_option( "-f", "--data-flow", dest="connections", default=None,
+                type="string", help="specify the number of relevant ID's")
+
+        parser.add_option( "-t", "--time", dest="timeframe", default=None,
+                type="string", help="select range of displayed packet (-t <start:stop>)")
+
+        parser.add_option( "-i", "--init", dest="init",  default=False,
+                action="store_true", help="create Gnuplot template and Makefile in output-dir")
+
+        self.opts, args = parser.parse_args(sys.argv[0:])
+        self.set_opts_logevel()
+        
+        if len(args) < 3:
+            parser.error("no pcap file argument given, exiting")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        self.captcp.print_welcome()
+
+        if not self.opts.outputdir:
+            self.logger.error("No output directory specified: --output-dir")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        if self.opts.init:
+            self.create_gnuplot_environment()
+
+        if not os.path.exists(self.opts.outputdir):
+            self.logger.error("Not a valid directory: \"%s\"" % (self.opts.outputdir))
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        if self.opts.timeframe:
+            self.logger.debug("split timeframe options: %s" % (self.opts.timeframe))
+            (start, end) = self.opts.timeframe.split(':')
+            (self.timeframe_start, self.timeframe_end) = (float(start), float(end))
+            sys.stderr.write("# displayed time frame: %.2fs to %.2fs\n" %
+                    (self.timeframe_start, self.timeframe_end))
+
+        self.captcp.pcap_file_path = args[2]
+        self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
+
+        if not self.opts.connections:
+            self.logger.error("No data flow specified (where the data flows)")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        (self.connection_id, self.data_flow_id) = self.opts.connections.split('.')
+        if int(self.data_flow_id) == 1:
+            self.ack_flow_id = 2
+        elif int(self.data_flow_id) == 2:
+            self.ack_flow_id = 1
+        else:
+            raise ArgumentException("sub flow must be 1 or 2")
+
+        sys.stderr.write("# connection: %s (data flow: %s, ACK flow: %s)\n" %
+                (self.connection_id, self.data_flow_id, self.ack_flow_id))
+
+        self.create_files()
+
+
+    def check_packet(self, ts, packet):
+        
+        if type(packet) != dpkt.ip.IP and type(packet) != dpkt.ip6.IP6:
+            return False
+
+        if type(packet.data) != dpkt.tcp.TCP:
+            return False
+
+        if not self.cc.is_packet_connection(packet, int(self.connection_id)):
+            return False
+
+        if not self.reference_time:
+            self.reference_time = ts
+
+        if self.timeframe_start and float(self.calculate_offset_time(ts)) < self.timeframe_start:
+            return False
+
+        if self.timeframe_end and float(self.calculate_offset_time(ts)) > self.timeframe_end:
+            return False
+
+        return True
+
+
+    def pre_process_packet(self, ts, packet):
+
+        if not self.check_packet(ts, packet):
+            return
+
+    def calculate_offset_time(self, ts):
+
+        time_diff = ts - self.reference_time
+        return float(time_diff.seconds) + time_diff.microseconds / 1E6 + time_diff.days * 86400
+
+
+    def process_data_flow_packet(self, ts, packet):
+
+        pi = PacketInfo(packet)
+        self.data_flow_file.write("%lf %s\n" % (self.calculate_offset_time(ts), pi.seq))
+
+
+    def process_ack_flow_packet(self, ts, packet):
+
+        pi = PacketInfo(packet)
+        self.ack_flow_file.write("%lf %s\n" % (self.calculate_offset_time(ts), pi.ack))
+
+
+    def process_packet(self, ts, packet):
+
+        if not self.check_packet(ts, packet):
+            return
+
+        sub_connection = self.cc.sub_connection_by_packet(packet)
+
+        if sub_connection.sub_connection_id == int(self.data_flow_id):
+            self.process_data_flow_packet(ts, packet)
+        elif sub_connection.sub_connection_id == int(self.ack_flow_id):
+            self.process_ack_flow_packet(ts, packet)
+        else:
+            raise InternalException
+
+
+    def process_final(self):
+
+        self.close_files()
+        sys.stderr.write("# now execute \"make\" in %s\n" % (self.opts.outputdir))
+
+
+
 class SequenceGraphMod(Mod):
     
     class Sequence: pass
@@ -1278,7 +1514,7 @@ class SequenceGraphMod(Mod):
 
             if self.timeframe_start and self.timeframe_end:
 
-                self.logger.debug("calculate page coordinated ans scale factor")
+                self.logger.debug("calculate page coordinated and scale factor")
 
                 timedelta_s = datetime.timedelta(seconds=self.timeframe_start)
                 timedelta_e = datetime.timedelta(seconds=self.timeframe_end)
@@ -2490,6 +2726,7 @@ class Captcp:
             "statistic":       "StatisticMod",
             "connection":      "ConnectionAnalyzeMod",
             "sequencegraph":   "SequenceGraphMod",
+            "timesequence":    "TimeSequenceMod",
             "show":            "ShowMod",
             "throughtput":     "ThroughputMod"
             }
@@ -2555,6 +2792,7 @@ class Captcp:
                 classtring == "ConnectionAnalyzeMod" or
                 classtring == "ShowMod" or
                 classtring == "ThroughputMod" or
+                classtring == "TimeSequenceMod" or
                 classtring == "SequenceGraphMod"):
 
             classinstance = globals()[classtring]()
