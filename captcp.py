@@ -1197,10 +1197,10 @@ class TimeSequenceMod(Mod):
         self.logger = logging.getLogger()
 
         self.ids = None
+        self.timeframe_start = self.timeframe_end = None
+        self.reference_time = False
 
         self.parse_local_options()
-        self.process_time_start = self.process_time_end = None
-        self.reference_time = False
 
         sys.stderr.write("# ADVICE: capture the data at sender side!\n")
 
@@ -1260,7 +1260,8 @@ class TimeSequenceMod(Mod):
             self.logger.debug("split timeframe options: %s" % (self.opts.timeframe))
             (start, end) = self.opts.timeframe.split(':')
             (self.timeframe_start, self.timeframe_end) = (float(start), float(end))
-            self.logger.debug("%s %s" %(self.timeframe_start, self.timeframe_end))
+            sys.stderr.write("# displayed time frame: %.2fs to %.2fs\n" %
+                    (self.timeframe_start, self.timeframe_end))
 
         self.captcp.pcap_file_path = args[2]
         self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
@@ -1297,10 +1298,10 @@ class TimeSequenceMod(Mod):
         if not self.reference_time:
             self.reference_time = ts
 
-        if self.process_time_start and ts < self.calculate_offset_time(self.process_time_start):
+        if self.timeframe_start and float(self.calculate_offset_time(ts)) < self.timeframe_start:
             return False
 
-        if self.process_time_end and ts > self.calculate_offset_time(self.process_time_end):
+        if self.timeframe_end and float(self.calculate_offset_time(ts)) > self.timeframe_end:
             return False
 
         return True
@@ -1343,7 +1344,10 @@ class TimeSequenceMod(Mod):
         else:
             raise InternalException
 
+
     def process_final(self):
+
+        self.close_files()
         sys.stderr.write("# now execute \"make\" in %s\n" % (self.opts.outputdir))
 
 
