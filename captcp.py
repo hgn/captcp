@@ -1080,6 +1080,12 @@ class Highlight:
         return ExitCodes.EXIT_SUCCESS
 
 
+class CaptureLevel:
+
+    LINK_LAYER      = 0
+    NETWORK_LAYER   = 1
+    TRANSPORT_LAYER = 2
+
 class Mod:
 
     def register_captcp(self, captcp):
@@ -1088,6 +1094,7 @@ class Mod:
     def __init__(self):
         self.captcp = None
         self.cc = ConnectionContainer()
+        self.capture_level = CaptureLevel.NETWORK_LAYER
 
     def internal_pre_process_packet(self, ts, packet):
         """ this is a hidden preprocessing function, called for every packet"""
@@ -1692,7 +1699,11 @@ class TcpConn:
 class SubConnectionStatistic:
 
     def __init__(self):
-        self.packets_processed = 0
+        self.packets_processed          = 0
+        self.bytes_sent_link_layer      = 0
+        self.bytes_sent_network_layer   = 0
+        self.bytes_sent_transport_layer = 0
+        self.bytes_sent_application_layer = 0
 
 
 class SubConnection(TcpConn):
@@ -1752,7 +1763,11 @@ class SubConnection(TcpConn):
 class ConnectionStatistic:
 
     def __init__(self):
-        self.packets_processed = 0
+        self.packets_processed          = 0
+        self.bytes_sent_link_layer      = 0
+        self.bytes_sent_network_layer   = 0
+        self.bytes_sent_transport_layer = 0
+        self.bytes_sent_application_layer = 0
 
 
 class Connection(TcpConn):
@@ -1799,7 +1814,8 @@ class Connection(TcpConn):
 
 
     def update_statistic(self, packet):
-        self.statistic.packets_processed += 1
+
+        self.statistic.packets_processed  += 1
 
 
     def update(self, ts, packet):
@@ -1862,6 +1878,11 @@ class ConnectionContainerStatistic:
         self.packets_tl_icmp  = 0
         self.packets_tl_icmp6  = 0
         self.packets_tl_unknown  = 0
+
+        # byte accounting
+        self.bytes_sent_link_layer        = 0
+        self.bytes_sent_network_layer     = 0
+        self.bytes_sent_transport_layer   = 0
 
 
 
@@ -2264,6 +2285,7 @@ class StatisticMod(Mod):
         self.color = RainbowColor(mode=RainbowColor.ANSI)
         self.logger = logging.getLogger()
         self.parse_local_options()
+        self.capture_level = CaptureLevel.NETWORK_LAYER
 
     def parse_local_options(self):
 
@@ -2294,6 +2316,18 @@ class StatisticMod(Mod):
 
 
     def pre_process_packet(self, ts, packet):
+
+
+
+        sub_connection = self.cc.sub_connection_by_packet(packet)
+        if not sub_connection:
+            return InternalException()
+
+        #sub_connection.statistic ...
+        sub_connection.statistic.bytes_sent_link_layer        += len(packet) + 14
+        sub_connection.statistic.bytes_sent_network_layer     += int(len(packet))
+        sub_connection.statistic.bytes_sent_transport_layer   += int(len(packet.data))
+        sub_connection.statistic.bytes_sent_application_layer += int(len(packet.data.data))
 
         self.cc.statistic.packets_processed += 1
 
@@ -2330,16 +2364,48 @@ class StatisticMod(Mod):
     def process_packet(self, ts, packet):
         pass
 
+    def format_data_column(self, hdr_left, data_left, hdr_right, data_right):
+
+        MAX_HDR_LEN = 10
+        MAX_DATA_LEN = 10
+        LEFT_WHITESPACE_GUARD = "        "
+
+        sys.stdout.write("%s%-10s %10s  %10s %10s\n" %
+                (LEFT_WHITESPACE_GUARD, hdr_left, data_left, hdr_right, data_right))
+
 
     def print_two_column_sc_statistic(self, cid, sc1, sc2):
-        sys.stdout.write("\n\tFlow %s.1                          Flow %s.2\n" % (cid, cid))
-        sys.stdout.write("\tPackets: %-10d    \t\tPackets: %d\n" %
+
+        self.format_data_column("%sFlow %s.1" % (self.color["yellow"], cid), " ",
+                "%sFlow %s.1%s" % (self.color["yellow"], cid, self.color["end"]), " ")
+        self.format_data_column("tx", "1000.0", "rx", "10000000")
+
+        sys.stdout.write("\n\t%sFlow %s.1\t\t\t\t%sFlow %s.2\n" %
+                (self.color["yellow"], cid, self.color["green"], cid))
+        sys.stdout.write("%s" % (self.color["end"]))
+        sys.stdout.write("\tPackets: %-10d    \t\t\tPackets: %d\n" %
                 (sc1.statistic.packets_processed, sc2.statistic.packets_processed))
+
+        sys.stdout.write("\tByte (link layer): %-10d    \tByte (link layer): %d\n" %
+                (sc1.statistic.bytes_sent_link_layer, sc2.statistic.bytes_sent_link_layer))
+
+        sys.stdout.write("\tByte (network layer): %-10d    \tByte (network layer): %d\n" %
+                (sc1.statistic.bytes_sent_network_layer, sc2.statistic.bytes_sent_network_layer))
+
+        sys.stdout.write("\tByte (tranport layer): %-10d    \tByte (transport layer): %d\n" %
+                (sc1.statistic.bytes_sent_transport_layer, sc2.statistic.bytes_sent_transport_layer))
+
+        sys.stdout.write("\tByte (application layer): %-10d\tByte (application layer): %d\n"  %
+                (sc1.statistic.bytes_sent_application_layer, sc2.statistic.bytes_sent_application_layer))
 
     def print_one_column_sc_statistic(self, cid, sc):
 
         sys.stdout.write("\n\tFlow %s.1\n" % (cid))
         sys.stdout.write("\t\tPackets: %d\n" % (sc.statistic.packets_processed))
+
+        # please copy the left hand side parts from above
+
+        raise NotImplementedException("one flow connection not supported yet")
 
 
     def process_final(self):
@@ -2398,8 +2464,11 @@ class StatisticMod(Mod):
             sys.stdout.write("\n")
 
             if connection.sc1 and connection.sc2:
+                sys.stdout.write("%s" % (self.color["yellow"]))
                 sys.stdout.write("\tFlow %s.1:  %s\n" % (connection.connection_id, connection.sc1))
+                sys.stdout.write("%s" % (self.color["green"]))
                 sys.stdout.write("\tFlow %s.2:  %s\n" % (connection.connection_id, connection.sc2))
+                sys.stdout.write("%s" % (self.color["end"]))
                 self.print_two_column_sc_statistic(connection.connection_id, connection.sc1, connection.sc2)
             elif connection.sc1:
                 sys.stdout.write("\tFlow %s.1:  %s\n" % (connection.connection_id, connection.sc1))
