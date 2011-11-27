@@ -1186,6 +1186,9 @@ class TimeSequenceMod(Mod):
     #
     #   re-gerate the data files; gnuplot and Makefile are left untouched
     #   $ captcp timesequence generate --data-flow 1.1 --output-dir foo-dir
+
+    # m = re.match(r"(\w+) (\w+)", "Isaac Newton, physicist")
+    # m.group(0)
     
     class Sequence: pass
 
@@ -1199,8 +1202,22 @@ class TimeSequenceMod(Mod):
         self.process_time_start = self.process_time_end = None
         self.reference_time = False
 
+        sys.stderr.write("# ADVICE: capture the data at sender side!\n")
+
+
+    def create_files(self):
+
+        self.data_flow_filepath = "%s/%s" % (self.opts.outputdir, "seq.data")
+        self.ack_flow_filepath  = "%s/%s" % (self.opts.outputdir, "ack.data")
         
-        sys.stderr.write("# HINT: capture the data at sender side!\n")
+        self.data_flow_file = open(self.data_flow_filepath, 'w')
+        self.ack_flow_file = open(self.ack_flow_filepath, 'w')
+
+
+    def close_files(self):
+
+        self.data_flow_file.close()
+        self.ack_flow_file.close()
 
 
     def parse_local_options(self):
@@ -1216,7 +1233,7 @@ class TimeSequenceMod(Mod):
         parser.add_option( "-o", "--output-dir", dest="outputdir", default=None,
                 type="string", help="specify the output directory")
 
-        parser.add_option( "-i", "--data-flow", dest="connections", default=None,
+        parser.add_option( "-f", "--data-flow", dest="connections", default=None,
                 type="string", help="specify the number of relevant ID's")
 
         parser.add_option( "-t", "--time", dest="timeframe", default=None,
@@ -1248,13 +1265,25 @@ class TimeSequenceMod(Mod):
         self.captcp.pcap_file_path = args[2]
         self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
 
+        if not self.opts.connections:
+            self.logger.error("No data flow specified (where the data flows)")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
 
-        if self.opts.connections:
-            self.ids = self.opts.connections.split(',')
-            self.logger.info("visualization limited to the following connections: %s" % (str(self.ids)))
+        (self.connection_id, self.data_flow_id) = self.opts.connections.split('.')
+        if int(self.data_flow_id) == 1:
+            self.ack_flow_id = 2
+        elif int(self.data_flow_id) == 2:
+            self.ack_flow_id = 1
+        else:
+            raise ArgumentException("sub flow must be 1 or 2")
+
+        sys.stderr.write("# connection: %s (data flow: %s, ACK flow: %s)\n" %
+                (self.connection_id, self.data_flow_id, self.ack_flow_id))
+
+        self.create_files()
 
 
-    def is_drawable_packet(self, ts, packet):
+    def check_packet(self, ts, packet):
         
         if type(packet) != dpkt.ip.IP and type(packet) != dpkt.ip6.IP6:
             return False
@@ -1262,40 +1291,25 @@ class TimeSequenceMod(Mod):
         if type(packet.data) != dpkt.tcp.TCP:
             return False
 
-        if self.process_time_start and ts < self.process_time_start:
+        if not self.cc.is_packet_connection(packet, int(self.connection_id)):
             return False
 
-        if self.process_time_end and ts > self.process_time_end:
+        if not self.reference_time:
+            self.reference_time = ts
+
+        if self.process_time_start and ts < self.calculate_offset_time(self.process_time_start):
             return False
 
-        sub_connection = self.cc.sub_connection_by_packet(packet)
-        # only for TCP flows this can be true, therefore
-        # no additional checks that this is TCP are required
-        # here
-        if not sub_connection:
+        if self.process_time_end and ts > self.calculate_offset_time(self.process_time_end):
             return False
-
-        # if the user applied a filter, we check it here
-        if self.ids:
-            if not sub_connection.is_in(self.ids):
-                return False
-
-            return True
 
         return True
 
 
     def pre_process_packet(self, ts, packet):
 
-        if not self.is_drawable_packet(ts, packet):
+        if not self.check_packet(ts, packet):
             return
-
-        if not self.reference_time:
-            # time time where the first packet is
-            # captured
-            self.reference_time = ts
-            self.reference_sequence_number = PacketInfo(packet).seq
-
 
     def calculate_offset_time(self, ts):
 
@@ -1303,14 +1317,35 @@ class TimeSequenceMod(Mod):
         return float(time_diff.seconds) + time_diff.microseconds / 1E6 + time_diff.days * 86400
 
 
-    def process_packet(self, ts, packet):
-
-        if not self.is_drawable_packet(ts, packet):
-            return
+    def process_data_flow_packet(self, ts, packet):
 
         pi = PacketInfo(packet)
+        self.data_flow_file.write("%lf %s\n" % (self.calculate_offset_time(ts), pi.seq))
 
-        print("%lf %s" % (self.calculate_offset_time(ts), pi.seq))
+
+    def process_ack_flow_packet(self, ts, packet):
+
+        pi = PacketInfo(packet)
+        self.ack_flow_file.write("%lf %s\n" % (self.calculate_offset_time(ts), pi.ack))
+
+
+    def process_packet(self, ts, packet):
+
+        if not self.check_packet(ts, packet):
+            return
+
+        sub_connection = self.cc.sub_connection_by_packet(packet)
+
+        if sub_connection.sub_connection_id == int(self.data_flow_id):
+            self.process_data_flow_packet(ts, packet)
+        elif sub_connection.sub_connection_id == int(self.ack_flow_id):
+            self.process_ack_flow_packet(ts, packet)
+        else:
+            raise InternalException
+
+    def process_final(self):
+        sys.stderr.write("# now execute \"make\" in %s\n" % (self.opts.outputdir))
+
 
 
 class SequenceGraphMod(Mod):
