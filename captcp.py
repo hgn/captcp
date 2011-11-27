@@ -633,33 +633,31 @@ plot \
     timesequence = \
 """
 set terminal postscript eps enhanced color "Times" 30
-set output "timesequence.eps"
+set output "time-sequence.eps"
 set title "Time Sequence Graph"
 
 set style line 99 linetype 1 linecolor rgb "#999999" lw 2
 set key right bottom
 set key box linestyle 99
 set key spacing 1.2
-set nokey
 
 set grid xtics ytics mytics
 
-#set xrange [1:60]
-
 set size 2
-set size ratio 0.4
+#set size ratio 0.4
 
-set ylabel "Data [byte]"
+set format y "%.0f"
+
+set ylabel "Sequence Number"
 set xlabel "Time [seconds]"
 
-set style line 1 lc rgb '#0060ad' lt 1 lw 10 pt 0 pi -1 ps 3
-set style line 2 lc rgb '#0060ad' lt 1 lw 10 pt 7 ps 3.5
+set style line 1 lc rgb '#00004d' lt 1 lw 1
+set style line 2 lc rgb '#0060ad' lt 1 lw 1
 
-# grayscale
-set style line 1 lc rgb '#000' lt 1 pi 0 pt 6 lw 8 ps 4
 
-plot \
-  "timesequence.data" using 1:2 title "Sequence Number" with linespoints ls 1
+plot  \
+	"seq.data" using 1:2 title "Sequence Number" with linespoints ls 1, \
+	"ack.data" using 1:2 title "ACK Number" with linespoints ls 2 \
 """
 
 
@@ -1220,6 +1218,22 @@ class TimeSequenceMod(Mod):
         self.ack_flow_file.close()
 
 
+    def create_gnuplot_environment(self):
+
+        gnuplot_filename = "time-sequence.gpi"
+        makefile_filename = "Makefile"
+
+        filepath = "%s/%s" % (self.opts.outputdir, gnuplot_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (Template.timesequence))
+        fd.close()
+
+        filepath = "%s/%s" % (self.opts.outputdir, makefile_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (Template.gnuplot_makefile))
+        fd.close()
+
+
     def parse_local_options(self):
 
         self.width = self.height = 0
@@ -1239,6 +1253,9 @@ class TimeSequenceMod(Mod):
         parser.add_option( "-t", "--time", dest="timeframe", default=None,
                 type="string", help="select range of displayed packet (-t <start:stop>)")
 
+        parser.add_option( "-i", "--init", dest="init",  default=False,
+                action="store_true", help="create Gnuplot template and Makefile in output-dir")
+
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
         
@@ -1251,6 +1268,9 @@ class TimeSequenceMod(Mod):
         if not self.opts.outputdir:
             self.logger.error("No output directory specified: --output-dir")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        if self.opts.init:
+            self.create_gnuplot_environment()
 
         if not os.path.exists(self.opts.outputdir):
             self.logger.error("Not a valid directory: \"%s\"" % (self.opts.outputdir))
