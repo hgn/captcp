@@ -1,0 +1,12 @@
+
+Connection:
+
+    Bidirectional TCP flow between two peers. A connection consist of at least one
+    flow, but for 99% it consist of two flows: the data flow from the sender to
+    the receiver and a ACK flow from the receiver back to the sender of data. It
+    can happend that only on flow exist: three way handshake and the receiver is
+    not available (dropped packets at firewall) or if the capture file only
+    consist of one part.
+
+Flow:
+    a unidirectional flow from one the sender to the receiver.
