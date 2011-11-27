@@ -1200,10 +1200,7 @@ class TimeSequenceMod(Mod):
         self.reference_time = False
 
         
-        sys.stderr.write("# Tip 1: generate gnuplot template with "
-                "\"./captcp.py template -t timesequence > timesequence.gpi\"\n")
-        sys.stderr.write("# Tip 2: generate Makefile template with "
-                "\"./captcp.py template -t gnuplot-makefile > Makefile\"\n")
+        sys.stderr.write("# HINT: capture the data at sender side!\n")
 
 
     def parse_local_options(self):
@@ -1215,6 +1212,9 @@ class TimeSequenceMod(Mod):
 
         parser.add_option( "-v", "--loglevel", dest="loglevel", default=None,
                 type="string", help="set the loglevel (info, debug, warning, error)")
+
+        parser.add_option( "-o", "--output-dir", dest="outputdir", default=None,
+                type="string", help="specify the output directory")
 
         parser.add_option( "-i", "--data-flow", dest="connections", default=None,
                 type="string", help="specify the number of relevant ID's")
@@ -1230,6 +1230,14 @@ class TimeSequenceMod(Mod):
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
         self.captcp.print_welcome()
+
+        if not self.opts.outputdir:
+            self.logger.error("No output directory specified: --output-dir")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        if not os.path.exists(self.opts.outputdir):
+            self.logger.error("Not a valid directory: \"%s\"" % (self.opts.outputdir))
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
 
         if self.opts.timeframe:
             self.logger.debug("split timeframe options: %s" % (self.opts.timeframe))
