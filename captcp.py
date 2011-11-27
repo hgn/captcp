@@ -1174,6 +1174,18 @@ class Mod:
 
 
 class TimeSequenceMod(Mod):
+
+    # usage:
+    #
+    #   generate gnuplot template and Makefile template
+    #   $ captcp timesequence --init --output-dir foo-dir
+    #
+    #   generate data files sequence.data and ack.data in foo-dir
+    #   for flow 1.1 (flow 1.2 is considered as ACK flow)
+    #   $ captcp timesequence generate --data-flow 1.1 --output-dir foo-dir
+    #
+    #   re-gerate the data files; gnuplot and Makefile are left untouched
+    #   $ captcp timesequence generate --data-flow 1.1 --output-dir foo-dir
     
     class Sequence: pass
 
