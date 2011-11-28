@@ -680,7 +680,7 @@ png: $(PNG_OBJ)
 	@ echo "compillation of "$<
 	@gnuplot $<
 
-%.pdf: %.eps 
+%.pdf: %.eps $(shell *.data)
 	@echo "conversion in pdf format"
 	@epstopdf --outfile=$*.pdf $<
 	@echo "end"
