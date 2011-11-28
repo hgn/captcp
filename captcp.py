@@ -654,8 +654,8 @@ set xlabel "Time [seconds]"
 load "data-arrow.data"
 load "data-arrow-retrans.data"
 
-set style line 1 lc rgb '#00004d' lt 1 lw 1
-set style line 2 lc rgb '#0060ad' lt 1 lw 1
+set style line 1 lc rgb '#00004d' lt 1 lw 3
+set style line 2 lc rgb '#0060ad' lt 1 lw 3
 
 
 plot  \
