@@ -1364,11 +1364,11 @@ class TimeSequenceMod(Mod):
         self.data_flow_file.write("%lf %s\n" % (packet_time, pi.seq))
 
         if pi.seq > self.highest_seq:
-            self.logger.info("data seq: %lf high: %lf" % (pi.seq, self.highest_seq))
+            #self.logger.info("data seq: %lf high: %lf" % (pi.seq, self.highest_seq))
             self.data_arrow_file.write("set arrow from %lf,%s.0 to %ls,%s.0 lc rgb \"blue\"\n" %
                                        (packet_time, pi.seq, packet_time, pi.seq + len(packet.data.data)))
         else:
-            self.logger.info("retr seq: %lf high: %lf" % (pi.seq, self.highest_seq))
+            #self.logger.info("retr seq: %lf high: %lf" % (pi.seq, self.highest_seq))
             self.data_arrow_retrans_file.write("set arrow from %lf,%s.0 to %ls,%s.0 lc rgb \"red\"\n" %
                                        (packet_time, pi.seq, packet_time, pi.seq + len(packet.data.data)))
 
@@ -1382,7 +1382,10 @@ class TimeSequenceMod(Mod):
         packet_time = self.calculate_offset_time(ts)
 
         pi = PacketInfo(packet)
-        self.ack_flow_file.write("%lf %s\n" % (packet_time, pi.ack))
+
+        # ignore first ACK packet
+        if pi.ack != 0:
+            self.ack_flow_file.write("%lf %s\n" % (packet_time, pi.ack))
 
 
     def process_packet(self, ts, packet):
