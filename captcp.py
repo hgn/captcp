@@ -653,6 +653,7 @@ set xlabel "Time [seconds]"
 
 load "data-arrow.data"
 load "data-arrow-retrans.data"
+load "data-arrow-sack.data"
 
 set style line 1 lc rgb '#00004d' lt 1 lw 3
 set style line 2 lc rgb '#0060ad' lt 1 lw 3
@@ -1183,21 +1184,6 @@ class Mod:
 
 class TimeSequenceMod(Mod):
 
-    # usage:
-    #
-    #   generate gnuplot template and Makefile template
-    #   $ captcp timesequence --init --output-dir foo-dir
-    #
-    #   generate data files sequence.data and ack.data in foo-dir
-    #   for flow 1.1 (flow 1.2 is considered as ACK flow)
-    #   $ captcp timesequence generate --data-flow 1.1 --output-dir foo-dir
-    #
-    #   re-gerate the data files; gnuplot and Makefile are left untouched
-    #   $ captcp timesequence generate --data-flow 1.1 --output-dir foo-dir
-
-    # m = re.match(r"(\w+) (\w+)", "Isaac Newton, physicist")
-    # m.group(0)
-    
     class Sequence: pass
 
     def pre_initialize(self):
@@ -1220,11 +1206,13 @@ class TimeSequenceMod(Mod):
         self.ack_flow_filepath  = "%s/%s" % (self.opts.outputdir, "ack.data")
         self.data_arrow_filepath  = "%s/%s" % (self.opts.outputdir, "data-arrow.data")
         self.data_arrow_retrans_filepath  = "%s/%s" % (self.opts.outputdir, "data-arrow-retrans.data")
+        self.data_arrow_sack_filepath  = "%s/%s" % (self.opts.outputdir, "data-arrow-sack.data")
         
         self.data_flow_file = open(self.data_flow_filepath, 'w')
         self.ack_flow_file = open(self.ack_flow_filepath, 'w')
         self.data_arrow_file = open(self.data_arrow_filepath, 'w')
         self.data_arrow_retrans_file = open(self.data_arrow_retrans_filepath, 'w')
+        self.data_arrow_sack_file = open(self.data_arrow_sack_filepath, 'w')
 
 
     def close_files(self):
@@ -1233,6 +1221,7 @@ class TimeSequenceMod(Mod):
         self.ack_flow_file.close()
         self.data_arrow_file.close()
         self.data_arrow_retrans_file.close()
+        self.data_arrow_sack_file.close()
 
 
     def create_gnuplot_environment(self):
@@ -1365,11 +1354,11 @@ class TimeSequenceMod(Mod):
 
         if pi.seq > self.highest_seq:
             #self.logger.info("data seq: %lf high: %lf" % (pi.seq, self.highest_seq))
-            self.data_arrow_file.write("set arrow from %lf,%s.0 to %ls,%s.0 lc rgb \"blue\"\n" %
+            self.data_arrow_file.write("set arrow from %lf,%s.0 to %ls,%s.0 lc rgb \"#008800\" lw 1\n" %
                                        (packet_time, pi.seq, packet_time, pi.seq + len(packet.data.data)))
         else:
             #self.logger.info("retr seq: %lf high: %lf" % (pi.seq, self.highest_seq))
-            self.data_arrow_retrans_file.write("set arrow from %lf,%s.0 to %ls,%s.0 lc rgb \"red\"\n" %
+            self.data_arrow_retrans_file.write("set arrow from %lf,%s.0 to %ls,%s.0 lc rgb \"red\" lw 1\n" %
                                        (packet_time, pi.seq, packet_time, pi.seq + len(packet.data.data)))
 
         # only real data packets should be accounted, no plain ACKs
@@ -1386,6 +1375,12 @@ class TimeSequenceMod(Mod):
         # ignore first ACK packet
         if pi.ack != 0:
             self.ack_flow_file.write("%lf %s\n" % (packet_time, pi.ack))
+
+        if pi.options['sackblocks']:
+            assert(float(len(pi.options['sackblocks'])) % 2 == 0)
+            for i in range(0, len(pi.options['sackblocks']), 2):
+                self.data_arrow_sack_file.write("set arrow from %lf,%s.0 to %ls,%s.0 nohead lc rgb \"#aaaaff\" lw 2\n" %
+                        (packet_time, pi.options['sackblocks'][i], packet_time, pi.options['sackblocks'][i + 1]))
 
 
     def process_packet(self, ts, packet):
