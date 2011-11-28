@@ -632,7 +632,7 @@ plot \
 
     timesequence = \
 """
-set terminal postscript eps enhanced color "Times" 30
+set terminal postscript eps enhanced color "Times" 25
 set output "time-sequence.eps"
 set title "Time Sequence Graph"
 
@@ -657,11 +657,13 @@ load "data-arrow-sack.data"
 
 set style line 1 lc rgb '#00004d' lt 1 lw 3
 set style line 2 lc rgb '#0060ad' lt 1 lw 3
+set style line 3 lc rgb '#cdaf95' lt 1 lw 3
 
 
-plot  \
-	"seq.data" using 1:2 title "Sequence Number" with linespoints ls 1, \
-	"ack.data" using 1:2 title "ACK Number" with linespoints ls 2 \
+plot  \\
+    "seq.data" using 1:2 title "Seq" with linespoints ls 1, \\
+    "ack.data" using 1:2 title "ACK" with linespoints ls 2, \\
+    "win.data" using 1:2 title "AWND" with lines ls 3
 """
 
 
@@ -1190,10 +1192,12 @@ class TimeSequenceMod(Mod):
 
         self.logger = logging.getLogger()
 
-        self.ids = None
-        self.timeframe_start = self.timeframe_end = None
-        self.reference_time = False
-        self.highest_seq = -1
+        self.ids                   = None
+        self.timeframe_start       = self.timeframe_end = None
+        self.reference_time        = False
+        self.highest_seq           = -1
+        self.wscale_receiver       = 1
+        self.wscale_sender_support = False
 
         self.parse_local_options()
 
@@ -1202,14 +1206,18 @@ class TimeSequenceMod(Mod):
 
     def create_files(self):
 
-        self.data_flow_filepath = "%s/%s" % (self.opts.outputdir, "seq.data")
-        self.ack_flow_filepath  = "%s/%s" % (self.opts.outputdir, "ack.data")
-        self.data_arrow_filepath  = "%s/%s" % (self.opts.outputdir, "data-arrow.data")
+        self.data_flow_filepath      = "%s/%s" % (self.opts.outputdir, "seq.data")
+        self.ack_flow_filepath       = "%s/%s" % (self.opts.outputdir, "ack.data")
+        self.receiver_awnd_filepath  = "%s/%s" % (self.opts.outputdir, "win.data")
+
+        self.data_arrow_filepath          = "%s/%s" % (self.opts.outputdir, "data-arrow.data")
         self.data_arrow_retrans_filepath  = "%s/%s" % (self.opts.outputdir, "data-arrow-retrans.data")
-        self.data_arrow_sack_filepath  = "%s/%s" % (self.opts.outputdir, "data-arrow-sack.data")
+        self.data_arrow_sack_filepath     = "%s/%s" % (self.opts.outputdir, "data-arrow-sack.data")
         
         self.data_flow_file = open(self.data_flow_filepath, 'w')
         self.ack_flow_file = open(self.ack_flow_filepath, 'w')
+        self.receiver_awnd_file = open(self.receiver_awnd_filepath, 'w')
+
         self.data_arrow_file = open(self.data_arrow_filepath, 'w')
         self.data_arrow_retrans_file = open(self.data_arrow_retrans_filepath, 'w')
         self.data_arrow_sack_file = open(self.data_arrow_sack_filepath, 'w')
@@ -1219,6 +1227,8 @@ class TimeSequenceMod(Mod):
 
         self.data_flow_file.close()
         self.ack_flow_file.close()
+        self.receiver_awnd_file.close()
+
         self.data_arrow_file.close()
         self.data_arrow_retrans_file.close()
         self.data_arrow_sack_file.close()
@@ -1238,6 +1248,46 @@ class TimeSequenceMod(Mod):
         fd = open(filepath, 'w')
         fd.write("%s" % (Template.gnuplot_makefile))
         fd.close()
+
+
+    def check_options(self):
+
+        if not self.opts.outputdir:
+            self.logger.error("No output directory specified: --output-dir")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        if self.opts.init:
+            self.create_gnuplot_environment()
+
+        if not os.path.exists(self.opts.outputdir):
+            self.logger.error("Not a valid directory: \"%s\"" %
+                    (self.opts.outputdir))
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        if self.opts.timeframe:
+            self.logger.debug("split timeframe options: %s" %
+                    (self.opts.timeframe))
+            (start, end) = self.opts.timeframe.split(':')
+            (self.timeframe_start, self.timeframe_end) = \
+                    (float(start), float(end))
+            sys.stderr.write("# displayed time frame: %.2fs to %.2fs\n" %
+                    (self.timeframe_start, self.timeframe_end))
+
+        if not self.opts.connections:
+            self.logger.error("No data flow specified (where the data flows)")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        (self.connection_id, self.data_flow_id) = self.opts.connections.split('.')
+        if int(self.data_flow_id) == 1:
+            self.ack_flow_id = 2
+        elif int(self.data_flow_id) == 2:
+            self.ack_flow_id = 1
+        else:
+            raise ArgumentException("sub flow must be 1 or 2")
+
+        sys.stderr.write("# connection: %s (data flow: %s, ACK flow: %s)\n" %
+                (self.connection_id, self.data_flow_id, self.ack_flow_id))
+
 
 
     def parse_local_options(self):
@@ -1271,41 +1321,10 @@ class TimeSequenceMod(Mod):
 
         self.captcp.print_welcome()
 
-        if not self.opts.outputdir:
-            self.logger.error("No output directory specified: --output-dir")
-            sys.exit(ExitCodes.EXIT_CMD_LINE)
-
-        if self.opts.init:
-            self.create_gnuplot_environment()
-
-        if not os.path.exists(self.opts.outputdir):
-            self.logger.error("Not a valid directory: \"%s\"" % (self.opts.outputdir))
-            sys.exit(ExitCodes.EXIT_CMD_LINE)
-
-        if self.opts.timeframe:
-            self.logger.debug("split timeframe options: %s" % (self.opts.timeframe))
-            (start, end) = self.opts.timeframe.split(':')
-            (self.timeframe_start, self.timeframe_end) = (float(start), float(end))
-            sys.stderr.write("# displayed time frame: %.2fs to %.2fs\n" %
-                    (self.timeframe_start, self.timeframe_end))
+        self.check_options()
 
         self.captcp.pcap_file_path = args[2]
         self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
-
-        if not self.opts.connections:
-            self.logger.error("No data flow specified (where the data flows)")
-            sys.exit(ExitCodes.EXIT_CMD_LINE)
-
-        (self.connection_id, self.data_flow_id) = self.opts.connections.split('.')
-        if int(self.data_flow_id) == 1:
-            self.ack_flow_id = 2
-        elif int(self.data_flow_id) == 2:
-            self.ack_flow_id = 1
-        else:
-            raise ArgumentException("sub flow must be 1 or 2")
-
-        sys.stderr.write("# connection: %s (data flow: %s, ACK flow: %s)\n" %
-                (self.connection_id, self.data_flow_id, self.ack_flow_id))
 
         self.create_files()
 
@@ -1338,6 +1357,7 @@ class TimeSequenceMod(Mod):
         if not self.check_packet(ts, packet):
             return
 
+
     def calculate_offset_time(self, ts):
 
         time_diff = ts - self.reference_time
@@ -1352,18 +1372,31 @@ class TimeSequenceMod(Mod):
 
         self.data_flow_file.write("%lf %s\n" % (packet_time, pi.seq))
 
+        # support the sender wscale?
+        if pi.options['wsc']:
+            self.wscale_sender_support = True
+
+        # differentiate between new data send
+        # or already sent data (thus retransmissins)
         if pi.seq > self.highest_seq:
-            #self.logger.info("data seq: %lf high: %lf" % (pi.seq, self.highest_seq))
             self.data_arrow_file.write("set arrow from %lf,%s.0 to %ls,%s.0 lc rgb \"#008800\" lw 1\n" %
-                                       (packet_time, pi.seq, packet_time, pi.seq + len(packet.data.data)))
+                            (packet_time, pi.seq, packet_time, pi.seq + len(packet.data.data)))
         else:
-            #self.logger.info("retr seq: %lf high: %lf" % (pi.seq, self.highest_seq))
             self.data_arrow_retrans_file.write("set arrow from %lf,%s.0 to %ls,%s.0 lc rgb \"red\" lw 1\n" %
-                                       (packet_time, pi.seq, packet_time, pi.seq + len(packet.data.data)))
+                            (packet_time, pi.seq, packet_time, pi.seq + len(packet.data.data)))
 
         # only real data packets should be accounted, no plain ACKs
         if len(packet.data.data) > 0:
             self.highest_seq = max(pi.seq, self.highest_seq)
+
+
+    def calc_advertised_window(self, pi):
+
+        # only enabled if both hosts support window scaling
+        if not self.wscale_sender_support:
+            return pi.win + pi.ack
+        else:
+            return pi.win * self.wscale_receiver + pi.ack
 
 
     def process_ack_flow_packet(self, ts, packet):
@@ -1373,14 +1406,26 @@ class TimeSequenceMod(Mod):
         pi = PacketInfo(packet)
 
         # ignore first ACK packet
-        if pi.ack != 0:
-            self.ack_flow_file.write("%lf %s\n" % (packet_time, pi.ack))
+        if pi.ack == 0:
+            return
+
+        # write ACK number
+        self.ack_flow_file.write("%lf %s\n" % (packet_time, pi.ack))
+
+        # write advertised window
+        self.receiver_awnd_file.write("%lf %s\n" % (packet_time, self.calc_advertised_window(pi)))
 
         if pi.options['sackblocks']:
             assert(float(len(pi.options['sackblocks'])) % 2 == 0)
             for i in range(0, len(pi.options['sackblocks']), 2):
                 self.data_arrow_sack_file.write("set arrow from %lf,%s.0 to %ls,%s.0 nohead lc rgb \"#aaaaff\" lw 2\n" %
                         (packet_time, pi.options['sackblocks'][i], packet_time, pi.options['sackblocks'][i + 1]))
+
+        # we set self.wscale_receiver at the end to bypass
+        # the first SYN/ACK packet where a) the window option
+        # is transmitted. This window MUST not be scaled.
+        if pi.options['wsc']:
+            self.wscale_receiver = math.pow(2, int(pi.options['wsc']))
 
 
     def process_packet(self, ts, packet):
