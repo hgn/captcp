@@ -1,4 +1,7 @@
 
+Disable NIC offloading capabilities
+
+$ ethtool -K eth5 tso off gso off gro off sg off
 
 Causes 1/10th of a percent (i.e 1 out of 1000) packets to be randomly dropped
 with a correction of 25%
