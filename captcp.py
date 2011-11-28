@@ -651,6 +651,9 @@ set format y "%.0f"
 set ylabel "Sequence Number"
 set xlabel "Time [seconds]"
 
+load "data-arrow.data"
+load "data-arrow-retrans.data"
+
 set style line 1 lc rgb '#00004d' lt 1 lw 1
 set style line 2 lc rgb '#0060ad' lt 1 lw 1
 
@@ -1204,6 +1207,7 @@ class TimeSequenceMod(Mod):
         self.ids = None
         self.timeframe_start = self.timeframe_end = None
         self.reference_time = False
+        self.highest_seq = -1
 
         self.parse_local_options()
 
@@ -1214,15 +1218,21 @@ class TimeSequenceMod(Mod):
 
         self.data_flow_filepath = "%s/%s" % (self.opts.outputdir, "seq.data")
         self.ack_flow_filepath  = "%s/%s" % (self.opts.outputdir, "ack.data")
+        self.data_arrow_filepath  = "%s/%s" % (self.opts.outputdir, "data-arrow.data")
+        self.data_arrow_retrans_filepath  = "%s/%s" % (self.opts.outputdir, "data-arrow-retrans.data")
         
         self.data_flow_file = open(self.data_flow_filepath, 'w')
         self.ack_flow_file = open(self.ack_flow_filepath, 'w')
+        self.data_arrow_file = open(self.data_arrow_filepath, 'w')
+        self.data_arrow_retrans_file = open(self.data_arrow_retrans_filepath, 'w')
 
 
     def close_files(self):
 
         self.data_flow_file.close()
         self.ack_flow_file.close()
+        self.data_arrow_file.close()
+        self.data_arrow_retrans_file.close()
 
 
     def create_gnuplot_environment(self):
@@ -1347,14 +1357,32 @@ class TimeSequenceMod(Mod):
 
     def process_data_flow_packet(self, ts, packet):
 
+        packet_time = self.calculate_offset_time(ts)
+
         pi = PacketInfo(packet)
-        self.data_flow_file.write("%lf %s\n" % (self.calculate_offset_time(ts), pi.seq))
+
+        self.data_flow_file.write("%lf %s\n" % (packet_time, pi.seq))
+
+        if pi.seq > self.highest_seq:
+            self.logger.info("data seq: %lf high: %lf" % (pi.seq, self.highest_seq))
+            self.data_arrow_file.write("set arrow from %lf,%s.0 to %ls,%s.0 lc rgb \"blue\"\n" %
+                                       (packet_time, pi.seq, packet_time, pi.seq + len(packet.data.data)))
+        else:
+            self.logger.info("retr seq: %lf high: %lf" % (pi.seq, self.highest_seq))
+            self.data_arrow_retrans_file.write("set arrow from %lf,%s.0 to %ls,%s.0 lc rgb \"red\"\n" %
+                                       (packet_time, pi.seq, packet_time, pi.seq + len(packet.data.data)))
+
+        # only real data packets should be accounted, no plain ACKs
+        if len(packet.data.data) > 0:
+            self.highest_seq = max(pi.seq, self.highest_seq)
 
 
     def process_ack_flow_packet(self, ts, packet):
 
+        packet_time = self.calculate_offset_time(ts)
+
         pi = PacketInfo(packet)
-        self.ack_flow_file.write("%lf %s\n" % (self.calculate_offset_time(ts), pi.ack))
+        self.ack_flow_file.write("%lf %s\n" % (packet_time, pi.ack))
 
 
     def process_packet(self, ts, packet):
