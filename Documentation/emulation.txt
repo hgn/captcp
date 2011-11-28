@@ -3,6 +3,12 @@ Disable NIC offloading capabilities
 
 $ ethtool -K eth5 tso off gso off gro off sg off
 
+
+Don't save metrics (ssthresh, cwnd, ...)
+
+$ sysctl -w net.ipv4.tcp_no_metrics_save=1
+
+
 Causes 1/10th of a percent (i.e 1 out of 1000) packets to be randomly dropped
 with a correction of 25%
 
