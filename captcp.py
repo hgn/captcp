@@ -15,6 +15,7 @@ import math
 import pprint
 import time
 import datetime
+import subprocess
 
 # optional packages
 try:
@@ -1181,6 +1182,74 @@ class Mod:
             self.logger.setLevel(logging.ERROR)
         else:
             raise ArgumentException("loglevel \"%s\" not supported" % self.opts.loglevel)
+
+
+
+class StackTraceMod(Mod):
+
+    def pre_initialize(self):
+
+        self.logger = logging.getLogger()
+
+        self.parse_local_options()
+
+        sys.stderr.write("# ADVICE: capture the data at sender side!\n")
+
+
+    def create_gnuplot_environment(self):
+
+        gnuplot_filename = "time-sequence.gpi"
+        makefile_filename = "Makefile"
+
+        filepath = "%s/%s" % (self.opts.outputdir, gnuplot_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (Template.timesequence))
+        fd.close()
+
+        filepath = "%s/%s" % (self.opts.outputdir, makefile_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (Template.gnuplot_makefile))
+        fd.close()
+
+
+    def check_options(self):
+
+        if not self.opts.outputdir:
+            self.logger.error("No output directory specified: --output-dir")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+
+
+    def parse_local_options(self):
+
+        self.width = self.height = 0
+
+        parser = optparse.OptionParser()
+        parser.usage = "%prog timesequence [options] <pcapfile>"
+
+        parser.add_option( "-v", "--loglevel", dest="loglevel", default=None,
+                type="string", help="set the loglevel (info, debug, warning, error)")
+
+        parser.add_option( "-o", "--output-dir", dest="outputdir", default=None,
+                type="string", help="specify the output directory")
+
+        parser.add_option( "-i", "--init", dest="init",  default=False,
+                action="store_true", help="create Gnuplot template and Makefile in output-dir")
+
+        self.opts, args = parser.parse_args(sys.argv[0:])
+        self.set_opts_logevel()
+        
+        self.captcp.print_welcome()
+
+        self.check_options()
+
+
+        self.create_gnuplot_environment()
+
+
+    def process_final(self):
+
+        sys.stderr.write("# now execute \"make\"\n")
 
 
 
@@ -2799,13 +2868,15 @@ class Captcp:
             "sequencegraph":   "SequenceGraphMod",
             "timesequence":    "TimeSequenceMod",
             "show":            "ShowMod",
-            "throughtput":     "ThroughputMod"
+            "throughtput":     "ThroughputMod",
+            "stacktrace":      "StackTraceMod"
             }
 
     def __init__(self):
         self.captcp_starttime = datetime.datetime.today()
         self.setup_logging()
         self.pcap_filter = None
+        self.pcap_file_path = False
 
     def setup_logging(self):
 
@@ -2864,6 +2935,7 @@ class Captcp:
                 classtring == "ShowMod" or
                 classtring == "ThroughputMod" or
                 classtring == "TimeSequenceMod" or
+                classtring == "StackTraceMod" or
                 classtring == "SequenceGraphMod"):
 
             classinstance = globals()[classtring]()
@@ -2871,22 +2943,27 @@ class Captcp:
 
             classinstance.pre_initialize()
 
-            # parse the whole pcap file first
-            pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
-            pcap_parser.register_callback(classinstance.internal_pre_process_packet)
-            self.logger.debug("call pre_process_packet [1/4]")
-            pcap_parser.run()
-            del pcap_parser
+            # there are other usages two (without pcap parsing)
+            # We check here and if pcap_file_path is not true
+            # then we assume a non-pcap module
+            if self.pcap_file_path:
+                # parse the whole pcap file first
+                pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
+                pcap_parser.register_callback(classinstance.internal_pre_process_packet)
+                self.logger.debug("call pre_process_packet [1/4]")
+                pcap_parser.run()
+                del pcap_parser
 
-            self.logger.debug("call pre_process_final [2/4]")
-            classinstance.pre_process_final()
+                self.logger.debug("call pre_process_final [2/4]")
+                classinstance.pre_process_final()
 
-            # and finally print all relevant stuff
-            pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
-            pcap_parser.register_callback(classinstance.process_packet)
-            self.logger.debug("call process_packet [3/4]")
-            pcap_parser.run()
-            del pcap_parser
+                # and finally print all relevant stuff
+                pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
+                pcap_parser.register_callback(classinstance.process_packet)
+                self.logger.debug("call process_packet [3/4]")
+                pcap_parser.run()
+                del pcap_parser
+
 
             self.logger.debug("call pre_process_final [4/4]")
             ret = classinstance.process_final()
