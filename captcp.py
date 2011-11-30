@@ -1302,7 +1302,8 @@ class StackTraceMod(Mod):
 
     def process_final(self):
 
-        stap_script = "%s/data/tcp-trace.stp" % (os.path.dirname(os.path.realpath(__file__)))
+        stap_script = "%s/data/stap-scripts/tcp-trace.stp" % \
+                (os.path.dirname(os.path.realpath(__file__)))
 
         cmd = []
         if os.geteuid() != 0:
