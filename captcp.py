@@ -661,11 +661,39 @@ set style line 1 lc rgb '#00004d' lt 1 lw 3
 set style line 2 lc rgb '#0060ad' lt 1 lw 3
 set style line 3 lc rgb '#cdaf95' lt 1 lw 3
 
-
 plot  \\
     "seq.data" using 1:2 title "Seq" with linespoints ls 1, \\
     "ack.data" using 1:2 title "ACK" with linespoints ls 2, \\
     "win.data" using 1:2 title "AWND" with lines ls 3
+"""
+
+    cwnd = \
+"""
+set terminal postscript eps enhanced color "Times" 25
+set output "cwnd.eps"
+set title "Throughput Graph"
+
+set style line 99 linetype 1 linecolor rgb "#999999" lw 2
+set key right bottom
+set key box linestyle 99
+set key spacing 1.2
+set nokey
+
+set grid xtics ytics mytics
+
+#set xrange [1:60]
+
+set size 2
+set size ratio 0.4
+
+set ylabel "Data [byte]"
+set xlabel "Time [seconds]"
+
+set style line 1 lc rgb '#000' lt 1 pi 0 pt 6 lw 3 ps 4
+set style line 2 lc rgb '#000' lt 2 pi 0 pt 6 lw 4 ps 4
+
+plot   "stap-raw.data" using 1:8 title "cwnd" with lines ls 1, \\
+       "stap-raw.data" using 1:12 title "ssh" with lines ls 2
 """
 
 
@@ -1203,12 +1231,12 @@ class StackTraceMod(Mod):
 
     def create_gnuplot_environment(self):
 
-        gnuplot_filename = "time-sequence.gpi"
+        gnuplot_filename = "cwnd.gpi"
         makefile_filename = "Makefile"
 
         filepath = "%s/%s" % (self.opts.outputdir, gnuplot_filename)
         fd = open(filepath, 'w')
-        fd.write("%s" % (Template.timesequence))
+        fd.write("%s" % (Template.cwnd))
         fd.close()
 
         filepath = "%s/%s" % (self.opts.outputdir, makefile_filename)
