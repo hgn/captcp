@@ -29,8 +29,8 @@ ifndef DESTDIR
 prefix?=$(HOME)
 endif
 bindir?=$(prefix)/bin
-htmldir?=$(prefix)/share/doc/perf-doc
-pdfdir?=$(prefix)/share/doc/perf-doc
+htmldir?=$(prefix)/share/doc/captcp-doc
+pdfdir?=$(prefix)/share/doc/captcp-doc
 mandir?=$(prefix)/share/man
 man1dir=$(mandir)/man1
 man5dir=$(mandir)/man5
@@ -84,13 +84,13 @@ ifdef ASCIIDOC8
 ASCIIDOC_EXTRA += -a asciidoc7compatible
 endif
 ifdef DOCBOOK_XSL_172
-ASCIIDOC_EXTRA += -a perf-asciidoc-no-roff
+ASCIIDOC_EXTRA += -a captcp-asciidoc-no-roff
 MANPAGE_XSL = manpage-1.72.xsl
 else
 	ifdef ASCIIDOC_NO_ROFF
 	# docbook-xsl after 1.72 needs the regular XSL, but will not
 	# pass-thru raw roff codes from asciidoc.conf, so turn them off.
-	ASCIIDOC_EXTRA += -a perf-asciidoc-no-roff
+	ASCIIDOC_EXTRA += -a captcp-asciidoc-no-roff
 	endif
 endif
 ifdef MAN_BOLD_LITERAL
@@ -103,15 +103,6 @@ endif
 SHELL_PATH ?= $(SHELL)
 # Shell quote;
 SHELL_PATH_SQ = $(subst ','\'',$(SHELL_PATH))
-
-#
-# Please note that there is a minor bug in asciidoc.
-# The version after 6.0.3 _will_ include the patch found here:
-#   http://marc.theaimsgroup.com/?l=perf&m=111558757202243&w=2
-#
-# Until that version is released you may have to apply the patch
-# yourself - yes, all 6 characters of it!
-#
 
 QUIET_SUBDIR0  = +$(MAKE) -C # space to separate -C and subdir
 QUIET_SUBDIR1  =
@@ -150,7 +141,7 @@ man1: $(DOC_MAN1)
 man5: $(DOC_MAN5)
 man7: $(DOC_MAN7)
 
-info: perf.info perfman.info
+info: captcp.info captcpman.info
 
 pdf: user-manual.pdf
 
@@ -166,10 +157,10 @@ install-man: man
 
 install-info: info
 	$(INSTALL) -d -m 755 $(DESTDIR)$(infodir)
-	$(INSTALL) -m 644 perf.info perfman.info $(DESTDIR)$(infodir)
+	$(INSTALL) -m 644 captcp.info captcpman.info $(DESTDIR)$(infodir)
 	if test -r $(DESTDIR)$(infodir)/dir; then \
-	  $(INSTALL_INFO) --info-dir=$(DESTDIR)$(infodir) perf.info ;\
-	  $(INSTALL_INFO) --info-dir=$(DESTDIR)$(infodir) perfman.info ;\
+	  $(INSTALL_INFO) --info-dir=$(DESTDIR)$(infodir) captcp.info ;\
+	  $(INSTALL_INFO) --info-dir=$(DESTDIR)$(infodir) captcpman.info ;\
 	else \
 	  echo "No directory found in $(DESTDIR)$(infodir)" >&2 ; \
 	fi
@@ -210,7 +201,7 @@ cmd-list.made: cmd-list.perl ../command-list.txt $(MAN1_TXT)
 
 clean:
 	$(RM) *.xml *.xml+ *.html *.html+ *.1 *.5 *.7
-	$(RM) *.texi *.texi+ *.texi++ perf.info perfman.info
+	$(RM) *.texi *.texi+ *.texi++ captcp.info captcpman.info
 	$(RM) howto-index.txt howto/*.html doc.dep
 	$(RM) technical/api-*.html technical/api-index.txt
 	$(RM) $(cmds_txt) *.made
@@ -218,7 +209,7 @@ clean:
 $(MAN_HTML): %.html : %.txt
 	$(QUIET_ASCIIDOC)$(RM) $@+ $@ && \
 	$(ASCIIDOC) -b xhtml11 -d manpage -f asciidoc.conf \
-		$(ASCIIDOC_EXTRA) -aperf_version=$(PERF_VERSION) -o $@+ $< && \
+		$(ASCIIDOC_EXTRA) -o $@+ $< && \
 	mv $@+ $@
 
 %.1 %.5 %.7 : %.xml
@@ -228,7 +219,7 @@ $(MAN_HTML): %.html : %.txt
 %.xml : %.txt
 	$(QUIET_ASCIIDOC)$(RM) $@+ $@ && \
 	$(ASCIIDOC) -b docbook -d manpage -f asciidoc.conf \
-		$(ASCIIDOC_EXTRA) -aperf_version=$(PERF_VERSION) -o $@+ $< && \
+		$(ASCIIDOC_EXTRA) -o $@+ $< && \
 	mv $@+ $@
 
 XSLT = docbook.xsl
@@ -237,7 +228,7 @@ XSLTOPTS = --xinclude --stringparam html.stylesheet docbook-xsl.css
 user-manual.html: user-manual.xml
 	$(QUIET_XSLTPROC)xsltproc $(XSLTOPTS) -o $@ $(XSLT) $<
 
-perf.info: user-manual.texi
+captcp.info: user-manual.texi
 	$(QUIET_MAKEINFO)$(MAKEINFO) --no-split -o $@ user-manual.texi
 
 user-manual.texi: user-manual.xml
@@ -252,7 +243,7 @@ user-manual.pdf: user-manual.xml
 	$(DBLATEX) -o $@+ -p /etc/asciidoc/dblatex/asciidoc-dblatex.xsl -s /etc/asciidoc/dblatex/asciidoc-dblatex.sty $< && \
 	mv $@+ $@
 
-perfman.texi: $(MAN_XML) cat-texi.perl
+captcpman.texi: $(MAN_XML) cat-texi.perl
 	$(QUIET_DB2TEXI)$(RM) $@+ $@ && \
 	($(foreach xml,$(MAN_XML),$(DOCBOOK2X_TEXI) --encoding=UTF-8 \
 		--to-stdout $(xml) &&) true) > $@++ && \
@@ -260,7 +251,7 @@ perfman.texi: $(MAN_XML) cat-texi.perl
 	rm $@++ && \
 	mv $@+ $@
 
-perfman.info: perfman.texi
+captcpman.info: captcpman.texi
 	$(QUIET_MAKEINFO)$(MAKEINFO) --no-split --no-validate $*.texi
 
 $(patsubst %.txt,%.texi,$(MAN_TXT)): %.texi : %.xml
@@ -276,8 +267,6 @@ howto-index.txt: howto-index.sh $(wildcard howto/*.txt)
 $(patsubst %,%.html,$(ARTICLES)) : %.html : %.txt
 	$(QUIET_ASCIIDOC)$(ASCIIDOC) -b xhtml11 $*.txt
 
-WEBDOC_DEST = /pub/software/tools/perf/docs
-
 $(patsubst %.txt,%.html,$(wildcard howto/*.txt)): %.html : %.txt
 	$(QUIET_ASCIIDOC)$(RM) $@+ $@ && \
 	sed -e '1,/^$$/d' $< | $(ASCIIDOC) -b xhtml11 - >$@+ && \
@@ -288,10 +277,6 @@ book:
 
 ebook:
 	a2x -fepub -dbook captcp.txt
-
-# UNIMPLEMENTED
-#install-webdoc : html
-#	'$(SHELL_PATH_SQ)' ./install-webdoc.sh $(WEBDOC_DEST)
 
 # quick-install: quick-install-man
 
