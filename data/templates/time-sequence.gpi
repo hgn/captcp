@@ -1,0 +1,32 @@
+set terminal postscript eps enhanced color "Times" 25
+set output "time-sequence.eps"
+set title "Time Sequence Graph"
+
+set style line 99 linetype 1 linecolor rgb "#999999" lw 2
+set key right bottom
+set key box linestyle 99
+set key spacing 1.2
+
+set grid xtics ytics mytics
+
+set size 2
+#set size ratio 0.4
+
+set format y "%.0f"
+
+set ylabel "Sequence Number"
+set xlabel "Time [seconds]"
+
+load "data-arrow.data"
+load "data-arrow-retrans.data"
+load "data-arrow-sack.data"
+
+set style line 1 lc rgb '#00004d' lt 1 lw 3
+set style line 2 lc rgb '#0060ad' lt 1 lw 3
+set style line 3 lc rgb '#cdaf95' lt 1 lw 3
+
+plot  \\
+    "seq.data" using 1:2 title "Seq" with linespoints ls 1, \\
+    "ack.data" using 1:2 title "ACK" with linespoints ls 2, \\
+    "win.data" using 1:2 title "AWND" with lines ls 3
+

@@ -17,6 +17,7 @@ import time
 import datetime
 import subprocess
 import select
+import re
 
 # optional packages
 try:
@@ -578,199 +579,6 @@ class PacketInfo:
             opts.append(o)
 
 
-class Template:
-
-    payloadtimeport3d = \
-"""
-set pm3d map; set palette rgbformulae 30,31,32;
-set terminal postscript eps enhanced color "Times" 30
-set output "plot.eps"
-set style line 99 linetype 1 linecolor rgb "#999999" lw 2
-set key right top
-set key box linestyle 99
-set key spacing 1.2
-set grid xtics ytics mytics
-set size 2
-set style line 1 lc rgb '#000' lt 1 lw 5 pt 0 pi -1 ps 3
-set style line 2 lc rgb '#000' lt 5 lw 5 pt 0 pi -1 ps 3
-set style line 4 lt -1 pi -4 pt 6 lw 2 ps 2
-set style line 5 lt -1 pi -3 pt 4 lw 2 ps 2
-set xrange[0:1500]
-set xlabel 'Time [s]';
-set ylabel 'Diffraction angle'
-splot 'out.data' notitle
-"""
-    throughput = \
-"""
-set terminal postscript eps enhanced color "Times" 30
-set output "throughput.eps"
-set title "Throughput Graph"
-
-set style line 99 linetype 1 linecolor rgb "#999999" lw 2
-set key right bottom
-set key box linestyle 99
-set key spacing 1.2
-set nokey
-
-set grid xtics ytics mytics
-
-#set xrange [1:60]
-
-set size 2
-set size ratio 0.4
-
-set ylabel "Data [byte]"
-set xlabel "Time [seconds]"
-
-set style line 1 lc rgb '#0060ad' lt 1 lw 10 pt 0 pi -1 ps 3
-set style line 2 lc rgb '#0060ad' lt 1 lw 10 pt 7 ps 3.5
-
-# grayscale
-set style line 1 lc rgb '#000' lt 1 pi 0 pt 6 lw 8 ps 4
-
-plot \
-  "throughput.data" using 1:2 title "rtt" with linespoints ls 1
-"""
-
-    timesequence = \
-"""
-set terminal postscript eps enhanced color "Times" 25
-set output "time-sequence.eps"
-set title "Time Sequence Graph"
-
-set style line 99 linetype 1 linecolor rgb "#999999" lw 2
-set key right bottom
-set key box linestyle 99
-set key spacing 1.2
-
-set grid xtics ytics mytics
-
-set size 2
-#set size ratio 0.4
-
-set format y "%.0f"
-
-set ylabel "Sequence Number"
-set xlabel "Time [seconds]"
-
-load "data-arrow.data"
-load "data-arrow-retrans.data"
-load "data-arrow-sack.data"
-
-set style line 1 lc rgb '#00004d' lt 1 lw 3
-set style line 2 lc rgb '#0060ad' lt 1 lw 3
-set style line 3 lc rgb '#cdaf95' lt 1 lw 3
-
-plot  \\
-    "seq.data" using 1:2 title "Seq" with linespoints ls 1, \\
-    "ack.data" using 1:2 title "ACK" with linespoints ls 2, \\
-    "win.data" using 1:2 title "AWND" with lines ls 3
-"""
-
-    cwnd = \
-"""
-set terminal postscript eps enhanced color "Times" 25
-set output "cwnd.eps"
-set title "Throughput Graph"
-
-set style line 99 linetype 1 linecolor rgb "#999999" lw 2
-set key right bottom
-set key box linestyle 99
-set key spacing 1.2
-set nokey
-
-set grid xtics ytics mytics
-
-#set xrange [1:60]
-
-set size 2
-set size ratio 0.4
-
-set ylabel "Data [byte]"
-set xlabel "Time [seconds]"
-
-set style line 1 lc rgb '#000' lt 1 pi 0 pt 6 lw 3 ps 4
-set style line 2 lc rgb '#000' lt 2 pi 0 pt 6 lw 4 ps 4
-
-plot   "stap-raw.data" using 1:8 title "cwnd" with lines ls 1, \\
-       "stap-raw.data" using 1:12 title "ssh" with lines ls 2
-"""
-
-
-    gnuplot_makefile = \
-"""
-GNUPLOT_FILES = $(wildcard *.gpi)
-PNG_OBJ = $(patsubst %.gpi,%.png,  $(GNUPLOT_FILES))
-PDF_OBJ = $(patsubst %.gpi,%.pdf,  $(GNUPLOT_FILES))
-
-all: $(PDF_OBJ)
-png: $(PNG_OBJ)
-
-%.eps: %.gpi
-	@ echo "compillation of "$<
-	@gnuplot $<
-
-%.pdf: %.eps $(shell *.data)
-	@echo "conversion in pdf format"
-	@epstopdf --outfile=$*.pdf $<
-	@echo "end"
-
-%.png: %.pdf
-	@echo "conversion in png format"
-	@convert -density 300 $< $*.png 
-	@echo "end"
-
-preview: all
-	for i in $$(ls *.pdf); do xpdf -fullscreen $$i ; done
-
-clean:
-	@echo "cleaning ..."
-	@rm -rf *.eps *.png *.pdf core
-
-distclean: clean
-	@echo "distcleaning"
-	@rm -rf *.data
-"""
-
-    def __init__(self, captcp):
-
-        self.captcp = captcp
-        self.parse_local_options()
-
-    def parse_local_options(self):
-        parser = optparse.OptionParser()
-        parser.add_option( "-t", "--template", dest="template", default=None,
-                type="string", help="template name")
-
-        self.opts, args = parser.parse_args(sys.argv[0:])
-        
-        if not self.opts.template:
-            sys.stderr.write("no template name given, exiting\n")
-            sys.exit(ExitCodes.EXIT_CMD_LINE)
-
-    def usage(self):
-
-        sys.stderr.write("""supported modules:
-        payload-time-port-3d
-        gnuplot-makefile
-        timesequence
-        \n""")
-
-    def run(self):
-        if self.opts.template == "payload-time-port-3d":
-            sys.stdout.write(Template.payloadtimeport3d)
-        elif self.opts.template == "gnuplot-makefile":
-            sys.stdout.write(Template.gnuplot_makefile)
-        elif self.opts.template == "throughput":
-            sys.stdout.write(Template.throughput)
-        elif self.opts.template == "timesequence":
-            sys.stdout.write(Template.timesequence)
-        else:
-            self.usage()
-
-        return ExitCodes.EXIT_SUCCESS
-
-
 
 class Geoip:
 
@@ -1214,6 +1022,131 @@ class Mod:
 
 
 
+class TemplateMod(Mod):
+
+    class TemplateContainer: pass
+
+    TYPE_MAKEFILE = 1
+    TYPE_GNUPLOT  = 2
+
+    def pre_initialize(self):
+
+        self.logger = logging.getLogger()
+        self.init_db()
+
+        self.parse_local_options()
+
+
+    def get_content_by_name(self, name):
+
+        pathname = False
+
+        for i in self.db:
+            if i.name == name:
+                pathname = i.full_path
+                break
+
+        if not pathname:
+            self.logger.error("template %s not valid" % name)
+            return
+
+        fd = open(pathname, 'r')
+        data = fd.read()
+        fd.close()
+
+        return data
+
+
+    def init_db(self):
+
+        self.logger.debug("initialize local template database")
+
+        path = "%s/data/templates/" % (os.path.dirname(os.path.realpath(__file__)))
+
+        self.db = []
+
+        listing = os.listdir(path)
+        for files in listing:
+            m = re.match(r"(.*)\.(\w+)", files)
+            if not m.group(0) and not m.group(1):
+                self.logger.error("strange files show up in %s!" % (path))
+                continue
+
+            tc = TemplateMod.TemplateContainer()
+            tc.full_path = "%s%s" % (path, files)
+
+            if m.group(2) == "gpi":
+                tc.type = TemplateMod.TYPE_GNUPLOT
+                tc.name = m.group(1)
+            elif m.group(2) == "make":
+                tc.type = TemplateMod.TYPE_MAKEFILE
+                tc.name = m.group(1)
+
+            self.db.append(tc)
+
+
+    def print_available_templates(self):
+
+        gpi = []; mak = []
+
+        for i in self.db:
+            if i.type == TemplateMod.TYPE_MAKEFILE:
+                mak.append(i)
+            elif i.type == TemplateMod.TYPE_GNUPLOT:
+                gpi.append(i)
+            else:
+                raise InternalException("programmed error")
+
+        sys.stdout.write("\nmakefile templates:\n")
+        for i in mak:
+            sys.stdout.write("\t%s\n" % (i.name))
+
+        sys.stdout.write("\ngnuplot templates:\n")
+        for i in gpi:
+            sys.stdout.write("\t%s\n" % (i.name))
+
+
+    def parse_local_options(self):
+
+        self.width = self.height = 0
+
+        parser = optparse.OptionParser()
+        parser.usage = "%prog template [options] <templatename>"
+
+        parser.add_option( "-v", "--loglevel", dest="loglevel", default=None,
+                type="string", help="set the loglevel (info, debug, warning, error)")
+
+        parser.add_option( "-o", "--output-dir", dest="outputdir", default=None,
+                type="string", help="specify the output directory")
+
+        parser.add_option( "-l", "--list", dest="list",  default=False,
+                action="store_true", help="list all available templates")
+
+        self.opts, args = parser.parse_args(sys.argv[0:])
+        self.set_opts_logevel()
+        
+        if len(args) < 3:
+            self.logger.error("no template name given, please pick on of the following")
+            self.print_available_templates()
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        self.captcp.print_welcome()
+
+        self.template_name = args[2]
+        self.logger.info("template_name: %s" % (self.template_name))
+
+
+    def process_final(self):
+
+        c = self.get_content_by_name(self.template_name)
+        if not c:
+            self.logger.error("not a valid template name %s" % (self.template_name))
+            return
+
+        sys.stdout.write(c)
+
+
+
 class StackTraceMod(Mod):
 
     DEFAULT_FILTER = '*.*.*.*:*-*.*.*.*:5001'
@@ -1409,12 +1342,12 @@ class TimeSequenceMod(Mod):
 
         filepath = "%s/%s" % (self.opts.outputdir, gnuplot_filename)
         fd = open(filepath, 'w')
-        fd.write("%s" % (Template.timesequence))
+        fd.write("%s" % (TemplateMod().get_content_by_name("time-sequence")))
         fd.close()
 
         filepath = "%s/%s" % (self.opts.outputdir, makefile_filename)
         fd = open(filepath, 'w')
-        fd.write("%s" % (Template.gnuplot_makefile))
+        fd.write("%s" % (TemplateMod().get_content_by_name("gnuplot")))
         fd.close()
 
 
@@ -2961,7 +2894,7 @@ class Captcp:
             "highlight":       "Highlight",
             "geoip":           "Geoip",
             "payloadtimeport": "PayloadTimePort",
-            "template":        "Template",
+            "template":        "TemplateMod",
             "statistic":       "StatisticMod",
             "connection":      "ConnectionAnalyzeMod",
             "sequencegraph":   "SequenceGraphMod",
@@ -3035,6 +2968,7 @@ class Captcp:
                 classtring == "ThroughputMod" or
                 classtring == "TimeSequenceMod" or
                 classtring == "StackTraceMod" or
+                classtring == "TemplateMod" or
                 classtring == "SequenceGraphMod"):
 
             classinstance = globals()[classtring]()
