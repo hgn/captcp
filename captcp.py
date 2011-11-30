@@ -16,6 +16,7 @@ import pprint
 import time
 import datetime
 import subprocess
+import select
 
 # optional packages
 try:
@@ -1187,13 +1188,17 @@ class Mod:
 
 class StackTraceMod(Mod):
 
+    DEFAULT_FILTER = '*.*.*.*:*-*.*.*.*:5001'
+
     def pre_initialize(self):
 
         self.logger = logging.getLogger()
 
         self.parse_local_options()
 
-        sys.stderr.write("# ADVICE: capture the data at sender side!\n")
+        sys.stderr.write("# 1. Make sure you have a working systemtap environment\n")
+        sys.stderr.write("# 2. Make sure sudo systemtap ... is working without password (or run as root)\n")
+        sys.stderr.write("# 2. CTRL-C to interrupt data collecting\n")
 
 
     def create_gnuplot_environment(self):
@@ -1218,6 +1223,20 @@ class StackTraceMod(Mod):
             self.logger.error("No output directory specified: --output-dir")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
+        if not os.path.exists(self.opts.outputdir):
+            self.logger.error("Not a valid directory: \"%s\"" %
+                    (self.opts.outputdir))
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+
+    def create_data_files(self):
+
+        self.stap_raw_filepath      = "%s/%s" % (self.opts.outputdir, "stap-raw.data")
+        self.stap_raw_file = open(self.stap_raw_filepath, 'w')
+
+
+    def close_data_files(self):
+        self.stap_raw_file.close()
 
 
     def parse_local_options(self):
@@ -1233,6 +1252,10 @@ class StackTraceMod(Mod):
         parser.add_option( "-o", "--output-dir", dest="outputdir", default=None,
                 type="string", help="specify the output directory")
 
+        parser.add_option( "-f", "--filter", dest="filter", default=StackTraceMod.DEFAULT_FILTER,
+                type="string", help="specify filter localIP:localPort-remoteIP:remotePort, " +
+                "(default: '*.*.*.*:*-*.*.*.*:5001')")
+
         parser.add_option( "-i", "--init", dest="init",  default=False,
                 action="store_true", help="create Gnuplot template and Makefile in output-dir")
 
@@ -1243,13 +1266,60 @@ class StackTraceMod(Mod):
 
         self.check_options()
 
+        if self.opts.init:
+            self.create_gnuplot_environment()
 
-        self.create_gnuplot_environment()
+        self.create_data_files()
 
 
     def process_final(self):
 
-        sys.stderr.write("# now execute \"make\"\n")
+        stap_script = "%s/data/tcp-trace.stp" % (os.path.dirname(os.path.realpath(__file__)))
+
+        cmd = []
+        if os.geteuid() != 0:
+            self.logger.info("execute script via sudo")
+            cmd += ["sudo"]
+
+        cmd += ["/usr/bin/stap", stap_script, "filter=all", "update=all", self.opts.filter]
+        self.logger.debug("cmd: %s" % (cmd))
+
+        sys.stderr.write("# compile and load kernel module, this may take some time ...\n")
+
+        tsk = subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+
+        poll = select.poll()
+        poll.register(tsk.stdout,select.POLLIN | select.POLLHUP)
+        poll.register(tsk.stderr,select.POLLIN | select.POLLHUP)
+        pollc = 2
+
+        events = poll.poll()
+        try:
+            while pollc > 0 and len(events) > 0:
+                for event in events:
+                    (rfd,event) = event
+                    if event & select.POLLIN:
+                         if rfd == tsk.stdout.fileno():
+                              line = tsk.stdout.readline()
+                              if len(line) > 0:
+                                  sys.stdout.write(line)
+                                  sys.stdout.flush()
+                                  self.stap_raw_file.write(line)
+                                  self.stap_raw_file.flush
+                         if rfd == tsk.stderr.fileno():
+                             line = tsk.stderr.readline()
+                             if len(line) > 0:
+                                 sys.stderr.write("stap: %s" % line)
+                    if event & select.POLLHUP:
+                        poll.unregister(rfd)
+                        pollc = pollc - 1
+                    if pollc > 0: events = poll.poll()
+            tsk.wait()
+        except KeyboardInterrupt:
+            sys.stderr.write("SIGINT received, flush data files and exit\n")
+
+        self.close_data_files()
+        sys.stderr.write("# now execute \"make\" in %s\n" % (self.opts.outputdir))
 
 
 
