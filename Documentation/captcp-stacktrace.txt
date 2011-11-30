@@ -1,0 +1,24 @@
+captcp stacktrace(1)
+====================
+
+NAME
+----
+captcp stacktrace - Trace Network Stack Variables
+
+SYNOPSIS
+--------
+[verse]
+'captcp' stacktrace --output-dir <dir> [--init] [--verbose <debug | info | error >]
+
+DESCRIPTION
+-----------
+Record Linux Network stack internal variables for analysis. Per
+default the initial congestion window as well as the slow start threshold
+(ssthresh) are recorded.
+
+
+SEE ALSO
+--------
+linkperf:perf-stat[1], linkperf:perf-top[1],
+linkperf:perf-record[1], linkperf:perf-report[1],
+linkperf:perf-list[1]
