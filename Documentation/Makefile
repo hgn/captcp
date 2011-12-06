@@ -273,7 +273,7 @@ $(patsubst %.txt,%.html,$(wildcard howto/*.txt)): %.html : %.txt
 	mv $@+ $@
 
 book:
-	a2x -fpdf -dbook --fop captcp.txt
+	a2x -fpdf -dbook  captcp.txt
 
 ebook:
 	a2x -fepub -dbook captcp.txt

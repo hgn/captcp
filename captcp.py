@@ -1398,7 +1398,7 @@ class TimeSequenceMod(Mod):
         parser = optparse.OptionParser()
         parser.usage = "%prog timesequence [options] <pcapfile>"
 
-        parser.add_option( "-v", "--loglevel", dest="loglevel", default=None,
+        parser.add_option( "-v", "--verbose", dest="loglevel", default=None,
                 type="string", help="set the loglevel (info, debug, warning, error)")
 
         parser.add_option( "-o", "--output-dir", dest="outputdir", default=None,
@@ -1732,7 +1732,7 @@ class SequenceGraphMod(Mod):
         parser = optparse.OptionParser()
         parser.usage = "%prog sequencegraph [options] <pcapfile>"
 
-        parser.add_option( "-v", "--loglevel", dest="loglevel", default=None,
+        parser.add_option( "-v", "--verbose", dest="loglevel", default=None,
                 type="string", help="set the loglevel (info, debug, warning, error)")
 
         parser.add_option( "-l", "--local", dest="localaddr", default=None,
@@ -2481,7 +2481,7 @@ class ThroughputMod(Mod):
         parser = optparse.OptionParser()
         parser.usage = "show [options] <pcapfile> [pcapfilter]"
 
-        parser.add_option( "-v", "--loglevel", dest="loglevel", default=None,
+        parser.add_option( "-v", "--verbose", dest="loglevel", default=None,
                 type="string", help="set the loglevel (info, debug, warning, error)")
 
         parser.add_option( "-i", "--connection-id", dest="connections", default=None,
@@ -2577,7 +2577,7 @@ class ShowMod(Mod):
         parser = optparse.OptionParser()
         parser.usage = "show [options] <pcapfile> [pcapfilter]"
 
-        parser.add_option( "-v", "--loglevel", dest="loglevel", default=None,
+        parser.add_option( "-v", "--verbose", dest="loglevel", default=None,
                 type="string", help="set the loglevel (info, debug, warning, error)")
 
         parser.add_option( "-i", "--connection-id", dest="connections", default=None,
