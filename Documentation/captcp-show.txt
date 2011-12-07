@@ -1,0 +1,56 @@
+Show
+----
+
+
+Synopsis
+~~~~~~~~
+[verse]
+'captcp' show
+	[--(v)erbose <debug | info | warning | error>]
+	[--(d)ifferentiate <connection | flow>]
+	[--(m)atch <string>]
+	[--connection-(i)d <id>]
+	<pcapfile>
+
+
+Description
+~~~~~~~~~~~
+
+Display TCP flows like tcpdump with some features:
+
+- Highlighting (up to 256 colors for supporter terminals (rxvt-unicode-256color))
+- Different colors for connections or flows
+- Powerful matching capabilities
+
+image::images/show.png[]
+
+
+Options
+~~~~~~~
+
+-v::
+--verbose:: <debug | info | warning | error>
+
+				Show more output (default is warning)
+
+-d::
+--differentiate <connection | flow>
+				Highlight different connections or different flows. If several
+				connections are captured then the connection options provide a quick
+				way to see how many connections are captured and when. If one flow is
+				captured then this is a method to see TX and RX directions of the
+				flow.
+
+-m::
+--match:: <filter>
+				Used to highlight only packets there the provided filter evaluate to
+				true. Filter can be:
+
+
+Examples
+~~~~~~~~
+
+Highlight different flows
+
+	$ captcp show -d flow capture.pcap
+
