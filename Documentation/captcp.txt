@@ -60,6 +60,7 @@ The next sections describes the modules in detail.
 include::captcp-stacktrace.txt[tabsize=3]
 include::captcp-template.txt[tabsize=3]
 include::captcp-show.txt[tabsize=3]
+include::captcp-time-sequence-graph.txt[tabsize=3]
 include::emulation.txt[tabsize=3]
 
 

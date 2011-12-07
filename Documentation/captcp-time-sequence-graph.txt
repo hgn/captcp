@@ -1,0 +1,40 @@
+Time Sequence Graph
+-------------------
+
+
+Synopsis
+~~~~~~~~
+[verse]
+'captcp' timesequence
+	[--(v)erbose <debug | info | warning | error>]
+	[--(o)utput <directory>]
+	[--(i)init ]
+	<pcapfile>
+
+
+Description
+~~~~~~~~~~~
+
+Show time sequence graph similar to tcptrace or Stevens.
+
+
+image::images/time-sequence.png[]
+
+
+Options
+~~~~~~~
+
+-v::
+--verbose:: <debug | info | warning | error>
+
+				Show more output (default is warning)
+
+Examples
+~~~~~~~~
+
+Highlight different flows
+
+ 	$ mkir foo
+	$ captcp -i -o foo capture.pcap
+
+
