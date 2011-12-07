@@ -1,15 +1,17 @@
+Network Emulation Hints
+-----------------------
 
 Disable NIC offloading capabilities
 
-$ ethtool -K eth5 tso off gso off gro off sg off
+	$ ethtool -K eth5 tso off gso off gro off sg off
 
 
 Don't save metrics (ssthresh, cwnd, ...)
 
-$ sysctl -w net.ipv4.tcp_no_metrics_save=1
+	$ sysctl -w net.ipv4.tcp_no_metrics_save=1
 
 
 Causes 1/10th of a percent (i.e 1 out of 1000) packets to be randomly dropped
 with a correction of 25%
 
-$ tc qdisc add dev eth5 root netem loss 30% 50%
+	$ tc qdisc add dev eth5 root netem loss 30% 50%

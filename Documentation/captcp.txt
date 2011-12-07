@@ -1,33 +1,67 @@
-captcp(1)
+captcp
 =======
 
-NAME
-----
-captcp - TCP Analysis Tool Collection for Linux
+About
+-----
+Since several years I used to use a own repository of scripts to analyze
+network traffic. First I started with plain tcpdump, tcptrace, tcpslice,
+tcpstat and the other tools. After some years I started to wrote an own set of
+scripts, starting with Perl and later also some Ruby scripts. Before I forget,
+of course, a few C programs are also in the collection. Captcp is the attempt
+to rewrite the scripts in Python.
 
-SYNOPSIS
---------
+
+Some Words About Packet Analysis
+--------------------------------
+
+During the years some wisdoms are here collected. You can ignore them, sure,
+but eventually there are some tricks for you.
+
+* Don't capture data life - capture the data via tcpdump and analyze the data off-line
+* If you know what you want to analyze you can adjust tcpdump to capture the required data
+* Make backups of your traces
+* Don't use one tool, find the most useful tool for your requirements
+* Last but not least: question the results!
+
+
+image::images/seq.png[]
+
+Modules
+-------
+
+The script functionality is splitted into submodules. Similar to git, perf and
+kvm-tool. The following list provides an overview over the currently supported
+list. If in doubt you can call captcp without any argument to get the full
+list.
+
+- stacktrace
+- show
+- statistic
+- payloadtimeport
+- timesequence
+- geoip
+- throughtput
+- connection
+- template
+- sequencegraph
+
+General Synopsis
+----------------
+
 [verse]
-'perf' [--help] COMMAND [ARGS]
+'captcp' [--help] COMMAND [ARGS]
 
-Command is one off the following:
+Module Description
+------------------
 
-* stacktrace (see linkcaptcp:captcp-stacktrace[1])
-* show (see linkcaptcp:captcp-stacktrace[1])
-* statistic (see linkcaptcp:captcp-stacktrace[1])
-* payloadtimeport (see linkcaptcp:captcp-stacktrace[1])
-* timesequence (see linkcaptcp:captcp-stacktrace[1])
-* geoip (see linkcaptcp:captcp-stacktrace[1])
-* throughtput (see linkcaptcp:captcp-stacktrace[1])
-* connection (see linkcaptcp:captcp-stacktrace[1]) 
-* template (see linkcaptcp:captcp-stacktrace[1])
-* sequencegraph (see linkcaptcp:captcp-stacktrace[1])
+The next sections describes the modules in detail.
 
-DESCRIPTION
------------
-Captcp collect a number of Network Analysis tools. Focus is TCP but there are
-some general purpose modules as well.
 
-SEE ALSO
+include::captcp-stacktrace.txt[tabsize=3]
+include::captcp-template.txt[tabsize=3]
+include::emulation.txt[tabsize=3]
+
+
+See also
 --------
-linkcaptcp:captcp-statistic[1], linkcaptcp:captcp-timesequence[1]
+linkcaptcp:captcp-stacktrace[1], linkcaptcp:captcp-timesequence[1]

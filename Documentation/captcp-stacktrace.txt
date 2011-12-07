@@ -1,18 +1,16 @@
-captcp stacktrace(1)
-====================
+Stacktrace
+----------
 
-NAME
-----
-captcp stacktrace - Trace Network Stack Variables
 
-SYNOPSIS
---------
+Synopsis
+~~~~~~~~
 [verse]
-'captcp' stacktrace --output-dir <dir> [--init]
-				[--verbose <debug | info | warning | error >]
+'captcp' stacktrace
+	--output-dir <dir> [--init]
+	[--verbose <debug | info | warning | error >]
 
-DESCRIPTION
------------
+Description
+~~~~~~~~~~~
 Record Linux Network stack internal variables for analysis. Per
 default the initial congestion window as well as the slow start threshold
 (ssthresh) are recorded.
@@ -22,8 +20,10 @@ is not started as root then the script try to spawn systemtap via
 captcplink:sudo[1]. So you can edit /etc/sudoers via visudo to execute
 systemtap with increased permissions.
 
-BACKGROUND
-----------
+image::images/cwnd.png[]
+
+Background
+~~~~~~~~~~
 
 This module use captcplink:systemap[1] in the background to collect internal
 Kernel data. So make sure you have installed systemtap and have a runnig
@@ -32,8 +32,8 @@ systemtap environment. Please check this before you use this module.
 If an error is encountered then often ther Kernelsource differs from the
 actual running Kernelversion.
 
-OPTIONS
--------
+Options
+~~~~~~~
 
 -o::
 --output-dir::
@@ -50,20 +50,13 @@ OPTIONS
 				original file is overwriten each time - without any warning! Don't
 				use this option if the Gnuplot or/and Makefile is modified.
 
-EXAMPLES
---------
+Examples
+~~~~~~~~
 
-Start 
+Take a stacktrace, interrupt the processing and generate PDF's.
 
 	$ captcp stacktrace --init --output-dir cwnd-test
 	CRTL-C
 	$ cd cwnd-test
 	$ make
 
-
-
-
-
-SEE ALSO
---------
-linkcaptcp:captcp[1]

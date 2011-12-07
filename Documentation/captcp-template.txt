@@ -1,23 +1,16 @@
-captcp template(1)
-====================
-
-NAME
-----
-captcp template - provides a wide varity of Gnuplot template files
-
-SYNOPSIS
+template
 --------
-[verse]
-'captcp' template [--verbose <debug | info | error >] [--list] <templatename>
 
-DESCRIPTION
------------
+Synopsis
+~~~~~~~~
+[verse]
+'captcp' template
+	[--verbose <debug | info | error >] [--list] <templatename>
+
+Description
+~~~~~~~~~~~
+
 Provides useful Gnuplot and Makefile templates for visualization. Also used
 internal.
 
 
-SEE ALSO
---------
-linkperf:perf-stat[1], linkperf:perf-top[1],
-linkperf:perf-record[1], linkperf:perf-report[1],
-linkperf:perf-list[1]
