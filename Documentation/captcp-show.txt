@@ -54,3 +54,10 @@ Highlight different flows
 
 	$ captcp show -d flow capture.pcap
 
+The next example and image illustrate the default options to differentiate
+connections.
+
+	$ captcp show capture.pcap
+
+image::images/show-connections.png[]
+
