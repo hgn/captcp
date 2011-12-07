@@ -56,7 +56,7 @@ Examples
 Take a stacktrace, interrupt the processing and generate PDF's.
 
 	$ captcp stacktrace --init --output-dir cwnd-test
-	CRTL-C
+	^C
 	$ cd cwnd-test
 	$ make
 

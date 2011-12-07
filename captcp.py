@@ -2584,7 +2584,7 @@ class ShowMod(Mod):
                 type="string", help="specify the number of displayed ID's")
 
         parser.add_option( "-d", "--differentiate", dest="differentiate", default="connection",
-                type="string", help="specify if connection or sub-connections should be colored")
+                type="string", help="specify if \"connection\" or \"flow\" should be colored")
 
         parser.add_option( "-m", "--match", dest="match", default=None,
                 type="string", help="if statment is true the string is color in red")
@@ -2610,7 +2610,7 @@ class ShowMod(Mod):
             self.ids = self.opts.connections.split(',')
             self.logger.info("show limited to the following connections: %s" % (str(self.ids)))
 
-        if self.opts.differentiate != "connection" and self.opts.differentiate != "sub-connection":
+        if self.opts.differentiate != "connection" and self.opts.differentiate != "flow":
             self.logger.error("only connection or sub-connection allowed for --d")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
             
@@ -2642,7 +2642,7 @@ class ShowMod(Mod):
             if "color" not in sub_connection.connection.user_data:
                 sub_connection.connection.user_data["color"] = \
                         self.color_iter.infinite_next()
-        elif self.opts.differentiate == "sub-connection":
+        elif self.opts.differentiate == "flow":
             if "color" not in sub_connection.user_data:
                 sub_connection.user_data["color"] = \
                         self.color_iter.infinite_next()
