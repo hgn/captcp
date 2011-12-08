@@ -2575,7 +2575,7 @@ class ShowMod(Mod):
         self.ids = False
 
         parser = optparse.OptionParser()
-        parser.usage = "show [options] <pcapfile> [pcapfilter]"
+        parser.usage = "show [options] <pcapfile>"
 
         parser.add_option( "-v", "--verbose", dest="loglevel", default=None,
                 type="string", help="set the loglevel (info, debug, warning, error)")
