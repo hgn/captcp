@@ -58,6 +58,7 @@ General Synopsis
 
 include::captcp-statistic.txt[tabsize=3]
 include::captcp-stacktrace.txt[tabsize=3]
+include::captcp-sequencegraph.txt[tabsize=3]
 include::captcp-show.txt[tabsize=3]
 include::captcp-time-sequence-graph.txt[tabsize=3]
 include::captcp-template.txt[tabsize=3]
