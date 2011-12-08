@@ -18,6 +18,10 @@ arch/*/include/generated
 Documentation/*.xml
 Documentation/*.html
 Documentation/*.1
+Documentation/captcp.pdf
+Documentation/captcp.html
+
+*.pcap
 
 *.orig
 *~
