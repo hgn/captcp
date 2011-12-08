@@ -1,0 +1,17 @@
+Statistic Module
+----------------
+
+Synopsis
+~~~~~~~~
+[verse]
+'captcp' statictis
+	[--verbose <debug | info | error >]
+	<pcapfile>
+
+Description
+~~~~~~~~~~~
+
+Provides detailed information about the packet flow.
+
+
+

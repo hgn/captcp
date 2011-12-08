@@ -1,5 +1,5 @@
-Template
---------
+Template Module
+---------------
 
 Synopsis
 ~~~~~~~~

@@ -1,14 +1,17 @@
-captcp
-=======
+Captcp
+======
 
 About
 -----
+
 Since several years I used to use a own repository of scripts to analyze
 network traffic. First I started with plain tcpdump, tcptrace, tcpslice,
 tcpstat and the other tools. After some years I started to wrote an own set of
 scripts, starting with Perl and later also some Ruby scripts. Before I forget,
 of course, a few C programs are also in the collection. Captcp is the attempt
 to rewrite the scripts in Python.
+
+This documentation is also avaiable in PDF form: link:captcp.pdf[PDF file]
 
 
 Some Words About Packet Analysis
@@ -26,41 +29,38 @@ but eventually there are some tricks for you.
 
 image::images/seq.png[]
 
-Modules
--------
+Modulse Overview
+----------------
 
 The script functionality is splitted into submodules. Similar to git, perf and
 kvm-tool. The following list provides an overview over the currently supported
 list. If in doubt you can call captcp without any argument to get the full
 list.
 
-- stacktrace
-- show
-- statistic
-- payloadtimeport
-- timesequence
-- geoip
-- throughtput
-- connection
-- template
-- sequencegraph
+- Stacktrace
+- Show
+- Statistic
+- Payloadtimeport
+- Timesequence
+- Geoip
+- Throughtput
+- Connection
+- Template
+- Sequencegraph
 
 General Synopsis
 ----------------
 
 [verse]
-'captcp' [--help] COMMAND [ARGS]
-
-Module Description
-------------------
-
-The next sections describes the modules in detail.
+'captcp' [--help] MODULENAME [ARGS]
 
 
+
+include::captcp-statistic.txt[tabsize=3]
 include::captcp-stacktrace.txt[tabsize=3]
-include::captcp-template.txt[tabsize=3]
 include::captcp-show.txt[tabsize=3]
 include::captcp-time-sequence-graph.txt[tabsize=3]
+include::captcp-template.txt[tabsize=3]
 include::emulation.txt[tabsize=3]
 
 

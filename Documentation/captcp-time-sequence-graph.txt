@@ -1,5 +1,5 @@
-Time Sequence Graph
--------------------
+Time Sequence Graph Module
+--------------------------
 
 
 Synopsis
