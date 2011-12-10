@@ -250,11 +250,11 @@ hr {display: none; height: 0; width: 25%; margin: 50px auto 50px; border: 0; bor
 	white-space: pre-wrap; /* CSS 2.1 */
 	white-space: pre-line; /* CSS 3 (and 2.1 as well, actually) */
 	word-wrap: break-word; /* IE */
-	background-color:#eee;
+	background-color:#ddd;
 	margin-top:1em;
 	margin-bottom:1em;
 	padding-left:1em;
-	 -webkit-border-radius: 15px; -moz-border-radius: 15px; border-radius: 15px;
+	 -webkit-border-radius: 5px; -moz-border-radius: 5px; border-radius: 5px;
 }
 
 article figure {float: right; position: relative; margin: 0 -25% 12px 12px;}
