@@ -9,7 +9,7 @@ png: $(PNG_OBJ)
 	@ echo "compillation of "$<
 	@gnuplot $<
 
-%.pdf: %.eps $(shell *.data)
+%.pdf: %.eps
 	@echo "conversion in pdf format"
 	@epstopdf --outfile=$*.pdf $<
 	@echo "end"
