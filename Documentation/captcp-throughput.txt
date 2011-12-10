@@ -1,0 +1,93 @@
+Throughtput Module
+------------------
+
+
+Synopsis
+~~~~~~~~
+[verse]
+'captcp' throughput
+	[--(v)erbose <debug | info | warning | error>]
+	[--(o)utput <directory>]
+	[--(f)low <id>]
+	[--(s)samplelength <seconds>]
+	[--(m)ode <goodput>]
+	[--(i)init]
+	<pcapfile>
+
+
+Description
+~~~~~~~~~~~
+
+Generate a common througput graph for a given capture file. If no filter
+(--flow) is given the whole data over time from the whole file is considered.
+
+
+image::images/throughput.png[]
+
+
+Options
+~~~~~~~
+
+-v::
+--verbose:: <debug | info | warning | error>
+
+Show more output (default is warning)
+
+-s::
+--sampling:: <seconds>
+
+
+Throughput is data over a given time period. This time period is per
+default 1 second: bytes per second. Sometimes it can be more usefull
+to select another sampling factor. For data is rarely sent to get a
+more smooth sampling of e.g. 10 seconds can be selected. The value is
+of type float, it is possible to use sub-second fractions.
+
+
+-i::
+--init::
+
+If specified a suitable Gnuplot/Makefile environment is generated.
+A "make" is sufficient to generate the PDF file, "make png" to
+generate a raster PNG image.
+
+Each time this option is specified the Gnuplot/Makefile is
+overwritten. Make sure to remove this option if you edit the gnuplot
+file (throughput.gpi)
+
+-f::
+--flow:: <id>
+
+Often several connections/flows are tracked in a PCAP file. To limit
+the throughput a connection (1, 2, 3, ...) or a flow (1.1, 1.2, 2.1,
+2.2) can be specified. This is similar to all other submodules. To see
+what flow get what id a "captcp statistic" is required. This will
+display all connections/flows for a given PCAP file.
+
+-m::
+--mode:: <goodput>
+
+Normally the complete packet len is considered. This includes the
+Ethernet header, IPv4/IPv6 header, TCP header and payload. To display
+only the payload bytes per second this option can be specified.
+Goodput is the application level throughput.
+
+-u::
+--unit:: <byte, kbyte, ...>
+
+Standard is to display the data in byte. But it can also be displayed
+in kilo or any other (possible) unit too: byte, kbyte, mbyte
+
+Examples
+~~~~~~~~
+
+Generate data directory, change into that directory, generate template files
+for make and Gnuplot and generate data file for web-80mb-down.trace, sampling
+is each second (the default). Last but not least: generate PDF and PNG image.
+
+ 	$ mkir throughput-test
+	$ cd throughput-test
+	$ captcp.py throughput -s 1 -o . -i web-80mb-down.trace
+	$ make pdf png
+
+
