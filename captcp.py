@@ -2402,6 +2402,7 @@ class ConnectionContainer:
             cc.update(ts, packet)
 
 
+
 class ConnectionAnalyzeMod(Mod):
 
     def pre_initialize(self):
@@ -2465,6 +2466,7 @@ class ConnectionAnalyzeMod(Mod):
         sys.stderr.write("# Tip: generate graphviz file with: \"twopi -onetwork.png -Tpng network.data\"\n")
 
 
+
 class ThroughputMod(Mod):
 
 
@@ -2473,6 +2475,7 @@ class ThroughputMod(Mod):
         self.logger = logging.getLogger()
         self.parse_local_options()
         self.start_time = False
+
 
     def parse_local_options(self):
 
@@ -2589,6 +2592,9 @@ class ShowMod(Mod):
         parser.add_option( "-m", "--match", dest="match", default=None,
                 type="string", help="if statment is true the string is color in red")
 
+        parser.add_option( "-s", "--suppress", dest="suppress", default=False,
+                action="store_true", help="don't display other packets")
+
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
         
@@ -2613,10 +2619,64 @@ class ShowMod(Mod):
         if self.opts.differentiate != "connection" and self.opts.differentiate != "flow":
             self.logger.error("only connection or sub-connection allowed for --d")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
-            
 
-    def match(self, ts, packet):
-        pass
+
+    # this provides an sandbox where the variables
+    # are made public, this a match can be coded
+    # as "sackblocks > 2" instead of
+    # "opts[foo].sackblocks > 2
+    #
+    # return color is match is True
+    # return False if the packet should not displayed
+    # return None if the packet should be displayed
+    #        with no color change
+    def match(self, ts, packet, packet_len, pi):
+
+        # default is un-machted
+        match = False
+
+        # ip
+        sip = pi.sip
+        dip = pi.dip
+        # tcp
+        seq = pi.seq
+        ack = pi.ack
+        seq = pi.seq
+        ack = pi.ack
+        win = pi.win
+        urp = pi.urp
+        sum = pi.sum
+
+        sport = pi.sport
+        dport = pi.dport
+
+        ack_flag = pi.is_ack_flag()
+        syn_flag = pi.is_syn_flag()
+        urg_flag = pi.is_urg_flag()
+        psh_flag = pi.is_psh_flag()
+        fin_flag = pi.is_fin_flag()
+        rst_flag = pi.is_rst_flag()
+        ece_flag = pi.is_ece_flag()
+        cwr_flag = pi.is_cwr_flag()
+
+        # tcp options
+        mss        = pi.options['mss']
+        wsc        = pi.options['wsc']
+        tsval      = pi.options['tsval']
+        tsecr      = pi.options['tsecr']
+        sackok     = pi.options['sackok']
+        sackblocks = pi.options['sackblocks']
+
+        exec "if " + self.opts.match + ": match = True"
+
+        if match:
+            return self.color.color_palette['red']
+        else:
+            if self.opts.suppress:
+                return False
+
+        # dont change the color if nothing happends
+        return self.color.color_palette['end']
 
 
     def seq_plus(self, seq, length):
@@ -2649,7 +2709,7 @@ class ShowMod(Mod):
 
         pi = PacketInfo(packet)
         data_len = len(packet.data.data)
-
+        time = Utils.ts_tofloat(ts - self.cc.capture_time_start)
 
         # color init
         if self.opts.differentiate == "connection":
@@ -2657,9 +2717,14 @@ class ShowMod(Mod):
         else:
             line = sub_connection.user_data["color"]
 
+        if self.opts.match:
+            line = self.match(time, packet, data_len, pi)
+            if line == False:
+                return
+
+
         # time handling
-        time = ts - self.cc.capture_time_start
-        line += "%.5f" % (Utils.ts_tofloat(time))
+        line += "%.5f" % (time)
 
         line += " %s %s:%d > %s:%d" % (pi.ipversion,
                 pi.sip, pi.sport, pi.dip, pi.dport)
