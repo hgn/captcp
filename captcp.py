@@ -816,16 +816,17 @@ class TemplateMod(Mod):
     TYPE_MAKEFILE = 1
     TYPE_GNUPLOT  = 2
 
-    def pre_initialize(self):
 
+    def __init__(self):
         self.logger = logging.getLogger()
         self.init_db()
 
+
+    def pre_initialize(self):
         self.parse_local_options()
 
 
     def get_content_by_name(self, name):
-
         pathname = False
 
         for i in self.db:
@@ -2256,12 +2257,58 @@ class ConnectionAnalyzeMod(Mod):
 
 class ThroughputMod(Mod):
 
+    def create_gnuplot_environment(self):
+
+        gnuplot_filename = "throughput.gpi"
+        makefile_filename = "Makefile"
+
+        filepath = "%s/%s" % (self.opts.outputdir, gnuplot_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (TemplateMod().get_content_by_name("throughput")))
+        fd.close()
+
+        filepath = "%s/%s" % (self.opts.outputdir, makefile_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (TemplateMod().get_content_by_name("gnuplot")))
+        fd.close()
+
+
+    def check_options(self):
+        if not self.opts.outputdir:
+            self.logger.error("No output directory specified: --output-dir")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        if not os.path.exists(self.opts.outputdir):
+            self.logger.error("Not a valid directory: \"%s\"" %
+                    (self.opts.outputdir))
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+
+    def create_data_files(self):
+
+        self.throughput_filepath = \
+                "%s/%s" % (self.opts.outputdir, "throughput.data")
+        self.throughput_file = open(self.throughput_filepath, 'w')
+
+
+    def close_data_files(self):
+        self.throughput_file.close()
+
 
     def pre_initialize(self):
 
         self.logger = logging.getLogger()
+
         self.parse_local_options()
+
         self.start_time = False
+
+        self.check_options()
+
+        if self.opts.init:
+            self.create_gnuplot_environment()
+
+        self.create_data_files()
 
 
     def parse_local_options(self):
@@ -2274,10 +2321,10 @@ class ThroughputMod(Mod):
         parser.add_option( "-v", "--verbose", dest="loglevel", default=None,
                 type="string", help="set the loglevel (info, debug, warning, error)")
 
-        parser.add_option( "-i", "--connection-id", dest="connections", default=None,
+        parser.add_option( "-f", "--flow", dest="connections", default=None,
                 type="string", help="specify the number of displayed ID's")
 
-        parser.add_option( "-s", "--samplelenght", dest="samplelenght", default=1.0,
+        parser.add_option( "-s", "--samplelength", dest="samplelength", default=1.0,
                 type="float", help="length in seconds (float) where data is accumulated (1.0)")
 
         parser.add_option( "-m", "--mode", dest="mode", default="goodput",
@@ -2285,6 +2332,13 @@ class ThroughputMod(Mod):
 
         parser.add_option( "-u", "--unit", dest="unit", default="byte",
                 type="string", help="unit: byte, kbyte, mbyte")
+
+        parser.add_option( "-i", "--init", dest="init",  default=False,
+                action="store_true", help="create Gnuplot template and Makefile in output-dir")
+
+        parser.add_option( "-o", "--output-dir", dest="outputdir", default=None,
+                type="string", help="specify the output directory")
+
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
@@ -2313,9 +2367,8 @@ class ThroughputMod(Mod):
             return
 
         # if the user applied a filter, we check it here
-        if self.ids:
-            if not sub_connection.is_in(self.ids):
-                return
+        if self.ids and not sub_connection.is_in(self.ids):
+            return
 
         pi = PacketInfo(packet)
 
@@ -2335,18 +2388,20 @@ class ThroughputMod(Mod):
 
         self.data += data_len
 
-        if timediff > self.last_sample + self.opts.samplelenght:
+        if timediff > self.last_sample + self.opts.samplelength:
 
             amount = UtilMod.byte_to_unit(self.data, self.opts.unit)
 
             # time to print the data
-            sys.stdout.write("%.5f %.3f\n" % (self.last_sample + self.opts.samplelenght,
-                amount))
+            self.throughput_file.write("%.5f %.3f\n" %
+                    (self.last_sample + self.opts.samplelength, amount))
             self.data  = 0
 
-            self.last_sample += self.opts.samplelenght
+            self.last_sample += self.opts.samplelength
         
 
+    def process_final(self):
+        self.close_data_files()
 
 
 
@@ -2751,7 +2806,7 @@ class Captcp:
             "sequencegraph":   "SequenceGraphMod",
             "timesequence":    "TimeSequenceMod",
             "show":            "ShowMod",
-            "throughtput":     "ThroughputMod",
+            "throughput":      "ThroughputMod",
             "stacktrace":      "StackTraceMod"
             }
 
