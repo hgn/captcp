@@ -11,6 +11,7 @@ set nokey
 set grid xtics ytics mytics
 
 #set xrange [1:60]
+set format y "%.0f"
 
 set size 2
 set size ratio 0.4
