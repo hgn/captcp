@@ -46,6 +46,12 @@ Options
 				Used to highlight only packets there the provided filter evaluate to
 				true. Filter can be:
 
+-s::
+--suppress::
+				Only usefull in combination with match. Instead of coloring packets
+				red (which is the default), only matched packets are displayed. All
+				other packets are not displayed.
+
 
 Examples
 ~~~~~~~~
@@ -60,4 +66,33 @@ connections.
 	$ captcp show capture.pcap
 
 image::images/show-connections.png[]
+
+
+Matching can be really powerfull. We start with the hello world example:
+
+	$ captcp.py show --match True trace.pcap
+
+This will match all packets, thus all packets are red colored.
+
+
+Another usefull option is --suppress: only packets are displayed where the
+match evalutated to true. This can be used to count special packets. As an
+example: to display only packets with TCP SACK (selective acknowledgements)
+you can filter for it and suppress all other packets
+
+	$ captcp.py show --match "sackblocks > 0" --suppress trace.pcap
+
+Highlight packet where the TCP SYN and ACK flag is set:
+
+	$ captcp.py show --match "syn_flag and ack_flag" trace.pcap
+
+Show packets where the Maximum Segment Size is less then 1000:
+
+	$ captcp.py show --match "mss and mss < 1000" trace.pcap
+
+It is important to note that MSS must be checked before the values can be
+compared. A packet where no MSS is present (the MSS option is only set at the
+Three Way Handshake) the mss value is False. So a plain statement like "mss <
+1400" will evalulate to "False < 100" which is true in Python. Therefore the
+additional check is required.
 
