@@ -546,6 +546,18 @@ class PacketInfo:
         if self.options['sackok']:
             ret += "sackok"
 
+    def linear_sackblocks_array(self, liste):
+        retlist = list()
+        i = len(liste) / 2
+        while i > 0:
+            r = list()
+            r.append(liste.pop(-1))
+            r.append(liste.pop(-1))
+            retlist.append(r)
+            i -= 1
+
+        return retlist
+
 
     def parse_tcp_options(self):
 
@@ -572,7 +584,7 @@ class PacketInfo:
                 self.options['sackok'] = True
             elif o == dpkt.tcp.TCP_OPT_SACK:
                 ofmt="!%sI" % int(len(d) / 4)
-                self.options['sackblocks'] = struct.unpack(ofmt, d)
+                self.options['sackblocks'] = self.linear_sackblocks_array(list(struct.unpack(ofmt, d)))
             elif o == dpkt.tcp.TCP_OPT_TIMESTAMP:
                 (self.options['tsval'], self.options['tsecr']) = struct.unpack('>II', d)
 
@@ -2414,6 +2426,7 @@ class ShowMod(Mod):
         self.parse_local_options()
         self.color = RainbowColor(mode=RainbowColor.ANSI256)
         self.color_iter = self.color.__iter__()
+        self.packet_no = 0
 
     def parse_local_options(self):
 
@@ -2436,6 +2449,9 @@ class ShowMod(Mod):
 
         parser.add_option( "-s", "--suppress", dest="suppress", default=False,
                 action="store_true", help="don't display other packets")
+
+        parser.add_option( "-n", "--number", dest="packet_number", default=False,
+                action="store_true", help="number the packets")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
@@ -2526,6 +2542,8 @@ class ShowMod(Mod):
 
     def pre_process_packet(self, ts, packet):
 
+        self.packet_no += 1
+
         sub_connection = self.cc.sub_connection_by_packet(packet)
         # only for TCP flows this can be true, therefore
         # no additional checks that this is TCP are required
@@ -2564,9 +2582,10 @@ class ShowMod(Mod):
             if line == False:
                 return
 
-
-        # time handling
-        line += "%.5f" % (time)
+        if self.opts.packet_number:
+            line += "%d %.5f" % (self.packet_no, time)
+        else:
+            line += "%.5f" % (time)
 
         line += " %s %s:%d > %s:%d" % (pi.ipversion,
                 pi.sip, pi.sport, pi.dip, pi.dport)
