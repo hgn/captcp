@@ -52,6 +52,11 @@ Options
 				red (which is the default), only matched packets are displayed. All
 				other packets are not displayed.
 
+-n::
+--number::
+				Show in firt row the absolut packet number. This can be used to
+				correlate one packet with the packet in wireshark or tcpdump.
+
 
 Examples
 ~~~~~~~~
@@ -80,7 +85,7 @@ match evalutated to true. This can be used to count special packets. As an
 example: to display only packets with TCP SACK (selective acknowledgements)
 you can filter for it and suppress all other packets
 
-	$ captcp.py show --match "sackblocks > 0" --suppress trace.pcap
+	$ captcp.py show --match "sackblocks" --suppress trace.pcap
 
 Highlight packet where the TCP SYN and ACK flag is set:
 
@@ -96,3 +101,10 @@ Three Way Handshake) the mss value is False. So a plain statement like "mss <
 1400" will evalulate to "False < 100" which is true in Python. Therefore the
 additional check is required.
 
+
+Show all packets with SACK blocks and where the first TCP SACK block
+(left-edge) starts with a number less then the acknowledgenumber. Normally
+this is not superfluous, but sometimes DUP-ACKs are cached and retransmitted
+and the SACK information is not updated.
+
+	$ captcp.py show -m "sackblocks and len(sackblocks) > 0 and sackblocks[0][0] < ack" --suppress --number trace2.pcap
