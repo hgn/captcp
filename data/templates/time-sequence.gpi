@@ -25,8 +25,8 @@ set style line 1 lc rgb '#00004d' lt 1 lw 3
 set style line 2 lc rgb '#0060ad' lt 1 lw 3
 set style line 3 lc rgb '#cdaf95' lt 1 lw 3
 
-plot  \\
-    "seq.data" using 1:2 title "Seq" with linespoints ls 1, \\
-    "ack.data" using 1:2 title "ACK" with linespoints ls 2, \\
+plot  \
+    "seq.data" using 1:2 title "Seq" with linespoints ls 1, \
+    "ack.data" using 1:2 title "ACK" with linespoints ls 2, \
     "win.data" using 1:2 title "AWND" with lines ls 3
 
