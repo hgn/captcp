@@ -2417,6 +2417,169 @@ class ThroughputMod(Mod):
 
 
 
+class InFlightMod(Mod):
+
+    def pre_initialize(self):
+        self.logger = logging.getLogger()
+        self.parse_local_options()
+        self.packet_sequence = list()
+        self.packet_prev = False
+        self.start_time = False
+        if not self.opts.stdio:
+            self.check_options()
+            if self.opts.init:
+                self.create_gnuplot_environment()
+            self.create_data_files()
+
+
+    def parse_local_options(self):
+        self.ids = False
+        parser = optparse.OptionParser()
+        parser.usage = "show [options] <pcapfile>"
+        parser.add_option( "-v", "--verbose", dest="loglevel", default=None,
+                type="string", help="set the loglevel (info, debug, warning, error)")
+        parser.add_option( "-f", "--data-flow", dest="connections", default=None,
+                type="string", help="specify the number of relevant ID's")
+        parser.add_option( "-m", "--mode", dest="mode", default="byte",
+                type="string", help="display packets or bytes in flight")
+        parser.add_option( "-s", "--stdio", dest="stdio",  default=False,
+                action="store_true", help="don't create Gnuplot files, instead print to stdout")
+        parser.add_option( "-i", "--init", dest="init",  default=False,
+                action="store_true", help="create Gnuplot template and Makefile in output-dir")
+        parser.add_option( "-o", "--output-dir", dest="outputdir", default=None,
+                type="string", help="specify the output directory")
+
+        self.opts, args = parser.parse_args(sys.argv[0:])
+        self.set_opts_logevel()
+        
+        if len(args) < 3:
+            self.logger.error("no pcap file argument given, exiting\n")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        self.captcp.print_welcome()
+        self.captcp.pcap_file_path = args[2]
+        self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
+
+        if not self.opts.connections:
+            self.logger.error("No data flow specified (where the data flows)")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        (self.connection_id, self.data_flow_id) = self.opts.connections.split('.')
+        if int(self.data_flow_id) == 1:
+            self.ack_flow_id = 2
+        elif int(self.data_flow_id) == 2:
+            self.ack_flow_id = 1
+        else:
+            raise ArgumentException("sub flow must be 1 or 2")
+
+        sys.stderr.write("# connection: %s (data flow: %s, ACK flow: %s)\n" %
+                (self.connection_id, self.data_flow_id, self.ack_flow_id))
+
+
+    def create_gnuplot_environment(self):
+        gnuplot_filename = "inflight.gpi"
+        makefile_filename = "Makefile"
+
+        filepath = "%s/%s" % (self.opts.outputdir, gnuplot_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (TemplateMod().get_content_by_name("inflight")))
+        fd.close()
+
+        filepath = "%s/%s" % (self.opts.outputdir, makefile_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (TemplateMod().get_content_by_name("gnuplot")))
+        fd.close()
+
+
+    def check_options(self):
+        if not self.opts.outputdir:
+            self.logger.error("No output directory specified: --output-dir")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        if not os.path.exists(self.opts.outputdir):
+            self.logger.error("Not a valid directory: \"%s\"" %
+                    (self.opts.outputdir))
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+
+    def create_data_files(self):
+        self.filepath = \
+                "%s/%s" % (self.opts.outputdir, "inflight.data")
+        self.file = open(self.filepath, 'w')
+
+
+    def close_data_files(self):
+        self.file.close()
+
+
+    def process_data_flow(self, ts, packet):
+
+        pi = PacketInfo(packet)
+
+        data = (pi.seq, ts, packet)
+
+        self.packet_sequence.append(data)
+
+
+    def process_ack_flow(self, ts, packet):
+
+        pi = PacketInfo(packet)
+
+        for i in list(self.packet_sequence):
+            if pi.ack >= i[0]:
+                self.packet_sequence.remove(i)
+
+
+    def gnuplot_out(self, time, is_data):
+
+        if self.packet_prev:
+            self.file.write("%.5f %d\n" % (time - 0.00001, self.packet_prev))
+
+        self.file.write("%.5f %d\n" % (time, len(self.packet_sequence)))
+        self.packet_prev = len(self.packet_sequence)
+
+
+    def stdio_out(self, time, is_data):
+
+        if is_data:
+            kind = "DATA"
+        else:
+            kind = " ACK"
+
+        print("%.5f %s %d\t%s" % (time, kind, len(self.packet_sequence), '#' * len(self.packet_sequence)))
+
+
+
+    def pre_process_packet(self, ts, packet):
+
+        sub_connection = self.cc.sub_connection_by_packet(packet)
+
+        if sub_connection.sub_connection_id == int(self.data_flow_id):
+            self.process_data_flow(ts, packet)
+            is_data = True
+        elif sub_connection.sub_connection_id == int(self.ack_flow_id):
+            self.process_ack_flow(ts, packet)
+            is_data = False
+        else:
+            raise InternalException
+
+        time = Utils.ts_tofloat(ts - self.cc.capture_time_start)
+
+        if self.opts.stdio:
+            self.stdio_out(time, is_data)
+        else:
+            self.gnuplot_out(time, is_data)
+
+
+    def process_final(self):
+        if not self.opts.stdio:
+            self.close_data_files()
+
+
+
+
+
+
 class ShowMod(Mod):
 
 
@@ -2614,7 +2777,6 @@ class ShowMod(Mod):
 
 class StatisticMod(Mod):
 
-
     def pre_initialize(self):
         self.color = RainbowColor(mode=RainbowColor.ANSI)
         self.logger = logging.getLogger()
@@ -2710,9 +2872,9 @@ class StatisticMod(Mod):
 
     def print_two_column_sc_statistic(self, cid, sc1, sc2):
 
-        self.format_data_column("%sFlow %s.1" % (self.color["yellow"], cid), " ",
-                "%sFlow %s.1%s" % (self.color["yellow"], cid, self.color["end"]), " ")
-        self.format_data_column("tx", "1000.0", "rx", "10000000")
+        #self.format_data_column("%sFlow %s.1" % (self.color["yellow"], cid), " ",
+        #        "%sFlow %s.1%s" % (self.color["yellow"], cid, self.color["end"]), " ")
+        #self.format_data_column("tx", "1000.0", "rx", "10000000")
 
         sys.stdout.write("\n\t%sFlow %s.1\t\t\t\t%sFlow %s.2\n" %
                 (self.color["yellow"], cid, self.color["green"], cid))
@@ -2826,6 +2988,7 @@ class Captcp:
             "timesequence":    "TimeSequenceMod",
             "show":            "ShowMod",
             "throughput":      "ThroughputMod",
+            "inflight":        "InFlightMod",
             "stacktrace":      "StackTraceMod"
             }
 
@@ -2887,55 +3050,42 @@ class Captcp:
         if not classtring:
             return 1
 
-        if (classtring == "StatisticMod" or
-                classtring == "ConnectionAnalyzeMod" or
-                classtring == "ShowMod" or
-                classtring == "ThroughputMod" or
-                classtring == "TimeSequenceMod" or
-                classtring == "StackTraceMod" or
-                classtring == "TemplateMod" or
-                classtring == "SequenceGraphMod"):
 
-            classinstance = globals()[classtring]()
-            classinstance.register_captcp(self)
+        classinstance = globals()[classtring]()
+        classinstance.register_captcp(self)
 
-            classinstance.pre_initialize()
+        classinstance.pre_initialize()
 
-            # there are other usages two (without pcap parsing)
-            # We check here and if pcap_file_path is not true
-            # then we assume a non-pcap module
-            if self.pcap_file_path:
-                # parse the whole pcap file first
-                pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
-                pcap_parser.register_callback(classinstance.internal_pre_process_packet)
-                self.logger.debug("call pre_process_packet [1/4]")
-                pcap_parser.run()
-                del pcap_parser
+        # there are other usages two (without pcap parsing)
+        # We check here and if pcap_file_path is not true
+        # then we assume a non-pcap module
+        if self.pcap_file_path:
+            # parse the whole pcap file first
+            pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
+            pcap_parser.register_callback(classinstance.internal_pre_process_packet)
+            self.logger.debug("call pre_process_packet [1/4]")
+            pcap_parser.run()
+            del pcap_parser
 
-                self.logger.debug("call pre_process_final [2/4]")
-                classinstance.pre_process_final()
+            self.logger.debug("call pre_process_final [2/4]")
+            classinstance.pre_process_final()
 
-                # and finally print all relevant stuff
-                pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
-                pcap_parser.register_callback(classinstance.process_packet)
-                self.logger.debug("call process_packet [3/4]")
-                pcap_parser.run()
-                del pcap_parser
+            # and finally print all relevant stuff
+            pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
+            pcap_parser.register_callback(classinstance.process_packet)
+            self.logger.debug("call process_packet [3/4]")
+            pcap_parser.run()
+            del pcap_parser
 
 
-            self.logger.debug("call pre_process_final [4/4]")
-            ret = classinstance.process_final()
+        self.logger.debug("call pre_process_final [4/4]")
+        ret = classinstance.process_final()
 
-            time_diff = datetime.datetime.today() - self.captcp_starttime
-            time_diff_s = float(time_diff.seconds) + time_diff.microseconds / 1E6 + time_diff.days * 86400
-            self.logger.info("processing duration: %.4f seconds" % (time_diff_s))
+        time_diff = datetime.datetime.today() - self.captcp_starttime
+        time_diff_s = float(time_diff.seconds) + time_diff.microseconds / 1E6 + time_diff.days * 86400
+        self.logger.info("processing duration: %.4f seconds" % (time_diff_s))
 
-            return ret
-
-
-        else:
-            classinstance = globals()[classtring](self)
-            return classinstance.run()
+        return ret
 
 
 

@@ -19,6 +19,7 @@ install: captcp.py
 	$(INSTALLDATA) data/stap-scripts/* $(prefix)/share/captcp/data/stap-scripts
 	$(INSTALLDATA) data/templates/* $(prefix)/share/captcp/data/templates
 
+	rm -f $(prefix)/bin/captcp
 	ln -s $(prefix)/share/captcp/captcp.py $(prefix)/bin/captcp
 
 
