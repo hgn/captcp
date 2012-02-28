@@ -2417,13 +2417,14 @@ class ThroughputMod(Mod):
 
 
 
+
 class InFlightMod(Mod):
 
     def pre_initialize(self):
         self.logger = logging.getLogger()
         self.parse_local_options()
         self.packet_sequence = list()
-        self.packet_prev = False
+        self.packet_prev = 0
         self.start_time = False
         if not self.opts.stdio:
             self.check_options()
@@ -2440,7 +2441,7 @@ class InFlightMod(Mod):
                 type="string", help="set the loglevel (info, debug, warning, error)")
         parser.add_option( "-f", "--data-flow", dest="connections", default=None,
                 type="string", help="specify the number of relevant ID's")
-        parser.add_option( "-m", "--mode", dest="mode", default="byte",
+        parser.add_option( "-m", "--mode", dest="mode", default="packets",
                 type="string", help="display packets or bytes in flight")
         parser.add_option( "-s", "--stdio", dest="stdio",  default=False,
                 action="store_true", help="don't create Gnuplot files, instead print to stdout")
@@ -2513,45 +2514,32 @@ class InFlightMod(Mod):
 
 
     def process_data_flow(self, ts, packet):
-
         pi = PacketInfo(packet)
-
         data = (pi.seq, ts, packet)
-
         self.packet_sequence.append(data)
 
 
     def process_ack_flow(self, ts, packet):
-
         pi = PacketInfo(packet)
-
         for i in list(self.packet_sequence):
             if pi.ack >= i[0]:
                 self.packet_sequence.remove(i)
 
 
     def gnuplot_out(self, time, is_data):
-
-        if self.packet_prev:
-            self.file.write("%.5f %d\n" % (time - 0.00001, self.packet_prev))
-
+        self.file.write("%.5f %d\n" % (time - 0.00001, self.packet_prev))
         self.file.write("%.5f %d\n" % (time, len(self.packet_sequence)))
         self.packet_prev = len(self.packet_sequence)
 
 
     def stdio_out(self, time, is_data):
-
-        if is_data:
-            kind = "DATA"
-        else:
-            kind = " ACK"
-
-        print("%.5f %s %d\t%s" % (time, kind, len(self.packet_sequence), '#' * len(self.packet_sequence)))
-
+        if is_data: kind = "DATA"
+        else: kind = " ACK"
+        sys.stdout.write("%.5f %s %d\t%s" %
+                (time, kind, len(self.packet_sequence), '#' * len(self.packet_sequence)))
 
 
     def pre_process_packet(self, ts, packet):
-
         sub_connection = self.cc.sub_connection_by_packet(packet)
 
         if sub_connection.sub_connection_id == int(self.data_flow_id):
