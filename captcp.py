@@ -2533,14 +2533,16 @@ class InFlightMod(Mod):
 
 
     def stdio_out(self, time, is_data):
-        if is_data: kind = "DATA"
-        else: kind = " ACK"
-        sys.stdout.write("%.5f %s %d\t%s" %
+        if is_data: kind = "TX"
+        else: kind = "RX"
+        sys.stdout.write("%.5f %s %d\t%s\n" %
                 (time, kind, len(self.packet_sequence), '#' * len(self.packet_sequence)))
 
 
     def pre_process_packet(self, ts, packet):
         sub_connection = self.cc.sub_connection_by_packet(packet)
+        if not sub_connection:
+            return
 
         if sub_connection.sub_connection_id == int(self.data_flow_id):
             self.process_data_flow(ts, packet)
