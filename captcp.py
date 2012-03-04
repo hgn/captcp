@@ -2579,6 +2579,211 @@ class InFlightMod(Mod):
 
 
 
+class SpacingMod(Mod):
+
+    def pre_initialize(self):
+        self.logger = logging.getLogger()
+        self.parse_local_options()
+        self.packet_sequence = list()
+        self.packet_prev = False
+        self.start_time = False
+
+        self.prev_tx_time = False
+        self.prev_rx_time = False
+
+        self.tx_time_samples = list()
+        self.rx_time_samples = list()
+
+        self.capture_time_start = False
+
+        if not self.opts.stdio:
+            self.check_options()
+            if self.opts.init:
+                self.create_gnuplot_environment()
+            self.create_data_files()
+
+
+    def parse_local_options(self):
+        self.ids = False
+        parser = optparse.OptionParser()
+        parser.usage = "show [options] <pcapfile>"
+        parser.add_option( "-v", "--verbose", dest="loglevel", default=None,
+                type="string", help="set the loglevel (info, debug, warning, error)")
+        parser.add_option( "-f", "--data-flow", dest="connections", default=None,
+                type="string", help="specify the number of relevant ID's")
+        parser.add_option( "-m", "--mode", dest="mode", default="packets",
+                type="string", help="display packets or bytes in flight (default packets)")
+        parser.add_option( "-s", "--stdio", dest="stdio",  default=False,
+                action="store_true", help="don't create Gnuplot files, instead print to stdout")
+        parser.add_option( "-i", "--init", dest="init",  default=False,
+                action="store_true", help="create Gnuplot template and Makefile in output-dir")
+        parser.add_option( "-o", "--output-dir", dest="outputdir", default=None,
+                type="string", help="specify the output directory")
+        parser.add_option( "-a", "--samples", dest="sample_no", default=10,
+                type="int", help="number of packet sampled (default: 10)")
+
+        self.opts, args = parser.parse_args(sys.argv[0:])
+        self.set_opts_logevel()
+        
+        if len(args) < 3:
+            self.logger.error("no pcap file argument given, exiting")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        self.captcp.print_welcome()
+        self.captcp.pcap_file_path = args[2]
+        self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
+
+        if not self.opts.connections:
+            self.logger.error("No data flow specified! Call \"captcp statistics\"")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        (self.connection_id, self.data_flow_id) = self.opts.connections.split('.')
+        if int(self.data_flow_id) == 1:
+            self.ack_flow_id = 2
+        elif int(self.data_flow_id) == 2:
+            self.ack_flow_id = 1
+        else:
+            raise ArgumentException("sub flow must be 1 or 2")
+
+        sys.stderr.write("# connection: %s (data flow: %s, ACK flow: %s)\n" %
+                (self.connection_id, self.data_flow_id, self.ack_flow_id))
+
+
+    def create_gnuplot_environment(self):
+        gnuplot_filename = "spacing.gpi"
+        makefile_filename = "Makefile"
+
+        filepath = "%s/%s" % (self.opts.outputdir, gnuplot_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (TemplateMod().get_content_by_name("spacing")))
+        fd.close()
+
+        filepath = "%s/%s" % (self.opts.outputdir, makefile_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (TemplateMod().get_content_by_name("gnuplot")))
+        fd.close()
+
+
+    def check_options(self):
+        if not self.opts.outputdir:
+            self.logger.error("No output directory specified: --output-dir")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        if not os.path.exists(self.opts.outputdir):
+            self.logger.error("Not a valid directory: \"%s\"" %
+                    (self.opts.outputdir))
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+
+    def create_data_files(self):
+        self.tx_filepath = "%s/%s" % (self.opts.outputdir, "tx.data")
+        self.tx_file = open(self.tx_filepath, 'w')
+
+        self.rx_filepath = "%s/%s" % (self.opts.outputdir, "rx.data")
+        self.rx_file = open(self.rx_filepath, 'w')
+
+
+    def close_data_files(self):
+        self.tx_file.close()
+        self.rx_file.close()
+
+
+    def process_data_flow(self, ts, packet):
+        pi = PacketInfo(packet)
+
+        data = (pi.seq, ts, packet)
+        self.packet_sequence.append(data)
+
+
+    def process_ack_flow(self, ts, packet):
+        pi = PacketInfo(packet)
+        for i in list(self.packet_sequence):
+            if pi.ack >= i[0]:
+                self.packet_sequence.remove(i)
+
+
+    def gnuplot_out(self, time, delta, is_data_flow):
+        if is_data_flow:
+            self.tx_file.write("%.5f %.5f\n" % (time, delta))
+        else:
+            self.rx_file.write("%.5f %.5f\n" % (time, delta))
+            
+
+
+    def stdio_out(self, time, delta, is_data_flow):
+        if is_data_flow:
+            pre = "TX"
+        else:
+            pre = "RX"
+
+        sys.stdout.write("%s %.5f %.5f\n" % (pre, time, delta))
+
+
+    def pre_process_packet(self, ts, packet):
+        sub_connection = self.cc.sub_connection_by_packet(packet)
+        if not sub_connection: return
+        if not self.capture_time_start: self.capture_time_start = ts
+        time = Utils.ts_tofloat(ts - self.capture_time_start)
+        pi = PacketInfo(packet)
+        delta = 0.0
+        is_data_flow = None
+
+
+        if sub_connection.sub_connection_id == int(self.data_flow_id):
+            if not self.prev_tx_time:
+                self.prev_tx_time = time
+                return
+
+            delta = time - self.prev_tx_time
+            self.prev_tx_time = time
+            is_data_flow = True
+            self.tx_time_samples.append(delta)
+            if len(self.tx_time_samples) < self.opts.sample_no:
+                return
+        elif sub_connection.sub_connection_id == int(self.ack_flow_id):
+            if not self.prev_rx_time:
+                self.prev_rx_time = time
+                return
+
+            delta = time - self.prev_rx_time
+            self.prev_rx_time = time
+            is_data_flow = False
+            self.rx_time_samples.append(delta)
+            if len(self.rx_time_samples) < self.opts.sample_no:
+                return
+        else:
+            raise InternalException
+
+        
+        tmp = 0.0
+        if is_data_flow:
+            for i in self.tx_time_samples:
+                tmp += i
+            tmp /= len(self.tx_time_samples)
+        else:
+            for i in self.rx_time_samples:
+                tmp += i
+            tmp /= len(self.rx_time_samples)
+
+
+        if self.opts.stdio:
+            self.stdio_out(time, tmp, is_data_flow)
+        else:
+            self.gnuplot_out(time, tmp, is_data_flow)
+
+        if is_data_flow:
+            self.tx_time_samples = list()
+        else:
+            self.rx_time_samples = list()
+
+
+    def process_final(self):
+        if not self.opts.stdio:
+            self.close_data_files()
+
+
+
+
 
 class ShowMod(Mod):
 
@@ -2997,6 +3202,7 @@ class Captcp:
             "show":            "ShowMod",
             "throughput":      "ThroughputMod",
             "inflight":        "InFlightMod",
+            "spacing":         "SpacingMod",
             "stacktrace":      "StackTraceMod"
             }
 
