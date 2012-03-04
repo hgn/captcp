@@ -19,12 +19,11 @@ set size ratio 0.4
 set ylabel "Data [byte]"
 set xlabel "Time [seconds]"
 
-set style line 1 lc rgb '#0060ad' lt 1 lw 10 pt 0 pi -1 ps 3
-set style line 2 lc rgb '#0060ad' lt 1 lw 10 pt 7 ps 3.5
+set style line 1 lc rgb '#00004d' lt 1 lw 3
 
 # grayscale
-set style line 1 lc rgb '#000' lt 1 pi 0 pt 6 lw 8 ps 4
+#set style line 1 lc rgb '#000' lt 1 pi 0 pt 6 lw 8 ps 4
 
 plot \
-  "throughput.data" using 1:2 title "rtt" with linespoints ls 1
+  "throughput.data" using 1:2 notitle with linespoints ls 1
 

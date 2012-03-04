@@ -5,7 +5,7 @@ PDF_OBJ = $(patsubst %.gpi,%.pdf,  $(GNUPLOT_FILES))
 all: $(PDF_OBJ)
 png: $(PNG_OBJ)
 
-%.eps: %.gpi
+%.eps: %.gpi *.data
 	@ echo "compillation of "$<
 	@gnuplot $<
 

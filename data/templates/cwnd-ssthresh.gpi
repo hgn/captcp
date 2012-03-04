@@ -21,6 +21,6 @@ set xlabel "Time [seconds]"
 set style line 1 lc rgb '#000' lt 1 pi 0 pt 6 lw 3 ps 4
 set style line 2 lc rgb '#000' lt 2 pi 0 pt 6 lw 4 ps 4
 
-plot   "stap-raw.data" using 1:8 title "cwnd" with lines ls 1, \\
+plot   "stap-raw.data" using 1:8 title "cwnd" with lines ls 1, \
        "stap-raw.data" using 1:12 title "ssh" with lines ls 2
 
