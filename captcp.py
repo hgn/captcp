@@ -52,6 +52,7 @@ class InternalSequenceException(Exception): pass
 class InternalException(Exception): pass
 class SequenceContainerException(InternalException): pass
 class NotImplementedException(InternalException): pass
+class SkipProcessStepException(Exception): pass
 
 
 # TCP flag constants
@@ -403,7 +404,6 @@ class Converter:
 class PcapParser:
 
     def __init__(self, pcap_file_path, pcap_filter):
-
         self.logger = logging.getLogger()
         self.pcap_file = False
 
@@ -431,29 +431,27 @@ class PcapParser:
 
 
     def run(self):
-
-        for ts, pkt in self.pc:
-            packet = self.decode(pkt)
-            dt = datetime.datetime.fromtimestamp(ts)
-            self.callback(dt, packet.data)
+        try:
+            for ts, pkt in self.pc:
+                packet = self.decode(pkt)
+                dt = datetime.datetime.fromtimestamp(ts)
+                self.callback(dt, packet.data)
+        except SkipProcessStepException:
+            self.logger.debug("skip processing step")
 
 
 class PacketInfo:
 
     class TcpOptions:
-
         def __init__(self):
             self.data = dict()
-
         def __getitem__(self, key):
             return self.data[key]
-
         def __setitem__(self, key, val):
             self.data[key] = val
 
 
     def __init__(self, packet):
-
         self.tcp = packet.data
 
         if type(self.tcp) != TCP:
@@ -775,17 +773,26 @@ class Mod:
         """ called at the very beginning of module lifetime"""
         pass
 
+    def pre_process_packet(self, ts, packet):
+        """ final packet round"""
+        # We simple cannot skip this processing step because it
+        # is internally required for accounting. The worst case
+        # scenario imagineable where pre_process_packet() is skipped
+        # and later in process_packet the connection is required - which
+        # in turn was never initialized. So we always pre_process_packet
+        # here.
+        # There ARE solutions to optimize this case - sure. But I skipped
+        # this because I never run into performance problems.
+        pass
+
     def pre_process_final(self):
         """ single call between pre_process_packet and process_packet to do some calc"""
         pass
 
-    def pre_process_packet(self, ts, packet):
-        """ final packet round"""
-        pass
 
     def process_packet(self, ts, packet):
         """ final packet round"""
-        pass
+        raise SkipProcessStepException()
 
     def process_final(self):
         """ called at the end of packet processing"""
@@ -851,11 +858,8 @@ class TemplateMod(Mod):
 
 
     def init_db(self):
-
         self.logger.debug("initialize local template database")
-
         path = "%s/data/templates/" % (os.path.dirname(os.path.realpath(__file__)))
-
         self.db = []
 
         listing = os.listdir(path)
@@ -2852,12 +2856,6 @@ class StatisticMod(Mod):
             return
 
 
-    def pre_process_final(self):
-        pass
-
-    def process_packet(self, ts, packet):
-        pass
-
     def format_data_column(self, hdr_left, data_left, hdr_right, data_right):
 
         MAX_HDR_LEN = 10
@@ -2867,26 +2865,30 @@ class StatisticMod(Mod):
         sys.stdout.write("%s%-10s %10s  %10s %10s\n" %
                 (LEFT_WHITESPACE_GUARD, hdr_left, data_left, hdr_right, data_right))
 
+    def format_data(self, format, str, strlen=20):
+        """format the returned string to strlen"""
+        pass
+
 
     def print_two_column_sc_statistic(self, cid, sc1, sc2):
 
-        #self.format_data_column("%sFlow %s.1" % (self.color["yellow"], cid), " ",
-        #        "%sFlow %s.1%s" % (self.color["yellow"], cid, self.color["end"]), " ")
-        #self.format_data_column("tx", "1000.0", "rx", "10000000")
+        all_packets = sc1.statistic.packets_processed + sc2.statistic.packets_processed
+        sc1percent = float(sc1.statistic.packets_processed) / all_packets * 100
+        sc2percent = float(sc2.statistic.packets_processed) / all_packets * 100
 
         sys.stdout.write("\n\t%sFlow %s.1\t\t\t\t%sFlow %s.2\n" %
                 (self.color["yellow"], cid, self.color["green"], cid))
         sys.stdout.write("%s" % (self.color["end"]))
-        sys.stdout.write("\tPackets: %-10d    \t\t\tPackets: %d\n" %
-                (sc1.statistic.packets_processed, sc2.statistic.packets_processed))
+        sys.stdout.write("\tPackets: %-7d (%.2f%%)     Packets: %d (%.2f%%)\n" %
+                (sc1.statistic.packets_processed, sc1percent, sc2.statistic.packets_processed, sc2percent))
 
-        sys.stdout.write("\tByte (link layer): %-10d    \tByte (link layer): %d\n" %
+        sys.stdout.write("\tByte (link layer):        %-10d\tByte (link layer): %d\n" %
                 (sc1.statistic.bytes_sent_link_layer, sc2.statistic.bytes_sent_link_layer))
 
-        sys.stdout.write("\tByte (network layer): %-10d    \tByte (network layer): %d\n" %
+        sys.stdout.write("\tByte (network layer):     %-10d\tByte (network layer): %d\n" %
                 (sc1.statistic.bytes_sent_network_layer, sc2.statistic.bytes_sent_network_layer))
 
-        sys.stdout.write("\tByte (tranport layer): %-10d    \tByte (transport layer): %d\n" %
+        sys.stdout.write("\tByte (tranport layer):    %-10d\tByte (transport layer): %d\n" %
                 (sc1.statistic.bytes_sent_transport_layer, sc2.statistic.bytes_sent_transport_layer))
 
         sys.stdout.write("\tByte (application layer): %-10d\tByte (application layer): %d\n"  %
@@ -2903,7 +2905,6 @@ class StatisticMod(Mod):
 
 
     def process_final(self):
-
         one_percent = float(self.cc.statistic.packets_processed) / 100
 
         prct_nl_arp     = float(self.cc.statistic.packets_nl_arp) / one_percent
@@ -2920,20 +2921,30 @@ class StatisticMod(Mod):
 
         sys.stdout.write("General:\n")
 
-        sys.stdout.write("\tPackets processed: %5d (%7.3f%%)\n" % (self.cc.statistic.packets_processed, float(100)))
+        sys.stdout.write("\tPackets processed: %5d (%7.2f%%)\n" %
+                (self.cc.statistic.packets_processed, float(100)))
 
         sys.stdout.write("\tNetwork Layer\n")
-        sys.stdout.write("\t   ARP:       %8d (%7.3f%%)\n" % (self.cc.statistic.packets_nl_arp, prct_nl_arp))
-        sys.stdout.write("\t   IPv4:      %8d (%7.3f%%)\n" % (self.cc.statistic.packets_nl_ipv4, prct_nl_ip))
-        sys.stdout.write("\t   IPv6:      %8d (%7.3f%%)\n" % (self.cc.statistic.packets_nl_ipv6, prct_nl_ipv6))
-        sys.stdout.write("\t   Unknown:   %8d (%7.3f%%)\n" % (self.cc.statistic.packets_nl_unknown, prct_nl_unknown))
+        sys.stdout.write("\t   ARP:       %8d (%7.2f%%)\n" %
+                (self.cc.statistic.packets_nl_arp, prct_nl_arp))
+        sys.stdout.write("\t   IPv4:      %8d (%7.2f%%)\n" %
+                (self.cc.statistic.packets_nl_ipv4, prct_nl_ip))
+        sys.stdout.write("\t   IPv6:      %8d (%7.2f%%)\n" %
+                (self.cc.statistic.packets_nl_ipv6, prct_nl_ipv6))
+        sys.stdout.write("\t   Unknown:   %8d (%7.2f%%)\n" %
+                (self.cc.statistic.packets_nl_unknown, prct_nl_unknown))
 
         sys.stdout.write("\tTransport Layer\n")
-        sys.stdout.write("\t   TCP:       %8d (%7.3f%%)\n" % (self.cc.statistic.packets_tl_tcp, prct_tl_tcp))
-        sys.stdout.write("\t   UDP:       %8d (%7.3f%%)\n" % (self.cc.statistic.packets_tl_udp, prct_tl_udp))
-        sys.stdout.write("\t   ICMP:      %8d (%7.3f%%)\n" % (self.cc.statistic.packets_tl_icmp, prct_tl_icmp))
-        sys.stdout.write("\t   ICMPv6:    %8d (%7.3f%%)\n" % (self.cc.statistic.packets_tl_icmp6, prct_tl_icmp6))
-        sys.stdout.write("\t   Unknown:   %8d (%7.3f%%)\n" % (self.cc.statistic.packets_tl_unknown, prct_tl_unknown))
+        sys.stdout.write("\t   TCP:       %8d (%7.2f%%)\n" %
+                (self.cc.statistic.packets_tl_tcp, prct_tl_tcp))
+        sys.stdout.write("\t   UDP:       %8d (%7.2f%%)\n" %
+                (self.cc.statistic.packets_tl_udp, prct_tl_udp))
+        sys.stdout.write("\t   ICMP:      %8d (%7.2f%%)\n" %
+                (self.cc.statistic.packets_tl_icmp, prct_tl_icmp))
+        sys.stdout.write("\t   ICMPv6:    %8d (%7.2f%%)\n" %
+                (self.cc.statistic.packets_tl_icmp6, prct_tl_icmp6))
+        sys.stdout.write("\t   Unknown:   %8d (%7.2f%%)\n" %
+                (self.cc.statistic.packets_tl_unknown, prct_tl_unknown))
 
         sys.stdout.write("\nConnections:\n")
 
@@ -2944,16 +2955,15 @@ class StatisticMod(Mod):
             d[connection.connection_id] = connection
 
         for key in sorted(d.keys()):
-
             connection = d[key]
-
             sys.stdout.write("\n")
-
             sys.stdout.write("%s %d %s %s%s\n\n" % (self.color["red"], connection.connection_id,
                 self.color["yellow"], connection, self.color["end"]))
 
             # statistic
-            sys.stdout.write("\tPackets received: %d\n" % (connection.statistic.packets_processed))
+            sys.stdout.write("\tPackets processed: %d (%.1f%%)\n" %
+                    (connection.statistic.packets_processed,
+                        float(self.cc.statistic.packets_processed) / connection.statistic.packets_processed * 100.0))
 
             sys.stdout.write("\n")
 
