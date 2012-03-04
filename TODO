@@ -1,0 +1,8 @@
+Inflight Module
+===============
+
+The Inflight Module currently support "packet mode". Another
+interesting feature is a byte mode. I.e. how many bytes are
+in flight without being acknowledged. This should provide a
+nearly good understanding how the TCP window is used from
+in-flight perspective.
