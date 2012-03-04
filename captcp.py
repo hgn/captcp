@@ -240,6 +240,21 @@ class UtilMod:
         raise ArgumentException("unit %s not known" % (unit))
 
 
+    @staticmethod
+    def best_match(byte):
+        last_unit = "bit"
+        last_val  = float(byte) * 8
+        units = ("kbit", "Mbit", "Gbit")
+        for unit in units:
+            val = UtilMod.byte_to_unit(byte, unit)
+            if val < 1.0:
+                return "%.2f %s" % (last_val, last_unit)
+            last_unit = unit
+            last_val  = val
+
+        return "%.2f %s" % (UtilMod.byte_to_unit(byte, "Gbit"), "Gbit")
+
+
 class RainbowColor:
 
     ANSI    = 0
@@ -274,8 +289,7 @@ class RainbowColor:
     def init_color_ansi256(self):
         self.color_palette = dict()
         for i in range(255):
-            i += 1
-            self.color_palette[i] = '\033[38;5;%dm' % (i)
+            self.color_palette[i + 1] = '\033[38;5;%dm' % (i + 1)
 
         self.color_palette['end'] = '\033[0m'
         self.color_palette['red'] = '\033[91m'
@@ -316,7 +330,6 @@ class RainbowColor:
         return retdata
 
     def infinite_next(self):
-
         while True:
             found = True
             retdata = self.color_palette_flat[self.color_palette_pos % \
@@ -677,7 +690,7 @@ class PayloadTimePort:
         self.opts, args = parser.parse_args(sys.argv[0:])
         
         if len(args) < 3:
-            sys.stderr.write("no pcap file argument given, exiting\n")
+            sys.stderr.write("no pcap file argument given, exiting")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
  
         if not self.opts.verbose:
@@ -2216,7 +2229,7 @@ class ConnectionAnalyzeMod(Mod):
         self.opts, args = parser.parse_args(sys.argv[0:])
         
         if len(args) < 3:
-            self.logger.error("no pcap file argument given, exiting\n")
+            self.logger.error("no pcap file argument given, exiting")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
  
         self.captcp.pcap_file_path = args[2]
@@ -2270,7 +2283,6 @@ class ConnectionAnalyzeMod(Mod):
 class ThroughputMod(Mod):
 
     def create_gnuplot_environment(self):
-
         gnuplot_filename = "throughput.gpi"
         makefile_filename = "Makefile"
 
@@ -2297,7 +2309,6 @@ class ThroughputMod(Mod):
 
 
     def create_data_files(self):
-
         self.throughput_filepath = \
                 "%s/%s" % (self.opts.outputdir, "throughput.data")
         self.throughput_file = open(self.throughput_filepath, 'w')
@@ -2308,59 +2319,50 @@ class ThroughputMod(Mod):
 
 
     def pre_initialize(self):
-
         self.logger = logging.getLogger()
-
         self.parse_local_options()
-
-        self.start_time = False
-
-        self.check_options()
-
-        if self.opts.init:
-            self.create_gnuplot_environment()
-
-        self.create_data_files()
+        self.end_time = self.start_time = False
+        self.total_data_len = 0
+        if not self.opts.stdio:
+            # no need to check and generate Gnuplot
+            # environment
+            self.check_options()
+            if self.opts.init:
+                self.create_gnuplot_environment()
+            self.create_data_files()
 
 
     def parse_local_options(self):
-
         self.ids = False
-
         parser = optparse.OptionParser()
         parser.usage = "show [options] <pcapfile> [pcapfilter]"
 
         parser.add_option( "-v", "--verbose", dest="loglevel", default=None,
                 type="string", help="set the loglevel (info, debug, warning, error)")
-
         parser.add_option( "-f", "--flow", dest="connections", default=None,
                 type="string", help="specify the number of displayed ID's")
-
-        parser.add_option( "-s", "--samplelength", dest="samplelength", default=1.0,
+        parser.add_option( "-s", "--sample-length", dest="samplelength", default=1.0,
                 type="float", help="length in seconds (float) where data is accumulated (1.0)")
-
         parser.add_option( "-m", "--mode", dest="mode", default="goodput",
                 type="string", help="layer where the data len measurement is taken (default: goodput")
-
         parser.add_option( "-u", "--unit", dest="unit", default="byte",
                 type="string", help="unit: byte, kbyte, mbyte")
-
         parser.add_option( "-i", "--init", dest="init",  default=False,
                 action="store_true", help="create Gnuplot template and Makefile in output-dir")
-
+        parser.add_option("-t", "--stdio", dest="stdio",  default=False,
+                action="store_true", help="don't create Gnuplot data, just stdio")
         parser.add_option( "-o", "--output-dir", dest="outputdir", default=None,
                 type="string", help="specify the output directory")
 
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
-        
+
         if len(args) < 3:
-            self.logger.error("no pcap file argument given, exiting\n")
+            self.logger.error("no pcap file argument given, exiting")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
         self.captcp.print_welcome()
-
         self.captcp.pcap_file_path = args[2]
         self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
 
@@ -2369,8 +2371,14 @@ class ThroughputMod(Mod):
             self.logger.info("show limited to the following connections: %s" % (str(self.ids)))
 
 
-    def pre_process_packet(self, ts, packet):
+    def output_data(self, time, amount):
+        if self.opts.stdio:
+            sys.stdout.write("%5.1f  %10.1f\n" % (time, amount))
+        else:
+            self.throughput_file.write("%.5f %.3f\n" % (time, amount))
 
+
+    def pre_process_packet(self, ts, packet):
         sub_connection = self.cc.sub_connection_by_packet(packet)
         # only for TCP flows this can be true, therefore
         # no additional checks that this is TCP are required
@@ -2384,10 +2392,15 @@ class ThroughputMod(Mod):
 
         pi = PacketInfo(packet)
 
-        if self.opts.mode == "goodput":
+        if self.opts.mode == "goodput" or self.opts.mode == "application-layer":
             data_len = len(packet.data.data)
+        elif self.opts.mode == "transport-layer":
+            data_len = len(packet.data)
+        elif self.opts.mode == "network-layer":
+            data_len = len(packet)
         else:
-            raise NotImplementedException("only goodput mode is supported")
+            raise NotImplementedException("mode \"%s\" not supported" %
+                    (self.opts.mode))
 
         # time handling
         if not self.start_time:
@@ -2396,23 +2409,31 @@ class ThroughputMod(Mod):
             self.data = 0
             #line += "%.5f" % (Utils.ts_tofloat(time))
 
+        self.data += data_len
+        self.total_data_len += data_len
+
         timediff = Utils.ts_tofloat(ts - self.start_time)
 
-        self.data += data_len
-
         if timediff > self.last_sample + self.opts.samplelength:
-
             amount = UtilMod.byte_to_unit(self.data, self.opts.unit)
-
-            # time to print the data
-            self.throughput_file.write("%.5f %.3f\n" %
-                    (self.last_sample + self.opts.samplelength, amount))
+            self.output_data(self.last_sample + self.opts.samplelength, amount)
             self.data  = 0
-
             self.last_sample += self.opts.samplelength
-        
+
+        self.end_time = ts
+
 
     def process_final(self):
+        if self.opts.stdio:
+            timediff =  Utils.ts_tofloat(self.end_time - self.start_time)
+            sys.stdout.write("# total data (%s): %d %s (%s)\n" %
+                    (self.opts.mode, self.total_data_len, self.opts.unit,
+                    UtilMod.best_match(self.total_data_len)))
+            sys.stdout.write("# throughput (%s): %.2f %s/s (%s/s)\n" %
+                    (self.opts.mode, float(self.total_data_len)/timediff, self.opts.unit,
+                    UtilMod.best_match(float(self.total_data_len)/timediff)))
+            return
+
         self.close_data_files()
 
 
@@ -2424,7 +2445,8 @@ class InFlightMod(Mod):
         self.logger = logging.getLogger()
         self.parse_local_options()
         self.packet_sequence = list()
-        self.packet_prev = 0
+        self.packet_prev = False
+        self.inflight_max = 0
         self.start_time = False
         if not self.opts.stdio:
             self.check_options()
@@ -2442,7 +2464,7 @@ class InFlightMod(Mod):
         parser.add_option( "-f", "--data-flow", dest="connections", default=None,
                 type="string", help="specify the number of relevant ID's")
         parser.add_option( "-m", "--mode", dest="mode", default="packets",
-                type="string", help="display packets or bytes in flight")
+                type="string", help="display packets or bytes in flight (default packets)")
         parser.add_option( "-s", "--stdio", dest="stdio",  default=False,
                 action="store_true", help="don't create Gnuplot files, instead print to stdout")
         parser.add_option( "-i", "--init", dest="init",  default=False,
@@ -2454,7 +2476,7 @@ class InFlightMod(Mod):
         self.set_opts_logevel()
         
         if len(args) < 3:
-            self.logger.error("no pcap file argument given, exiting\n")
+            self.logger.error("no pcap file argument given, exiting")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
         self.captcp.print_welcome()
@@ -2527,9 +2549,10 @@ class InFlightMod(Mod):
 
 
     def gnuplot_out(self, time, is_data):
-        self.file.write("%.5f %d\n" % (time - 0.00001, self.packet_prev))
+        #if self.packet_prev:
+        #    self.file.write("%.5f %d\n" % (time - 0.00001, self.packet_prev))
         self.file.write("%.5f %d\n" % (time, len(self.packet_sequence)))
-        self.packet_prev = len(self.packet_sequence)
+        #self.packet_prev = len(self.packet_sequence)
 
 
     def stdio_out(self, time, is_data):
@@ -2537,6 +2560,7 @@ class InFlightMod(Mod):
         else: kind = "RX"
         sys.stdout.write("%.5f %s %d\t%s\n" %
                 (time, kind, len(self.packet_sequence), '#' * len(self.packet_sequence)))
+        self.inflight_max = max(self.inflight_max, len(self.packet_sequence))
 
 
     def pre_process_packet(self, ts, packet):
@@ -2564,6 +2588,8 @@ class InFlightMod(Mod):
     def process_final(self):
         if not self.opts.stdio:
             self.close_data_files()
+        else:
+            sys.stdout.write("# inflight max %d packets\n" % (self.inflight_max))
 
 
 
@@ -2577,12 +2603,11 @@ class ShowMod(Mod):
 
         self.logger = logging.getLogger()
         self.parse_local_options()
-        self.color = RainbowColor(mode=RainbowColor.ANSI256)
         self.color_iter = self.color.__iter__()
         self.packet_no = 0
 
-    def parse_local_options(self):
 
+    def parse_local_options(self):
         self.ids = False
 
         parser = optparse.OptionParser()
@@ -2590,19 +2615,16 @@ class ShowMod(Mod):
 
         parser.add_option( "-v", "--verbose", dest="loglevel", default=None,
                 type="string", help="set the loglevel (info, debug, warning, error)")
-
         parser.add_option( "-i", "--connection-id", dest="connections", default=None,
                 type="string", help="specify the number of displayed ID's")
-
         parser.add_option( "-d", "--differentiate", dest="differentiate", default="connection",
                 type="string", help="specify if \"connection\" or \"flow\" should be colored")
-
         parser.add_option( "-m", "--match", dest="match", default=None,
                 type="string", help="if statment is true the string is color in red")
-
+        parser.add_option( "-c", "--color", dest="color", default="ansi-256",
+                type="string", help="colored output modifier: ansi-256 (default), ansi, none")
         parser.add_option( "-s", "--suppress", dest="suppress", default=False,
                 action="store_true", help="don't display other packets")
-
         parser.add_option( "-n", "--number", dest="packet_number", default=False,
                 action="store_true", help="number the packets")
 
@@ -2610,7 +2632,7 @@ class ShowMod(Mod):
         self.set_opts_logevel()
         
         if len(args) < 3:
-            self.logger.error("no pcap file argument given, exiting\n")
+            self.logger.error("no pcap file argument given, exiting")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
         self.captcp.print_welcome()
@@ -2631,6 +2653,14 @@ class ShowMod(Mod):
             self.logger.error("only connection or sub-connection allowed for --d")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
+        if self.opts.color == "ansi-256":
+            self.color = RainbowColor(mode=RainbowColor.ANSI256)
+        elif self.opts.color == "ansi":
+            self.color = RainbowColor(mode=RainbowColor.ANSI)
+        elif self.opts.color == "none":
+            self.color = RainbowColor(mode=RainbowColor.DISABLE)
+
+
 
     # this provides an sandbox where the variables
     # are made public, this a match can be coded
@@ -2650,8 +2680,6 @@ class ShowMod(Mod):
         sip = pi.sip
         dip = pi.dip
         # tcp
-        seq = pi.seq
-        ack = pi.ack
         seq = pi.seq
         ack = pi.ack
         win = pi.win
@@ -2786,7 +2814,7 @@ class StatisticMod(Mod):
         self.opts, args = parser.parse_args(sys.argv[0:])
         
         if len(args) < 3:
-            self.logger.error("no pcap file argument given, exiting\n")
+            self.logger.error("no pcap file argument given, exiting")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
  
         self.captcp.print_welcome()
