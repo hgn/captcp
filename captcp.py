@@ -357,26 +357,6 @@ class Utils:
         return float(ts.seconds) + ts.microseconds / 1E6 + ts.days * 86400
 
 
-class Colors:
-
-    colors = [
-        '\033[92m',
-        '\033[93m',
-        '\033[94m',
-        '\033[95m'
-    ]
-
-    RED = '\033[91m'
-
-    start = -1
-
-    ENDC    = '\033[0m'
-
-    @staticmethod
-    def next_color():
-        Colors.start += 1
-        return Colors.colors[Colors.start % len(Colors.colors)]
-
 
 class Converter:
 
