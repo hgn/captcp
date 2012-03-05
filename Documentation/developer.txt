@@ -10,3 +10,21 @@ Connection:
 
 Flow:
     a unidirectional flow from one the sender to the receiver.
+
+
+To check for an specific Flow ID:
+
+packet.flow_id()
+
+packet.connection_id()
+
+packet.srcip
+packet.dstip
+packet.family == AF_INET || AF_INET6
+packet.srcport
+
+packet.options.window_scale
+packet.options.sackok
+packet.options.sackblock[0]
+
+
