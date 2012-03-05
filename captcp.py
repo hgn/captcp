@@ -586,26 +586,15 @@ class PacketInfo:
 class Geoip:
 
     def __init__(self, captcp):
-
         self.captcp = captcp
         self.parse_local_options()
 
 
     def parse_local_options(self):
-
         parser = optparse.OptionParser()
         parser.usage = "geoip"
         parser.add_option( "-v", "--verbose", dest="verbose", default=False,
                 action="store_true", help="show verbose")
-
-        parser.add_option( "-p", "--port", dest="portnum", default=80,
-                type="int", help="port number to run on")
-
-        parser.add_option( "-m", "--match", dest="match", default=None,
-                type="string", help="if statment is true the string is color in red")
-
-        parser.add_option( "-s", "--suppress-other", dest="suppress", default=False,
-                action="store_true", help="don't display other packets")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         
@@ -663,7 +652,7 @@ class PayloadTimePort:
                 type="int", help="sampling rate (default: 5 seconds)")
 
         parser.add_option( "-o", "--outfile", dest="outfile", default="payload-time-port.data",
-                type="string", help="name of the output file (default: payload-time-port.dat)")
+                type="string", help="name of the output file (default: payload-time-port.data)")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         
@@ -883,8 +872,7 @@ class TemplateMod(Mod):
 
 
     def print_available_templates(self):
-
-        gpi = []; mak = []
+        gpi = list(); mak = list()
 
         for i in self.db:
             if i.type == TemplateMod.TYPE_MAKEFILE:
@@ -1103,7 +1091,6 @@ class TimeSequenceMod(Mod):
 
 
     def create_files(self):
-
         self.data_flow_filepath      = "%s/%s" % (self.opts.outputdir, "seq.data")
         self.ack_flow_filepath       = "%s/%s" % (self.opts.outputdir, "ack.data")
         self.receiver_awnd_filepath  = "%s/%s" % (self.opts.outputdir, "win.data")
@@ -1122,7 +1109,6 @@ class TimeSequenceMod(Mod):
 
 
     def close_files(self):
-
         self.data_flow_file.close()
         self.ack_flow_file.close()
         self.receiver_awnd_file.close()
@@ -1133,7 +1119,6 @@ class TimeSequenceMod(Mod):
 
 
     def create_gnuplot_environment(self):
-
         gnuplot_filename = "time-sequence.gpi"
         makefile_filename = "Makefile"
 
@@ -1149,7 +1134,6 @@ class TimeSequenceMod(Mod):
 
 
     def check_options(self):
-
         if not self.opts.outputdir:
             self.logger.error("No output directory specified: --output-dir")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
@@ -1189,7 +1173,6 @@ class TimeSequenceMod(Mod):
 
 
     def parse_local_options(self):
-
         self.width = self.height = 0
 
         parser = optparse.OptionParser()
@@ -1218,17 +1201,13 @@ class TimeSequenceMod(Mod):
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
         self.captcp.print_welcome()
-
         self.check_options()
-
         self.captcp.pcap_file_path = args[2]
         self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
-
         self.create_files()
 
 
     def check_packet(self, ts, packet):
-        
         if type(packet) != dpkt.ip.IP and type(packet) != dpkt.ip6.IP6:
             return False
 
@@ -1251,23 +1230,18 @@ class TimeSequenceMod(Mod):
 
 
     def pre_process_packet(self, ts, packet):
-
         if not self.check_packet(ts, packet):
             return
 
 
     def calculate_offset_time(self, ts):
-
         time_diff = ts - self.reference_time
         return float(time_diff.seconds) + time_diff.microseconds / 1E6 + time_diff.days * 86400
 
 
     def process_data_flow_packet(self, ts, packet):
-
         packet_time = self.calculate_offset_time(ts)
-
         pi = PacketInfo(packet)
-
         self.data_flow_file.write("%lf %s\n" % (packet_time, pi.seq))
 
         # support the sender wscale?
@@ -1289,7 +1263,6 @@ class TimeSequenceMod(Mod):
 
 
     def calc_advertised_window(self, pi):
-
         # only enabled if both hosts support window scaling
         if not self.wscale_sender_support:
             return pi.win + pi.ack
@@ -1298,9 +1271,7 @@ class TimeSequenceMod(Mod):
 
 
     def process_ack_flow_packet(self, ts, packet):
-
         packet_time = self.calculate_offset_time(ts)
-
         pi = PacketInfo(packet)
 
         # ignore first ACK packet
@@ -1327,7 +1298,6 @@ class TimeSequenceMod(Mod):
 
 
     def process_packet(self, ts, packet):
-
         if not self.check_packet(ts, packet):
             return
 
@@ -2225,9 +2195,8 @@ class ConnectionAnalyzeMod(Mod):
 
 
     def process_final(self):
-
         sys.stdout.write("digraph G {\nranksep=3.0;\nnodesep=2.0;\n")
-        # sys.stdout.write("\nsize=\"7.75,10.25\";\n orientation=\"landscape\"")
+        sys.stdout.write("#size=\"7.75,10.25\";\n orientation=\"landscape\"\n")
 
         label = "\"%d\" [ label=\"%s\",style=filled,color=none,fontsize=6,fontname=Helvetica];\n"
 
