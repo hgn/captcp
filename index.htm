@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <meta charset="utf-8">
-    <title>CAPTCP - TCP Analyze Scripts</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="author" content="Hagen Paul Pfeifer">
+		<meta charset="utf-8">
+		<title>CAPTCP - TCP Analyze Scripts</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta name="author" content="Hagen Paul Pfeifer">
 		<meta name="description" content="PACTCP - A Python Based TCP Analyze Script">
 		<meta name="author" content="Hagen Paul Pfeifer">
 		<meta name="Copyright" content="Copyright Hagen Paul Pfeifer 2010,2011. All Rights Reserved.">
@@ -13,50 +13,50 @@
 		<meta name="DC.subject" content="Python network analyze tool">
 		<meta name="DC.creator" content="Hagen Paul Pfeifer">
 
-    <!-- Le HTML5 shim, for IE6-8 support of HTML elements -->
-    <!--[if lt IE 9]>
-      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
+		<!-- Le HTML5 shim, for IE6-8 support of HTML elements -->
+		<!--[if lt IE 9]>
+			<script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+		<![endif]-->
 
-    <!-- Le styles -->
-    <link href="css/bootstrap.min.css" rel="stylesheet">
-    <link href="css/bootstrap-responsive.css" rel="stylesheet">
-    <link href="css/docs.css" rel="stylesheet">
+		<!-- Le styles -->
+		<link href="css/bootstrap.min.css" rel="stylesheet">
+		<link href="css/bootstrap-responsive.css" rel="stylesheet">
+		<link href="css/docs.css" rel="stylesheet">
 		<link href="css/prettify.css" rel="stylesheet">
 <script type="text/javascript">
-  var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-29732787-1']);
-  _gaq.push(['_trackPageview']);
-  (function() {
-    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-  })();
+	var _gaq = _gaq || [];
+	_gaq.push(['_setAccount', 'UA-29732787-1']);
+	_gaq.push(['_trackPageview']);
+	(function() {
+		var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+		ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+		var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+	})();
 </script>
 
 
-  </head>
+	</head>
 
-  <body data-spy="scroll" data-target=".nav" data-offset="50">
+	<body data-spy="scroll" data-target=".nav" data-offset="50">
 
 
 
-    <div class="container">
+		<div class="container">
 
 
 <!-- Masthead
 ================================================== -->
 <header class="jumbotron subhead" id="overview">
-  <h1>CAPTCP</h1>
-  <p class="lead">Script Collection to Analyze TCP Traces</p>
-  <div class="subnav">
-    <ul class="nav nav-pills">
-      <li class=""><a href="#about">About</a></li>
-      <li class=""><a href="#modules">Modules</a></li>
-      <li class=""><a href="#installation">Installation</a></li>
-      <li><a href="#miscellaneous">Miscellaneous</a></li>
-    </ul>
-  </div>
+	<h1>CAPTCP</h1>
+	<p class="lead">Script Collection to Analyze TCP Traces</p>
+	<div class="subnav">
+		<ul class="nav nav-pills">
+			<li class=""><a href="#about">About</a></li>
+			<li class=""><a href="#modules">Modules</a></li>
+			<li class=""><a href="#installation">Installation</a></li>
+			<li><a href="#miscellaneous">Miscellaneous</a></li>
+		</ul>
+	</div>
 	</header>
 
 
@@ -66,14 +66,14 @@
 <!-- About
 ================================================== -->
 <section id="about">
-  <div class="page-header">
-    <h1>About</h1>
-  </div>
+	<div class="page-header">
+		<h1>About</h1>
+	</div>
 
-  <!-- Headings & Paragraph Copy -->
-  <div class="row">
-	  
-	  
+	<!-- Headings & Paragraph Copy -->
+	<div class="row">
+
+
 		<div class="span12">
 
 			<p>
@@ -126,13 +126,13 @@
 			often you start by identifying the relevant connection (or flow) and
 			limit the analysis for these connection (or flow).
 			</p>
-			
+
 			<img src="images/seq.png" alt="A before and after view of the file structure." />
 
 
-	      <div class="alert alert-block">
-	        <a class="close">×</a>
-	        <h4 class="alert-heading">Info</h4>
+				<div class="alert alert-block">
+					<a class="close">×</a>
+					<h4 class="alert-heading">Info</h4>
 					<p>CAPTCP is not optimized to analyze huge PCAP files with millions
 					of TCP connections. CAPTCP is primary designed to analyze one TCP
 					connection/flow. If you have a really large PCAP file (say 1 GB and
@@ -141,10 +141,10 @@
 					</p>
 				</div>
 
-    </div>
-	
+		</div>
 
-  </div>
+
+	</div>
 
 </section>
 
@@ -152,15 +152,15 @@
 <!-- Modules
 ================================================== -->
 <section id="modules">
-  <div class="page-header">
-    <h1>Modules</h1>
-  </div>
+	<div class="page-header">
+		<h1>Modules</h1>
+	</div>
 
-  <!-- Headings & Paragraph Copy -->
-  <div class="row">
-	  
-	  
-    <div class="span12">
+	<!-- Headings & Paragraph Copy -->
+	<div class="row">
+
+
+		<div class="span12">
 
 
 		<p>
@@ -192,17 +192,17 @@
 		<h3>Options</h3>
 <pre>
 -f CONNECTIONS, --flow=CONNECTIONS
-                      specify the number of displayed ID's
+											specify the number of displayed ID's
 -s SAMPLELENGTH, --samplelength=SAMPLELENGTH
-                      length in seconds (float) where data is accumulated
-                      (1.0)
+											length in seconds (float) where data is accumulated
+											(1.0)
 -m MODE, --mode=MODE  layer where the data len measurement is taken
-                      (default: goodput
+											(default: goodput
 -u UNIT, --unit=UNIT  unit: byte, kbyte, mbyte
 -i, --init            create Gnuplot template and Makefile in output-dir
 -t, --stdio           don't create Gnuplot data, just stdio
 -o OUTPUTDIR, --output-dir=OUTPUTDIR
-                      specify the output directory
+											specify the output directory
 </pre>
 
 		<h3>Usage</h3>
@@ -371,12 +371,12 @@ transfer is rather large. Therefore we switch to the graphical Gnuplot output.
 
 <pre>
 -f CONNECTIONS, --data-flow=CONNECTIONS
-                      specify the number of relevant ID's
+											specify the number of relevant ID's
 -m MODE, --mode=MODE  display packets or bytes in flight
 -s, --stdio           don't create Gnuplot files, instead print to stdout
 -i, --init            create Gnuplot template and Makefile in output-dir
 -o OUTPUTDIR, --output-dir=OUTPUTDIR
-                      specify the output directory
+											specify the output directory
 </pre>
 
 <p>
@@ -404,14 +404,14 @@ By the way: the inflight module functionality is called &quot;Outstanding Data G
 
 <pre>
 -f CONNECTIONS, --data-flow=CONNECTIONS
-                      specify the number of relevant ID's
+											specify the number of relevant ID's
 -m MODE, --mode=MODE  display packets or bytes in flight (default packets)
 -s, --stdio           don't create Gnuplot files, instead print to stdout
 -i, --init            create Gnuplot template and Makefile in output-dir
 -o OUTPUTDIR, --output-dir=OUTPUTDIR
-                      specify the output directory
+											specify the output directory
 -a SAMPLE_NO, --samples=SAMPLE_NO
-                      number of packet sampled (default: 10)
+											number of packet sampled (default: 10)
 </pre>
 
 <p>
@@ -444,11 +444,11 @@ make pdf png
 
 <pre>
 -i CONNECTIONS, --connection-id=CONNECTIONS
-                      specify the number of displayed ID's
+											specify the number of displayed ID's
 -d DIFFERENTIATE, --differentiate=DIFFERENTIATE
-                      specify if "connection" or "flow" should be colored
+											specify if "connection" or "flow" should be colored
 -m MATCH, --match=MATCH
-                      if statment is true the string is color in red
+											if statment is true the string is color in red
 -s, --suppress        don't display other packets
 -n, --number          number the packets
 </pre>
@@ -561,169 +561,169 @@ $ captcp show -m "sackblocks and len(sackblocks) &gt; 0 and sackblocks[0][0] &lt
 <p>
 <table class="table table-striped">
  <thead>
-    <tr>
-      <th>Keyword</th>
-      <th>Description</th>
-      <th>Type</th>
-      <th>Example</th>
-    </tr>
-  </thead>
-  <tbody>
-    <!--            -->
-    <tr>
-      <td>sip</td>
-      <td>Source IP address, IPv4 or IPv6</td>
-      <td>str</td>
-      <td>sip == "192.168.0.1" or sip == "192.168.0.2"</td>
-    </tr>
-    <!--            -->
-    <tr>
-      <td>dip</td>
-      <td>Destination IP address, IPv4 or IPv6</td>
-      <td>str</td>
-      <td>re.search( r'192\.168.*', dip) and re.search( r'.*\.2$', dip)</td>
-    </tr>
-    <!--            -->
-    <tr>
-      <td>seq</td>
-      <td>TCP Sequence Number</td>
-      <td>int</td>
+		<tr>
+			<th>Keyword</th>
+			<th>Description</th>
+			<th>Type</th>
+			<th>Example</th>
+		</tr>
+	</thead>
+	<tbody>
+		<!--            -->
+		<tr>
+			<td>sip</td>
+			<td>Source IP address, IPv4 or IPv6</td>
+			<td>str</td>
+			<td>sip == "192.168.0.1" or sip == "192.168.0.2"</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>dip</td>
+			<td>Destination IP address, IPv4 or IPv6</td>
+			<td>str</td>
+			<td>re.search( r'192\.168.*', dip) and re.search( r'.*\.2$', dip)</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>seq</td>
+			<td>TCP Sequence Number</td>
+			<td>int</td>
 			<td>seq &gt; 23233</td>
-    </tr>
-    <!--            -->
-    <tr>
-      <td>ack</td>
-      <td>TCP Acknowledgement number</td>
-      <td>int</td>
-      <td>ack &gt; 1000</td>
-    </tr>
-    <!--            -->
-    <tr>
-      <td>urp</td>
-      <td>TCP Urgend Data pointer</td>
-      <td>int</td>
-      <td>urp == 1000000</td>
-    </tr>
-    <!--            -->
-    <tr>
-      <td>sum</td>
-      <td>TCP Checksum</td>
-      <td>int</td>
-      <td>sum != 0</td>
-    </tr>
-    <!--            -->
-    <tr>
-      <td>sport</td>
-      <td>TCP Source Port</td>
-      <td>int</td>
-      <td>sport == 80 and dport != 80</td>
-    </tr>
-    <!--            -->
-    <tr>
-      <td>dport</td>
-      <td>TCP Destination Port</td>
-      <td>int</td>
-      <td>dport in (80, 443) or dport in range(1000, 2000)</td>
-    </tr>
-    <!--            -->
-    <tr>
-      <td>ack_flag</td>
-      <td>Acknowledgement Flag</td>
-      <td>bool</td>
-      <td>ack_flag == False</td>
-    </tr>
-    <!--            -->
-    <tr>
-      <td>syn_flag</td>
-      <td>Synchronization Flag</td>
-      <td>bool</td>
-      <td>ack_flag and syn_flag</td>
-    </tr>
-    <!--            -->
-    <tr>
-      <td>urg_flag</td>
-      <td>Urgend Pointer Flag</td>
-      <td>bool</td>
-      <td>urg_flag == True and ack_flag</td>
-    </tr>
-    <!--            -->
-    <tr>
-      <td>psh_flag</td>
-      <td>Push Flag</td>
-      <td>bool</td>
-      <td>psh_flag and not ack_flag</td>
-    </tr>
-     <!--            -->
-    <tr>
-      <td>fin_flag</td>
-      <td>FIN Flag, Type</td>
-      <td>bool</td>
-      <td>syn_flag and fin_flag</td>
-    </tr>
-    <!--            -->
-    <tr>
-      <td>rst_flag</td>
-      <td>Reset Flag</td>
-      <td>bool</td>
-      <td>rst_flag and not fin_flag</td>
-    </tr>
-    <!--            -->
-    <tr>
-      <td>ece_flag</td>
-      <td>ECE (ECN) Flag</td>
-      <td>bool</td>
-      <td>ece_flag and cwr_flag</td>
-    </tr>
-    <!--            -->
-    <tr>
-      <td>cwr_flag</td>
-      <td>CWR Flag</td>
-      <td>bool</td>
-      <td>not cwr_flag</td>
-    </tr>
-    <!--            -->
-    <tr>
-      <td>mss</td>
-      <td>Maximum Segement Size (MSS)</td>
-      <td>int</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>ack</td>
+			<td>TCP Acknowledgement number</td>
+			<td>int</td>
+			<td>ack &gt; 1000</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>urp</td>
+			<td>TCP Urgend Data pointer</td>
+			<td>int</td>
+			<td>urp == 1000000</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>sum</td>
+			<td>TCP Checksum</td>
+			<td>int</td>
+			<td>sum != 0</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>sport</td>
+			<td>TCP Source Port</td>
+			<td>int</td>
+			<td>sport == 80 and dport != 80</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>dport</td>
+			<td>TCP Destination Port</td>
+			<td>int</td>
+			<td>dport in (80, 443) or dport in range(1000, 2000)</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>ack_flag</td>
+			<td>Acknowledgement Flag</td>
+			<td>bool</td>
+			<td>ack_flag == False</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>syn_flag</td>
+			<td>Synchronization Flag</td>
+			<td>bool</td>
+			<td>ack_flag and syn_flag</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>urg_flag</td>
+			<td>Urgend Pointer Flag</td>
+			<td>bool</td>
+			<td>urg_flag == True and ack_flag</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>psh_flag</td>
+			<td>Push Flag</td>
+			<td>bool</td>
+			<td>psh_flag and not ack_flag</td>
+		</tr>
+		 <!--            -->
+		<tr>
+			<td>fin_flag</td>
+			<td>FIN Flag, Type</td>
+			<td>bool</td>
+			<td>syn_flag and fin_flag</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>rst_flag</td>
+			<td>Reset Flag</td>
+			<td>bool</td>
+			<td>rst_flag and not fin_flag</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>ece_flag</td>
+			<td>ECE (ECN) Flag</td>
+			<td>bool</td>
+			<td>ece_flag and cwr_flag</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>cwr_flag</td>
+			<td>CWR Flag</td>
+			<td>bool</td>
+			<td>not cwr_flag</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>mss</td>
+			<td>Maximum Segement Size (MSS)</td>
+			<td>int</td>
 			<td>mss &lt; 1400</td>
-    </tr>
-    <!--            -->
-    <tr>
-      <td>wsc</td>
-      <td>Window Scaled Option</td>
-      <td>int</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>wsc</td>
+			<td>Window Scaled Option</td>
+			<td>int</td>
 			<td>wsc == 0</td>
-    </tr>
-    <!--            -->
-    <tr>
-      <td>tsval</td>
-      <td>TCP Timestamp TSVAL value</td>
-      <td>int</td>
-      <td>tsval == 0 and tsecr == 0</td>
-    </tr>
-    <!--            -->
-    <tr>
-      <td>tsecr</td>
-      <td>TCP Timestamp TSECR value</td>
-      <td>int</td>
-      <td>tsval != 0 and tsecr != 0</td>
-    </tr>
-    <!--            -->
-    <tr>
-      <td>sackok</td>
-      <td>Selective Acknowledgements OK flag, Used during Three Way Handshake</td>
-      <td>bool</td>
-      <td>sackok</td>
-    </tr>
-    <!--            -->
-    <tr>
-      <td>sackblocks</td>
-      <td>If SACK is transmitted</td>
-      <td>list of list</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>tsval</td>
+			<td>TCP Timestamp TSVAL value</td>
+			<td>int</td>
+			<td>tsval == 0 and tsecr == 0</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>tsecr</td>
+			<td>TCP Timestamp TSECR value</td>
+			<td>int</td>
+			<td>tsval != 0 and tsecr != 0</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>sackok</td>
+			<td>Selective Acknowledgements OK flag, Used during Three Way Handshake</td>
+			<td>bool</td>
+			<td>sackok</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>sackblocks</td>
+			<td>If SACK is transmitted</td>
+			<td>list of list</td>
 			<td>sackblocks and len(sackblocks) &tg; 2</td>
-    </tr>
-  </tbody>
+		</tr>
+	</tbody>
 </table>
 </p>
 
@@ -766,7 +766,7 @@ $ captcp show -m "sackblocks and len(sackblocks) &gt; 0 and sackblocks[0][0] &lt
 	expression.
 
 --nocolor (-c)
-  This disables ANSI color sequences. This option is useful
+	This disables ANSI color sequences. This option is useful
 	in combination with "--suppress-other" and Terminals where
 	no ANSI color codes are available.
 
@@ -856,32 +856,32 @@ captcp highlight -s -m 'tcp.flags &amp; TH_ACK and tcp.flags &amp; TH_SYN' trace
 Usage: captcp sequencegraph [options] <pcapfile>
 
 Options:
-  -h, --help            show this help message and exit
-  -v LOGLEVEL, --loglevel=LOGLEVEL
-                        set the loglevel (info, debug, warning, error)
-  -l LOCALADDR, --local=LOCALADDR
-                        specify list of local ip addresses
-  -s SIZE, --size=SIZE  specify the size of the image (default: 600x1200)
-  -r RTT, --rtt=RTT     specify the average rtt per connection (default
-                        0.025s)
-  -f FILENAME, --filename=FILENAME
-                        specify the name of the generated PDF file (default:
-                        sequence.pdf)
-  -i CONNECTIONS, --connection-id=CONNECTIONS
-                        specify the number of relevant ID's
-  -y STYLE, --style=STYLE
-                        specify the style of the labels (normal or minimal)
-  -p LOCALLABEL, --locallabel=LOCALLABEL
-                        the default string left axis (default: Local)
-  -q REMOTELABEL, --remotelabel=REMOTELABEL
-                        the default string right axis (default: Remote)
+	-h, --help            show this help message and exit
+	-v LOGLEVEL, --loglevel=LOGLEVEL
+												set the loglevel (info, debug, warning, error)
+	-l LOCALADDR, --local=LOCALADDR
+												specify list of local ip addresses
+	-s SIZE, --size=SIZE  specify the size of the image (default: 600x1200)
+	-r RTT, --rtt=RTT     specify the average rtt per connection (default
+												0.025s)
+	-f FILENAME, --filename=FILENAME
+												specify the name of the generated PDF file (default:
+												sequence.pdf)
+	-i CONNECTIONS, --connection-id=CONNECTIONS
+												specify the number of relevant ID's
+	-y STYLE, --style=STYLE
+												specify the style of the labels (normal or minimal)
+	-p LOCALLABEL, --locallabel=LOCALLABEL
+												the default string left axis (default: Local)
+	-q REMOTELABEL, --remotelabel=REMOTELABEL
+												the default string right axis (default: Remote)
 		</pre>
 
-<p>
+		<p>
 		The illustation provides another nice visualization of data. Not the
 		pure amount of data can be seen, rather a nice feeling of how many
 		packets are transmitted and received at a given time.
-</p>
+		</p>
 
 		<figure>
 		<img src="images/sequence-graph-mass.png" alt="All connection from one trace file visualized" />
@@ -896,61 +896,61 @@ Options:
 
 
 
-    </div>
+	</div>
 
-  </div>
+</div>
 </section>
 
 
 <!-- Installation
 ================================================== -->
 <section id="installation">
-  <div class="page-header">
-    <h1>Installation</h1>
-  </div>
+<div class="page-header">
+	<h1>Installation</h1>
+</div>
 
-  <!-- Headings & Paragraph Copy -->
-  <div class="row">
-	  
-	  
-		<div class="span12">
+<!-- Headings & Paragraph Copy -->
+<div class="row">
 
-			<p>
-			There is no binary distribution of the python script. I decided to bundle
-			the whole functionality in one Python script. So just grab the repository and type make install.
-			The lattest version can be downloaded from github via:
-			<p>
+
+	<div class="span12">
+
+		<p>
+		There is no binary distribution of the python script. I decided to bundle
+		the whole functionality in one Python script. So just grab the repository and type make install.
+		The lattest version can be downloaded from github via:
+		<p>
 
 <pre>
 git clone git://github.com/hgn/captcp.git
 su -c make install
 </pre>
 
-    </div>
-  </div>
+		</div>
+	</div>
 	</section>
 
-<!-- Miscellaneous
-================================================== -->
-<section id="miscellaneous">
-  <div class="page-header">
-    <h1>Miscellaneous</h1>
-  </div>
+	<!-- Miscellaneous
+	================================================== -->
+	<section id="miscellaneous">
+	<div class="page-header">
+		<h1>Miscellaneous</h1>
+	</div>
 
-  <!-- Headings & Paragraph Copy -->
-  <div class="row">
-	  
-	  
+	<!-- Headings & Paragraph Copy -->
+	<div class="row">
+
+
 		<div class="span12">
 
 
-		<h4>Network Emulation</h4>
+			<h4>Network Emulation</h4>
 
-		<p>
-		Some tips if you plan to emulate network characteristics:
-		</p>
+			<p>
+			Some tips if you plan to emulate network characteristics:
+			</p>
 
-		<pre>
+			<pre>
 Disable NIC offloading capabilities
 $ ethtool -K eth5 tso off gso off gro off sg off
 Don’t save metrics (ssthresh, cwnd, …)
@@ -959,21 +959,21 @@ Causes 1/10th of a percent (i.e 1 out of 1000) packets to be randomly dropped wi
 $ tc qdisc add dev eth5 root netem loss 30% 50%
 		</pre>
 
-		<h4>Trace Files</h4>
+			<h4>Trace Files</h4>
 
-		<p>
-Sample trace files can be downloaded via FTP from Waikato University 
-</p>
+			<p>
+			Sample trace files can be downloaded via FTP from Waikato University 
+			</p>
 
 <pre>
 lftp ftp://wits.cs.waikato.ac.nz waikato/1
 </pre>
 
-<p>
-Libtrace comes with a program (traceconvert) that lets you convert from any
-trace type that libtrace understands, to any trace type libtrace can output.
-Under Debian simple type aptitude install libtrace-tools to install the tool.
-</p>
+			<p>
+			Libtrace comes with a program (traceconvert) that lets you convert from any
+			trace type that libtrace understands, to any trace type libtrace can output.
+			Under Debian simple type aptitude install libtrace-tools to install the tool.
+			</p>
 
 <pre>
 traceconvert legacyatm:auck4--0.gz pcapfile:auck4-0.pcap.gz
@@ -983,45 +983,45 @@ traceconvert erf:auck8-20031215-.gz pcapfile:auck8-20031215-.pcap.gz
 traceconvert erf:leip1-20021121.gz pcapfile:leip1.pcap.gz
 </pre>
 
-<p>
-To merge trace files:
-</p>
+			<p>
+			To merge trace files:
+			</p>
 
 <pre>
 tracemerge pcapfile:auck-comb.gz legacyatm:auck-0.gz legacyatm:auck-1.gz
 </pre>
 
 
-    </div>
-  </div>
-</section>
+			</div>
+		</div>
+		</section>
 
 
-     <!-- Footer
-      ================================================== -->
-			<footer class="footer">
-			<p class="pull-left">
-			© Copyright Hagen Paul Pfeifer 2010, 2011. All Rights Reserved.
-			</p>
-        <p class="pull-right"><a href="#">Back to top</a></p>
-      </footer>
+		<!-- Footer
+		================================================== -->
+		<footer class="footer">
+		<p class="pull-left">
+		© Copyright Hagen Paul Pfeifer 2010, 2011. All Rights Reserved.
+		</p>
+		<p class="pull-right"><a href="#">Back to top</a></p>
+		</footer>
 
-    </div><!-- /container -->
-
-
-
-    <!-- Le javascript
-    ================================================== -->
-		<!-- Placed at the end of the document so the pages load faster -->
-		<script src="./data/jquery.js"></script> 
-    <script src="./data/bootstrap-dropdown.js"></script>
-    <script src="./data/bootstrap-scrollspy.js"></script>
-    <script src="./data/bootstrap-collapse.js"></script>
-	  <script src="./data/bootstrap-tooltip.js"></script>
-    <script src="./data/application.js"></script>
-		<script src="./data/bootswatch.js"></script> 
+	</div><!-- /container -->
 
 
-  
+
+	<!-- Le javascript
+	================================================== -->
+	<!-- Placed at the end of the document so the pages load faster -->
+	<script src="./data/jquery.js"></script> 
+	<script src="./data/bootstrap-dropdown.js"></script>
+	<script src="./data/bootstrap-scrollspy.js"></script>
+	<script src="./data/bootstrap-collapse.js"></script>
+	<script src="./data/bootstrap-tooltip.js"></script>
+	<script src="./data/application.js"></script>
+	<script src="./data/bootswatch.js"></script> 
+
+
+
 
 </body><link rel="stylesheet" type="text/css" href="data:text/css,"></html>
