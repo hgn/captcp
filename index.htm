@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <title>CAPTCP - TCP Analyze Scripts</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta name="description" content="CAPTCP - TCP Analyze Scripts">
+    <meta name="author" content="Hagen Paul Pfeifer">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le styles -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/bootstrap-responsive.css" rel="stylesheet">
+    <link href="css/docs.css" rel="stylesheet">
+		<link href="css/prettify.css" rel="stylesheet">
+<script type="text/javascript">
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-29732787-1']);
+  _gaq.push(['_trackPageview']);
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+</script>
+
+
+  </head>
+
+  <body data-spy="scroll" data-target=".nav" data-offset="50">
+
+
+
+    <div class="container">
+
+
+<!-- Masthead
+================================================== -->
+<header class="jumbotron subhead" id="overview">
+  <h1>CAPTCP</h1>
+  <p class="lead">Script Collection to Analyze TCP Traces</p>
+  <div class="subnav">
+    <ul class="nav nav-pills">
+      <li class=""><a href="#about">About</a></li>
+      <li class=""><a href="#modules">Modules</a></li>
+      <li class=""><a href="#installation">Installation</a></li>
+      <li><a href="#miscellaneous">Miscellaneous</a></li>
+    </ul>
+  </div>
+	</header>
+
+
+			<img src="images/matrix.png" width="1170" height="200" alt="nice image" />
+
+
+<!-- About
+================================================== -->
+<section id="about">
+  <div class="page-header">
+    <h1>About</h1>
+  </div>
+
+  <!-- Headings & Paragraph Copy -->
+  <div class="row">
+	  
+	  
+		<div class="span12">
+
+			<p>
+			Since several years I used to use a own repository of scripts to analyze
+			network traffic. First I started with plain tcpdump, tcptrace, tcpslice,
+			tcpstat, wrapped by awk, sed and perl and the other tools. After some
+			years I started to wrote an own set of scripts, starting with Perl and C,
+			later also some Ruby scripts. Captcp is the attempt to rewrite the scripts
+			in Python. Python because the PCAP support is more feature complete compared
+			to Ruby, furthermore the Python Programming Language is heavily used in
+			Research Environment.
+			<p>
+
+			<h4>Some Words About Packet Analyzes</h4>
+
+			<p>
+			During the years some wisdoms are here collected. You can ignore them,
+			sure, but eventually there are some tricks for you.
+			</p>
+
+			<ul>
+				<li>Don't capture data life - capture the data via tcpdump and analyze the data off-line</li>
+				<li>If you know what you want to analyze you can adjust tcpdump to capture the required data</li>
+				<li>Make backups of your traces</li>
+				<li>Don't use one tool, find the most useful tool for your requirements</li>
+				<li>Last but not least: question the results!</li>
+			</ul>
+
+			<h4>General Synopsis</h4>
+
+			<p>
+			Captcp synopsis is similar to git or perf: <code>captcp module
+			&lt;module-args&gt; pcap-file</code>. To get a overview over all
+			arguments for a given submodule you can call <code>captcp module
+			--help</code>. Another similarity for all modules is the verbose mode:
+			<code>captcp module --verbose &lt;debug | info | warning |
+			error&gt;</code>
+			</p>
+
+			<h4>Connections and Flows</h4>
+			<p>
+			A fundamental concept in Captcp are Connections and Flows. Connections
+			are between two TCP endpoints are bidirectional. A connection consist of
+			two flows - flows are unidirectional. It can happened that a connection
+			consist of only one flow because the capture duration was to short or
+			packets are missing - but this is an exception. Via <code>captcp
+			statistic &lt;pcapfile&gt;</code> all connections and flows of a PCAP
+			file can be displayed. The numbering (e.g. 1, 2, 3, for a connection and
+			1.1, 1.2, 2.1, 2.2, 3.1, 3.2) is consistent across all captcp modules. So
+			often you start by identifying the relevant connection (or flow) and
+			limit the analysis for these connection (or flow).
+			</p>
+			
+			<img src="images/seq.png" alt="A before and after view of the file structure." />
+
+
+	      <div class="alert alert-block">
+	        <a class="close">×</a>
+	        <h4 class="alert-heading">Info</h4>
+					<p>CAPTCP is not optimized to analyze huge PCAP files with millions
+					of TCP connections. CAPTCP is primary designed to analyze one TCP
+					connection/flow. If you have a really large PCAP file (say 1 GB and
+					larger) you can use tcpslit to seperate TCP connections before. Under
+					normal circumstances this is not required.
+					</p>
+				</div>
+
+    </div>
+	
+
+  </div>
+
+</section>
+
+
+<!-- Modules
+================================================== -->
+<section id="modules">
+  <div class="page-header">
+    <h1>Modules</h1>
+  </div>
+
+  <!-- Headings & Paragraph Copy -->
+  <div class="row">
+	  
+	  
+    <div class="span12">
+
+
+		<p>
+		The script functionality is splitted into submodules. Similar to
+		git, perf and kvm-tool. The following list provides an overview over
+		the currently supported list. If in doubt you can call
+		<code>captcp</code> without any argument to get the full list.
+		</p>
+
+		<ul class="links">
+			<li><strong>Trhoughput</strong> show throughput for a connection</li>
+			<li><strong>highlight</strong> - similar to tcpdump but with colorful highlighting and some other features</li>
+			<li><strong>stats</strong> - print TCP flow statistics</li>
+			<li><strong>geoip</strong> - for a given IP address the location is returned</li>
+			<li><strong>template</strong> - provides a set of Gnuplot and Makefiles templare for post-processing</li>
+			<li><strong>payloadtimeport</strong> - analyze payload size distribution over time and port number</li>
+			<li><strong>payloadtime</strong> - Display the payload data over time, separated by services (ports) or protocols</li>
+		</ul>
+		</p>
+
+		<!--***** MODULE *************-->
+		<section id="throughput">
+		<h2>Throughput Module</h2>
+
+		<p>
+		Show the throughput of a connection over time. 
+		</p>
+
+		<h3>Options</h3>
+<pre>
+-f CONNECTIONS, --flow=CONNECTIONS
+                      specify the number of displayed ID's
+-s SAMPLELENGTH, --samplelength=SAMPLELENGTH
+                      length in seconds (float) where data is accumulated
+                      (1.0)
+-m MODE, --mode=MODE  layer where the data len measurement is taken
+                      (default: goodput
+-u UNIT, --unit=UNIT  unit: byte, kbyte, mbyte
+-i, --init            create Gnuplot template and Makefile in output-dir
+-t, --stdio           don't create Gnuplot data, just stdio
+-o OUTPUTDIR, --output-dir=OUTPUTDIR
+                      specify the output directory
+</pre>
+
+		<h3>Usage</h3>
+
+		<p>
+In this example we use a trace file where 20MB data are uploaded. We start by a
+simple print to stdout. We use the default mode where the data is collected at
+application level. No Ethernet Header, IPv{4,6} Header nor TCP header is
+accounted. Just application level data (i.e. including HTTP overhead if HTTP
+protocol). We can change this default via <code>--mode</code>: application-layer,
+transport-layer or network-layer or valid options.
+		</p>
+
+<pre>
+$ captcp.py throughput --stdio traces20.pcap
+ 1.0      1440.0
+ 2.0    149760.0
+ 3.0    125280.0
+ 4.0    129600.0
+ 5.0    123840.0
+ 6.0    139680.0
+ 7.0    149760.0
+ 8.0    156960.0
+ 9.0    151200.0
+10.0    100800.0
+11.0     74880.0
+12.0    188640.0
+13.0    133920.0
+14.0     99360.0
+15.0    112320.0
+16.0    122400.0
+17.0     97760.0
+# total data (goodput): 2057600 byte (16.46 Mbit)
+# throughput (goodput): 115693.10 byte/s (925.54 kbit/s)
+</pre>
+
+		<p>
+What we see here is that the throughput is in average 925.54 kbit/s.
+Between start and second 1 we transfer 1440byte, between second 1 and 2 we
+transfer 149760.0 byte and so on. The throughput is relative stable over
+time,except between second 10 and 11 and a next time between 13 and 14. The
+last segment (second 16-17) can be ignored because connection shutdown is in
+progress.
+		</p>
+
+		<p>
+But let us take a more exact look at the data. This time we increase the
+granularity by 2. We thus increase the sampling rate to 0.5 seconds.
+Additionally we choose to account IP and TCP overhead too.
+		</p>
+
+<pre>
+$ captcp.py throughput --mode network-layer --sample-length 0.5 --stdio trace20.pcap
+ 0.5      1664.0
+ 1.0      1492.0
+ 1.5     89536.0
+ 2.0     66844.0
+ 2.5     66792.0
+[...]
+17.0     35248.0
+17.5      1092.0
+# total data (network-layer): 2191356 byte (17.53 Mbit)
+# throughput (network-layer): 123213.82 byte/s (985.71 kbit/s)
+</pre>
+
+		<p>
+Nothing special: the data is as expected. The sample length can be useful to
+spot gaps where the transmission stalls. This can happened on a larger scale
+when e.g. crosstraffic (another upload) is active. On the other side, the
+sample length option can be useful to check if there are some stop-and-wait
+behavior within the transmission. E.g. the sender is receiver limited and
+artificial throttle the connection within a second. Therefore is is often wise
+to increase the sampling rate (decrease sample delta time).
+		</p>
+
+<p>
+Now we skip the stdout generator and generate a image - an illustration is
+always good! Because it is the first time we pass the <code>--init</code>
+option. This will generate boilerplate Gnuplot files and a Makefile.
+Additionally we need a directory where all files are generated. We can use the
+actual directory by passing <code>.</code> to <code>--output-dir</code> but we
+want to keep the directories clean we create an additional directory, called
+throughput-analysis.
+</p>
+
+<pre>
+mkdir throughput-analysis
+captcp throughput --init --output-dir throughput-analysis trace20.pcap
+</pre>
+
+<p>
+After the data is generated we can change the directory and simple type
+<code>make</code>. This generate a PDF file. Fine for zoom into details as well
+as an import graphic for LaTeX. Type <code>make png</code> generate a PNG file
+for further processing, e.g. website. The following illustration is the direct
+result:
+</p>
+
+		<img src="images/throughput-2.png" alt="Throughput image" />
+
+<p>
+The last image set the <code>sample-length</code> to 0.05 and in the Gnuplot
+file (throughput.gpi), the yrange is limited (<code>set yrange
+[0:15000]</code>). Thats the throughput module! We will analyze this PCAP trace
+later with some other modules too.
+</p>
+
+		<img src="images/throughput-3.png" alt="Throughput image" />
+
+		<h2>Inflight Module</h2>
+<p>
+TCP is a sliding window protocol, more then one packet can be in transmit at a
+time. The inflight module seems similar to the throughput module - but it
+isn't. Inflight must be called with a valid connection ID, exact: a valid flow
+ID. The unique inflight data is defined as the data send by sender and not
+acknowledged. Duplicate send data is not accounted or displayed. Therefore the
+connection ID is a required parameter for inflight. The connection IDs can be
+displayed via <code>captcp statistic trace.pcap</code>. Connection IDs are
+unique and don't change. For the inflight analysis normally you will pick up
+the data flow. If the connection is bidirectional you can analyze both - of
+course. Lets assume we trace20.pcap has one connection (1) and two flows (1.1
+and 1.2), the data flow is 1.1 (this is where the 20MB are transmitted)
+and the ACK flow is 1.2. The Inflight module also has a <code>stdio</code> option. This can be used to obtain a overview. We start with this option here and the same 20MB upload PCAP trace.
+</p>
+
+<pre>
+$ captcp.py inflight -f 1.1 --stdio traces20.pcap
+# connection: 1 (data flow: 1, ACK flow: 2)
+0.00000 TX 1    #
+0.04079 RX 0
+0.04083 TX 1    #
+1.04116 TX 2    ##
+1.04128 TX 3    ###
+1.04135 TX 4    ####
+1.04141 TX 5    #####
+1.09264 RX 2    ##
+1.09266 TX 3    ###
+1.09272 TX 4    ####
+1.09277 TX 5    #####
+1.10519 RX 4    ####
+1.10522 TX 5    #####
+1.10531 TX 6    ######
+1.10540 TX 7    #######
+1.11714 RX 6    ######
+1.11716 TX 7    #######
+1.11726 TX 8    ########
+1.11735 TX 9    #########
+1.12811 RX 8    ########
+1.12814 TX 9    #########
+1.12819 TX 10   ##########
+1.12824 TX 11   ###########
+1.14416 RX 10   ##########
+1.14418 TX 11   ###########
+1.14427 TX 12   ############
+[...]
+</pre>
+
+<p>
+Each '#' represent a packet in flight. The output is cuted because the packet
+transfer is rather large. Therefore we switch to the graphical Gnuplot output.
+</p>
+
+		<img src="images/inflight.png" alt="Inflight image" />
+
+		<h3>Usage</h3>
+
+<pre>
+-f CONNECTIONS, --data-flow=CONNECTIONS
+                      specify the number of relevant ID's
+-m MODE, --mode=MODE  display packets or bytes in flight
+-s, --stdio           don't create Gnuplot files, instead print to stdout
+-i, --init            create Gnuplot template and Makefile in output-dir
+-o OUTPUTDIR, --output-dir=OUTPUTDIR
+                      specify the output directory
+</pre>
+
+<p>
+The next illustration visualize the inflight behavior for four different TCP
+Congestion Control algorithmen: CUBIC, Vegas, Westwood and NewReno. 10MB (10^6)
+are uploaded for the measurement. Elapsed time for each transfer are really
+similar: 01:37.19 for Cubic, 01:36.14 for NewReno, 01:36.29 for Vegas and
+01:37.65 for Westwood. Thus the throughput is somewhere between 102404 Bps
+(Westwood) and 104011 Bps for NewReno.
+</p>
+
+<p>
+		<img src="images/congestion-control-flight.png" alt="Inflight Congestion Control Image" />
+</p>
+
+<p>
+By the way: the inflight module functionality is called &quot;Outstanding Data Graph&quot; in TCPTrace.
+</p>
+
+		<h2>Spacing Module</h2>
+
+		<p>
+		The spacing module visualize the time delta between packets and can be used to detect stalled connections. Use cases are where the TCP window is set to zero or where packet loss occur and a connection stall.
+		</p>
+
+<pre>
+-f CONNECTIONS, --data-flow=CONNECTIONS
+                      specify the number of relevant ID's
+-m MODE, --mode=MODE  display packets or bytes in flight (default packets)
+-s, --stdio           don't create Gnuplot files, instead print to stdout
+-i, --init            create Gnuplot template and Makefile in output-dir
+-o OUTPUTDIR, --output-dir=OUTPUTDIR
+                      specify the output directory
+-a SAMPLE_NO, --samples=SAMPLE_NO
+                      number of packet sampled (default: 10)
+</pre>
+
+<p>
+We start with a visualization of the famous TCP 20MB upload. But this time we
+change one parameter: the number of samples! On the left hand side you see a
+image where the sampling rate is 1, thus each packet delta to the previous
+packet is visualized. This amount of data is often to noise and hide the
+important characteristics. The right hand picture visualize the time between
+packets averaged over 10 packets. Values between 1 and 10 are a good choice.
+Please note that this time the Gnuplot file use a logarithmic scaled Y axis. 
+</p>
+
+<pre>
+mkdir spacing-data
+captcp spacing -f 1.1 -a 20 --init --output-dir spacing-data trace20mb.pcap
+cd spacing-data
+make pdf png
+</pre>
+
+<img src="images/spacing.png" alt="Spacing image" />
+
+
+		<h2>Show Module</h2>
+
+		<p>
+		Display TCP flows like tcpdump. Features are connection or flow highlighting (up to 256 colors for supported terminals like rxvt-unicode-256color) or powerful matching capabilities.
+		</p>
+
+<h3>Options</h3>
+
+<pre>
+-i CONNECTIONS, --connection-id=CONNECTIONS
+                      specify the number of displayed ID's
+-d DIFFERENTIATE, --differentiate=DIFFERENTIATE
+                      specify if "connection" or "flow" should be colored
+-m MATCH, --match=MATCH
+                      if statment is true the string is color in red
+-s, --suppress        don't display other packets
+-n, --number          number the packets
+</pre>
+
+		<h3>Usage</h3>
+
+				Highlight different connections or different flows. If several
+				connections are captured then the connection options provide a quick
+				way to see how many connections are captured and when. If one flow is
+				captured then this is a method to see TX and RX directions of the
+				flow.
+
+				Used to highlight only packets there the provided filter evaluate to
+				true. Filter can be:
+
+				Only useful in combination with match. Instead of coloring packets
+				red (which is the default), only matched packets are displayed. All
+				other packets are not displayed.
+
+				Show in first row the absolute packet number. This can be used to
+				correlate one packet with the packet in wireshark or tcpdump.
+
+
+		<h4>Examples</h4>
+
+		Highlight different flows
+
+<pre>
+$ captcp show -d flow capture.pcap
+</pre>
+
+The next example and image illustrate the default options to differentiate
+connections.
+
+<pre>
+$ captcp show capture.pcap
+</pre>
+
+image::images/show-connections.png
+
+
+Matching can be really powerfull. We start with the hello world example:
+
+<pre>
+$ captcp show --match True trace.pcap
+</pre>
+
+This will match all packets, thus all packets are red colored.
+
+
+Another usefull option is --suppress: only packets are displayed where the
+match evalutated to true. This can be used to count special packets. As an
+example: to display only packets with TCP SACK (selective acknowledgements)
+you can filter for it and suppress all other packets
+
+<pre>
+$ captcp show --match "sackblocks" --suppress trace.pcap
+</pre>
+
+Highlight packet where the TCP SYN and ACK flag is set:
+
+<pre>
+$ captcp show --match "syn_flag and ack_flag" trace.pcap
+</pre>
+
+Show packets where the Maximum Segment Size is less then 1000:
+
+<pre>
+$ captcp show --match "mss and mss &lt; 1000" trace.pcap
+</pre>
+
+It is important to note that MSS must be checked before the values can be
+compared. A packet where no MSS is present (the MSS option is only set at the
+Three Way Handshake) the mss value is False. So a plain statement like "mss &lt;
+1400" will evalulate to "False &lt; 100" which is true in Python. Therefore the
+additional check is required.
+
+
+Show all packets with SACK blocks and where the first TCP SACK block
+(left-edge) starts with a number less then the acknowledgenumber. Normally
+this is not superfluous, but sometimes DUP-ACKs are cached and retransmitted
+and the SACK information is not updated.
+
+<pre>
+$ captcp show -m "sackblocks and len(sackblocks) &gt; 0 and sackblocks[0][0] &lt; ack" --suppress --number trace2.pcap
+</pre>
+
+		<p>
+		The following match keywords are valid and can be used
+		</p>
+
+		<p>
+		<ul>
+		<li>sip</li>
+		<li>dip</li>
+		<li>seq</li>
+		<li>ack</li>
+		<li>win</li>
+		<li>urp</li>
+		<li>sum</li>
+		<li>sport</li>
+		<li>dport</li>
+		<li>ack_flag</li>
+		<li>syn_flag</li>
+		<li>urg_flag</li>
+		<li>psh_flag</li>
+		<li>fin_flag</li>
+		<li>rst_flag</li>
+		<li>ece_flag</li>
+		<li>cwr_flag</li>
+		<li>mss</li>
+		<li>wsc</li>
+		<li>tsval</li>
+		<li>tsecr</li>
+		<li>sackok</li>
+		<li>sackblocks</li>
+		</ul>
+		</p>
+
+
+
+		<!--***** MODULE *************-->
+
+
+		<h3>Highlight Module</h3>
+
+				<p>
+		The Highlight module is show a similar output compared to tcpdump.
+		The difference is that streams are highlighted in different colors
+		to distinguish between different flows.
+		Another feature is to highlight the packet if something interesting
+		in the packet is detected. The user is free to specify all kinds of
+		packet characteristic. See option <code>match</code> to match a
+		specific characteristic.
+		</p>
+
+		<h4>Options</h4>
+
+<pre>
+--match (-m) &lt;expression&gt;
+
+	sport
+	dport
+	ackno
+	seqno
+	options.wsc
+	options.mss
+	options.sackblocks
+	options.sackok
+	time
+
+--verbose (-v)
+
+--suppress-other (-s)
+	Suppress all other packets which do not match the match
+	expression.
+
+--nocolor (-c)
+  This disables ANSI color sequences. This option is useful
+	in combination with "--suppress-other" and Terminals where
+	no ANSI color codes are available.
+
+		</pre>
+
+
+
+
+		<h5>Examples</h5>
+
+		<p>Highlight packets with more then 2 SACK blocks</p>
+		<pre class="code">
+captcp highlight  --match "opts.sackblocks &gt; 2" trace.pcap
+		</pre>
+		</p>
+
+		<p>Highlight packets with source ip 192.168.1.1 (please note the
+		quotation marks for an IP address):</p>
+		<p>
+		<pre class="code">
+captcp highlight  --match 'ip.src == "192.168.1.1"' trace.pcap
+		</pre>
+		</p>
+
+		<p>Show only packets where the SYN and ACK packet is enabled. All
+		other packets are NOT displayed (--suppress-other option):</p>
+		<p>
+		<pre class="code">
+captcp highlight -s -m 'tcp.flags &amp; TH_ACK and tcp.flags &amp; TH_SYN' trace.pcap
+		</pre>
+		</p>
+
+
+		<h4>Stats Module</h4>
+
+		<figure>
+		<img src="images/connections-graphviz.png" alt="All connection from one trace file visualized" />
+		</figure> 
+
+		<h4>GeoIP Module</h4>
+
+		<p>
+		Sometimes for larger analysis and network anomalies it is helpful to
+		analyze from where a given packet is. What ISP, what counrty et
+		cetera. To provide fast information about the location the
+		<strong>geoip</strong> module can be used.
+		</p>
+
+		<h5>Note</h5>
+
+		<p>
+		This in an optional module. This module requires some third party
+		software. Under Debian a simple aptitude install is sufficient:
+		</p>
+
+		<pre class="config">
+		aptitude install python-geoip
+		</pre>
+
+		<h5>Examples</h5>
+
+		<p>Print the location for a given IP address</p>
+		<div class="codebox">
+			captcp geoip 78.120.0.1
+		</div>
+		</p>
+
+		<h4>Template Module</h4>
+
+		<p>
+		The template module provides an easy way to generate a bunch of
+		gnuplot and Makefiles for data visualization. It could be possible
+		to integrate this functionality in the other modules too but
+		mormally it is common to adjust the gnuplot template a little, set
+		x,y ranges, modify the title et cetera. Additionally the template
+		module is not limited to gnuplot.  It provides also Makefiles to
+		generate gnuplot files (PDF for LaTeX and PNG for web publishing).
+		</p>
+
+		<h4>Sequence Graph Module</h4>
+
+		<figure>
+		<img src="images/trace-one-http-session-seq-small.png" alt="All connection from one trace file visualized" />
+		</figure> 
+
+		<pre class="config">
+Usage: captcp sequencegraph [options] <pcapfile>
+
+Options:
+  -h, --help            show this help message and exit
+  -v LOGLEVEL, --loglevel=LOGLEVEL
+                        set the loglevel (info, debug, warning, error)
+  -l LOCALADDR, --local=LOCALADDR
+                        specify list of local ip addresses
+  -s SIZE, --size=SIZE  specify the size of the image (default: 600x1200)
+  -r RTT, --rtt=RTT     specify the average rtt per connection (default
+                        0.025s)
+  -f FILENAME, --filename=FILENAME
+                        specify the name of the generated PDF file (default:
+                        sequence.pdf)
+  -i CONNECTIONS, --connection-id=CONNECTIONS
+                        specify the number of relevant ID's
+  -y STYLE, --style=STYLE
+                        specify the style of the labels (normal or minimal)
+  -p LOCALLABEL, --locallabel=LOCALLABEL
+                        the default string left axis (default: Local)
+  -q REMOTELABEL, --remotelabel=REMOTELABEL
+                        the default string right axis (default: Remote)
+		</pre>
+
+		The illustation provides another nice visualization of data. Not the
+		pure amount of data can be seen, rather a nice feeling of how many
+		packets are transmitted and received at a given time.
+
+		<figure>
+		<img src="images/sequence-graph-mass.png" alt="All connection from one trace file visualized" />
+		</figure> 
+
+		<h4>Payloadtime Module</h4>
+
+		<p>
+		Display the payload data over time, separated by services (ports) or
+		protocols.
+		</p>
+
+
+
+    </div>
+
+  </div>
+</section>
+
+
+<!-- Installation
+================================================== -->
+<section id="installation">
+  <div class="page-header">
+    <h1>Installation</h1>
+  </div>
+
+  <!-- Headings & Paragraph Copy -->
+  <div class="row">
+	  
+	  
+		<div class="span12">
+
+			<p>
+			There is no binary distribution of the python script. I decided to bundle
+			the whole functionality in one Python script. So just grab the repository and type make install.
+			The lattest version can be downloaded from github via:
+			<p>
+
+<pre>
+git clone git://github.com/hgn/captcp.git
+su -c make install
+</pre>
+
+    </div>
+  </div>
+	</section>
+
+<!-- Miscellaneous
+================================================== -->
+<section id="miscellaneous">
+  <div class="page-header">
+    <h1>Miscellaneous</h1>
+  </div>
+
+  <!-- Headings & Paragraph Copy -->
+  <div class="row">
+	  
+	  
+		<div class="span12">
+
+
+		<h4>Network Emulation</h4>
+
+		<p>
+		Some tips if you plan to emulate network characteristics:
+		</p>
+
+		<pre>
+Disable NIC offloading capabilities
+$ ethtool -K eth5 tso off gso off gro off sg off
+Don’t save metrics (ssthresh, cwnd, …)
+$ sysctl -w net.ipv4.tcp_no_metrics_save=1
+Causes 1/10th of a percent (i.e 1 out of 1000) packets to be randomly dropped with a correction of 25%
+$ tc qdisc add dev eth5 root netem loss 30% 50%
+		</pre>
+
+		<h4>Trace Files</h4>
+
+		<p>
+Sample trace files can be downloaded via FTP from Waikato University 
+</p>
+
+<pre>
+lftp ftp://wits.cs.waikato.ac.nz waikato/1
+</pre>
+
+<p>
+Libtrace comes with a program (traceconvert) that lets you convert from any
+trace type that libtrace understands, to any trace type libtrace can output.
+Under Debian simple type aptitude install libtrace-tools to install the tool.
+</p>
+
+<pre>
+traceconvert legacyatm:auck4--0.gz pcapfile:auck4-0.pcap.gz
+traceconvert legacypos:IPLS-KSCY-0.gz pcapfile:IPLS-KSCY--0.pcap.gz
+traceconvert legacyeth:auck6-e0.gz pcapfile:auck6.pcap.gz
+traceconvert erf:auck8-20031215-.gz pcapfile:auck8-20031215-.pcap.gz
+traceconvert erf:leip1-20021121.gz pcapfile:leip1.pcap.gz
+</pre>
+
+<p>
+To merge trace files:
+</p>
+
+<pre>
+tracemerge pcapfile:auck-comb.gz legacyatm:auck-0.gz legacyatm:auck-1.gz
+</pre>
+
+
+    </div>
+  </div>
+</section>
+
+
+     <!-- Footer
+      ================================================== -->
+			<footer class="footer">
+			<p class="pull-left">
+			© Copyright Hagen Paul Pfeifer 2010, 2011. All Rights Reserved.
+			</p>
+        <p class="pull-right"><a href="#">Back to top</a></p>
+      </footer>
+
+    </div><!-- /container -->
+
+
+
+    <!-- Le javascript
+    ================================================== -->
+		<!-- Placed at the end of the document so the pages load faster -->
+		<script src="./data/jquery.js"></script> 
+    <script src="./data/bootstrap-dropdown.js"></script>
+    <script src="./data/bootstrap-scrollspy.js"></script>
+    <script src="./data/bootstrap-collapse.js"></script>
+	  <script src="./data/bootstrap-tooltip.js"></script>
+    <script src="./data/application.js"></script>
+		<script src="./data/bootswatch.js"></script> 
+
+
+  
+
+</body><link rel="stylesheet" type="text/css" href="data:text/css,"></html>
