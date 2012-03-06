@@ -3,8 +3,15 @@
     <meta charset="utf-8">
     <title>CAPTCP - TCP Analyze Scripts</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<meta name="description" content="CAPTCP - TCP Analyze Scripts">
     <meta name="author" content="Hagen Paul Pfeifer">
+		<meta name="description" content="PACTCP - A Python Based TCP Analyze Script">
+		<meta name="author" content="Hagen Paul Pfeifer">
+		<meta name="Copyright" content="Copyright Hagen Paul Pfeifer 2010,2011. All Rights Reserved.">
+
+		<!-- Dublin Core Metadata : http://dublincore.org/ -->
+		<meta name="DC.title" content="PACTCP">
+		<meta name="DC.subject" content="Python network analyze tool">
+		<meta name="DC.creator" content="Hagen Paul Pfeifer">
 
     <!-- Le HTML5 shim, for IE6-8 support of HTML elements -->
     <!--[if lt IE 9]>
@@ -448,6 +455,7 @@ make pdf png
 
 		<h3>Usage</h3>
 
+		<p>
 				Highlight different connections or different flows. If several
 				connections are captured then the connection options provide a quick
 				way to see how many connections are captured and when. If one flow is
@@ -463,18 +471,23 @@ make pdf png
 
 				Show in first row the absolute packet number. This can be used to
 				correlate one packet with the packet in wireshark or tcpdump.
+		</p>
 
 
 		<h4>Examples</h4>
 
+		<p>
 		Highlight different flows
+		<p>
 
 <pre>
 $ captcp show -d flow capture.pcap
 </pre>
 
+<p>
 The next example and image illustrate the default options to differentiate
 connections.
+</p>
 
 <pre>
 $ captcp show capture.pcap
@@ -483,12 +496,15 @@ $ captcp show capture.pcap
 image::images/show-connections.png
 
 
+<p>
 Matching can be really powerfull. We start with the hello world example:
+</p>
 
 <pre>
 $ captcp show --match True trace.pcap
 </pre>
 
+<p>
 This will match all packets, thus all packets are red colored.
 
 
@@ -496,34 +512,43 @@ Another usefull option is --suppress: only packets are displayed where the
 match evalutated to true. This can be used to count special packets. As an
 example: to display only packets with TCP SACK (selective acknowledgements)
 you can filter for it and suppress all other packets
+</p>
 
 <pre>
 $ captcp show --match "sackblocks" --suppress trace.pcap
 </pre>
 
+<p>
 Highlight packet where the TCP SYN and ACK flag is set:
+</p>
 
 <pre>
 $ captcp show --match "syn_flag and ack_flag" trace.pcap
 </pre>
 
+<p>
 Show packets where the Maximum Segment Size is less then 1000:
+</p>
 
 <pre>
 $ captcp show --match "mss and mss &lt; 1000" trace.pcap
 </pre>
 
+<p>
 It is important to note that MSS must be checked before the values can be
 compared. A packet where no MSS is present (the MSS option is only set at the
 Three Way Handshake) the mss value is False. So a plain statement like "mss &lt;
 1400" will evalulate to "False &lt; 100" which is true in Python. Therefore the
 additional check is required.
+</p>
 
 
+<p>
 Show all packets with SACK blocks and where the first TCP SACK block
 (left-edge) starts with a number less then the acknowledgenumber. Normally
 this is not superfluous, but sometimes DUP-ACKs are cached and retransmitted
 and the SACK information is not updated.
+</p>
 
 <pre>
 $ captcp show -m "sackblocks and len(sackblocks) &gt; 0 and sackblocks[0][0] &lt; ack" --suppress --number trace2.pcap
@@ -533,33 +558,174 @@ $ captcp show -m "sackblocks and len(sackblocks) &gt; 0 and sackblocks[0][0] &lt
 		The following match keywords are valid and can be used
 		</p>
 
-		<p>
-		<ul>
-		<li>sip</li>
-		<li>dip</li>
-		<li>seq</li>
-		<li>ack</li>
-		<li>win</li>
-		<li>urp</li>
-		<li>sum</li>
-		<li>sport</li>
-		<li>dport</li>
-		<li>ack_flag</li>
-		<li>syn_flag</li>
-		<li>urg_flag</li>
-		<li>psh_flag</li>
-		<li>fin_flag</li>
-		<li>rst_flag</li>
-		<li>ece_flag</li>
-		<li>cwr_flag</li>
-		<li>mss</li>
-		<li>wsc</li>
-		<li>tsval</li>
-		<li>tsecr</li>
-		<li>sackok</li>
-		<li>sackblocks</li>
-		</ul>
-		</p>
+<p>
+<table class="table table-striped">
+ <thead>
+    <tr>
+      <th>Keyword</th>
+      <th>Description</th>
+      <th>Type</th>
+      <th>Example</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!--            -->
+    <tr>
+      <td>sip</td>
+      <td>Source IP address, IPv4 or IPv6</td>
+      <td>str</td>
+      <td>sip == "192.168.0.1" or sip == "192.168.0.2"</td>
+    </tr>
+    <!--            -->
+    <tr>
+      <td>dip</td>
+      <td>Destination IP address, IPv4 or IPv6</td>
+      <td>str</td>
+      <td>re.search( r'192\.168.*', dip) and re.search( r'.*\.2$', dip)</td>
+    </tr>
+    <!--            -->
+    <tr>
+      <td>seq</td>
+      <td>TCP Sequence Number</td>
+      <td>int</td>
+			<td>seq &gt; 23233</td>
+    </tr>
+    <!--            -->
+    <tr>
+      <td>ack</td>
+      <td>TCP Acknowledgement number</td>
+      <td>int</td>
+      <td>ack &gt; 1000</td>
+    </tr>
+    <!--            -->
+    <tr>
+      <td>urp</td>
+      <td>TCP Urgend Data pointer</td>
+      <td>int</td>
+      <td>urp == 1000000</td>
+    </tr>
+    <!--            -->
+    <tr>
+      <td>sum</td>
+      <td>TCP Checksum</td>
+      <td>int</td>
+      <td>sum != 0</td>
+    </tr>
+    <!--            -->
+    <tr>
+      <td>sport</td>
+      <td>TCP Source Port</td>
+      <td>int</td>
+      <td>sport == 80 and dport != 80</td>
+    </tr>
+    <!--            -->
+    <tr>
+      <td>dport</td>
+      <td>TCP Destination Port</td>
+      <td>int</td>
+      <td>dport in (80, 443) or dport in range(1000, 2000)</td>
+    </tr>
+    <!--            -->
+    <tr>
+      <td>ack_flag</td>
+      <td>Acknowledgement Flag</td>
+      <td>bool</td>
+      <td>ack_flag == False</td>
+    </tr>
+    <!--            -->
+    <tr>
+      <td>syn_flag</td>
+      <td>Synchronization Flag</td>
+      <td>bool</td>
+      <td>ack_flag and syn_flag</td>
+    </tr>
+    <!--            -->
+    <tr>
+      <td>urg_flag</td>
+      <td>Urgend Pointer Flag</td>
+      <td>bool</td>
+      <td>urg_flag == True and ack_flag</td>
+    </tr>
+    <!--            -->
+    <tr>
+      <td>psh_flag</td>
+      <td>Push Flag</td>
+      <td>bool</td>
+      <td>psh_flag and not ack_flag</td>
+    </tr>
+     <!--            -->
+    <tr>
+      <td>fin_flag</td>
+      <td>FIN Flag, Type</td>
+      <td>bool</td>
+      <td>syn_flag and fin_flag</td>
+    </tr>
+    <!--            -->
+    <tr>
+      <td>rst_flag</td>
+      <td>Reset Flag</td>
+      <td>bool</td>
+      <td>rst_flag and not fin_flag</td>
+    </tr>
+    <!--            -->
+    <tr>
+      <td>ece_flag</td>
+      <td>ECE (ECN) Flag</td>
+      <td>bool</td>
+      <td>ece_flag and cwr_flag</td>
+    </tr>
+    <!--            -->
+    <tr>
+      <td>cwr_flag</td>
+      <td>CWR Flag</td>
+      <td>bool</td>
+      <td>not cwr_flag</td>
+    </tr>
+    <!--            -->
+    <tr>
+      <td>mss</td>
+      <td>Maximum Segement Size (MSS)</td>
+      <td>int</td>
+			<td>mss &lt; 1400</td>
+    </tr>
+    <!--            -->
+    <tr>
+      <td>wsc</td>
+      <td>Window Scaled Option</td>
+      <td>int</td>
+			<td>wsc == 0</td>
+    </tr>
+    <!--            -->
+    <tr>
+      <td>tsval</td>
+      <td>TCP Timestamp TSVAL value</td>
+      <td>int</td>
+      <td>tsval == 0 and tsecr == 0</td>
+    </tr>
+    <!--            -->
+    <tr>
+      <td>tsecr</td>
+      <td>TCP Timestamp TSECR value</td>
+      <td>int</td>
+      <td>tsval != 0 and tsecr != 0</td>
+    </tr>
+    <!--            -->
+    <tr>
+      <td>sackok</td>
+      <td>Selective Acknowledgements OK flag, Used during Three Way Handshake</td>
+      <td>bool</td>
+      <td>sackok</td>
+    </tr>
+    <!--            -->
+    <tr>
+      <td>sackblocks</td>
+      <td>If SACK is transmitted</td>
+      <td>list of list</td>
+			<td>sackblocks and len(sackblocks) &tg; 2</td>
+    </tr>
+  </tbody>
+</table>
+</p>
 
 
 
@@ -711,9 +877,11 @@ Options:
                         the default string right axis (default: Remote)
 		</pre>
 
+<p>
 		The illustation provides another nice visualization of data. Not the
 		pure amount of data can be seen, rather a nice feeling of how many
 		packets are transmitted and received at a given time.
+</p>
 
 		<figure>
 		<img src="images/sequence-graph-mass.png" alt="All connection from one trace file visualized" />
