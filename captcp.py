@@ -622,120 +622,6 @@ class Geoip:
 
 
 
-class PayloadTimePort:
-
-    PORT_START = 0
-    PORT_END   = 65535
-    DEFAULT_VAL = 0.0
-
-
-    def __init__(self, captcp):
-        self.captcp = captcp
-        self.parse_local_options()
-        self.data = dict()
-        self.trace_start = None
-
-
-    def parse_local_options(self):
-        parser = optparse.OptionParser()
-        parser.usage = "payloadtimeport"
-        parser.add_option( "-v", "--verbose", dest="verbose", default=False,
-                action="store_true", help="show verbose")
-
-        parser.add_option( "-f", "--format", dest="format", default="3ddata",
-                type="string", help="the data format for gnuplot")
-
-        parser.add_option( "-p", "--port", dest="port", default="sport",
-                type="string", help="sport or dport")
-
-        parser.add_option( "-s", "--sampling", dest="sampling", default=1,
-                type="int", help="sampling rate (default: 5 seconds)")
-
-        parser.add_option( "-o", "--outfile", dest="outfile", default="payload-time-port.data",
-                type="string", help="name of the output file (default: payload-time-port.data)")
-
-        self.opts, args = parser.parse_args(sys.argv[0:])
-        
-        if len(args) < 3:
-            sys.stderr.write("no pcap file argument given, exiting")
-            sys.exit(ExitCodes.EXIT_CMD_LINE)
- 
-        if not self.opts.verbose:
-            sys.stderr = open(os.devnull, 'w')
-        
-        self.captcp.print_welcome()
-
-        self.pcap_file_path = args[2]
-        sys.stderr.write("# pcapfile: \"%s\"\n" % self.pcap_file_path)
-
-        self.pcap_filter = None
-        if args[3:]:
-            self.pcap_filter = " ".join(args[3:])
-            sys.stderr.write("# pcap filter: \"" + self.pcap_filter + "\"\n")
-
-
-    def process_packet(self, ts, packet):
-        ip = packet
-        tcp = packet.data
-
-        if type(tcp) != TCP:
-            return
-
-        time = float(ts)
-
-        if self.trace_start == None:
-            self.trace_start = time
-            self.time_offset = time
-            self.next_sampling_boundary = time + float(self.opts.sampling)
-
-        if time > self.next_sampling_boundary:
-            self.next_sampling_boundary = time + float(self.opts.sampling)
-
-
-        if self.next_sampling_boundary - self.time_offset not in self.data:
-            self.data[self.next_sampling_boundary - self.time_offset] = dict()
-
-        dport  = int(tcp.dport)
-        sport  = int(tcp.sport)
-
-        if dport not in self.data[self.next_sampling_boundary - self.time_offset]:
-            self.data[self.next_sampling_boundary - self.time_offset][dport] = dict()
-            self.data[self.next_sampling_boundary - self.time_offset][dport]["cnt"] = 0
-            self.data[self.next_sampling_boundary - self.time_offset][dport]["sum"] = 0
-
-        self.data[self.next_sampling_boundary - self.time_offset][dport]["sum"] += len(packet)
-        self.data[self.next_sampling_boundary - self.time_offset][dport]["cnt"] += 1
- 
-
-    def print_data(self):
-        for timesortedtupel in sorted(self.data.iteritems(), key = lambda (k,v): float(k)):
-            time = timesortedtupel[0]
-            
-            for port in range(PayloadTimePort.PORT_END + 1):
-
-                if port in timesortedtupel[1]:
-                    avg = float(timesortedtupel[1][port]["sum"]) / float(timesortedtupel[1][port]["cnt"])
-                    sys.stdout.write(str(time) + " " + str(port) + " " + str(avg) + "\n")
-                else:
-                    sys.stdout.write(str(time) + " " + str(port) + " " + str(PayloadTimePort.DEFAULT_VAL) + "\n")
-
-            sys.stdout.write("\n")
-
-
-    def run(self):
-        
-        sys.stderr.write("# initiate PayloadTimePort module\n")
-
-        pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
-        pcap_parser.register_callback(self.process_packet)
-        pcap_parser.run()
-        del pcap_parser
-
-        self.print_data()
-
-        return ExitCodes.EXIT_SUCCESS
-
-
 class CaptureLevel:
 
     LINK_LAYER      = 0
@@ -807,6 +693,107 @@ class Mod:
             self.logger.setLevel(logging.ERROR)
         else:
             raise ArgumentException("loglevel \"%s\" not supported" % self.opts.loglevel)
+
+
+class PayloadTimePortMod(Mod):
+
+    PORT_START = 0
+    PORT_END   = 65535
+    DEFAULT_VAL = 0.0
+
+    def pre_initialize(self):
+        self.logger = logging.getLogger()
+        self.parse_local_options()
+
+        self.data = dict()
+        self.trace_start = None
+
+
+    def parse_local_options(self):
+        parser = optparse.OptionParser()
+        parser.add_option( "-v", "--verbose", dest="loglevel", default=None,
+                type="string", help="set the loglevel (info, debug, warning, error)")
+        parser.add_option( "-f", "--format", dest="format", default="3ddata",
+                type="string", help="the data format for gnuplot")
+        parser.add_option( "-p", "--port", dest="port", default="sport",
+                type="string", help="sport or dport")
+        parser.add_option( "-s", "--sampling", dest="sampling", default=50,
+                type="int", help="sampling rate (default: 5 seconds)")
+        parser.add_option( "-o", "--outfile", dest="outfile", default="payload-time-port.data",
+                type="string", help="name of the output file (default: payload-time-port.data)")
+
+        self.opts, args = parser.parse_args(sys.argv[0:])
+        
+        if len(args) < 3:
+            sys.stderr.write("no pcap file argument given, exiting\n")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+ 
+        self.captcp.print_welcome()
+        self.captcp.pcap_file_path = args[2]
+        self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
+
+
+    def process_packet(self, ts, packet):
+        ip = packet
+        tcp = packet.data
+
+        if type(tcp) != TCP:
+            return
+
+        time = Utils.ts_tofloat(ts - self.cc.capture_time_start)
+
+        if self.trace_start == None:
+            self.trace_start = time
+            self.time_offset = time
+            self.next_sampling_boundary = time + float(self.opts.sampling)
+
+        if time > self.next_sampling_boundary:
+            self.next_sampling_boundary = time + float(self.opts.sampling)
+
+
+        if self.next_sampling_boundary - self.time_offset not in self.data:
+            self.data[self.next_sampling_boundary - self.time_offset] = dict()
+
+        dport  = int(tcp.dport)
+        sport  = int(tcp.sport)
+
+        if dport not in self.data[self.next_sampling_boundary - self.time_offset]:
+            self.data[self.next_sampling_boundary - self.time_offset][dport] = dict()
+            self.data[self.next_sampling_boundary - self.time_offset][dport]["cnt"] = 0
+            self.data[self.next_sampling_boundary - self.time_offset][dport]["sum"] = 0
+
+        self.data[self.next_sampling_boundary - self.time_offset][dport]["sum"] += len(packet)
+        self.data[self.next_sampling_boundary - self.time_offset][dport]["cnt"] += 1
+
+        if sport not in self.data[self.next_sampling_boundary - self.time_offset]:
+            self.data[self.next_sampling_boundary - self.time_offset][sport] = dict()
+            self.data[self.next_sampling_boundary - self.time_offset][sport]["cnt"] = 0
+            self.data[self.next_sampling_boundary - self.time_offset][sport]["sum"] = 0
+
+        self.data[self.next_sampling_boundary - self.time_offset][sport]["sum"] += len(packet)
+        self.data[self.next_sampling_boundary - self.time_offset][sport]["cnt"] += 1
+ 
+
+    def print_data(self):
+        for timesortedtupel in sorted(self.data.iteritems(), key = lambda (k,v): float(k)):
+            time = timesortedtupel[0]
+            
+            for port in range(PayloadTimePortMod.PORT_END + 1):
+
+                if port in timesortedtupel[1]:
+                    avg = float(timesortedtupel[1][port]["sum"]) / float(timesortedtupel[1][port]["cnt"])
+                    sys.stdout.write(str(time) + " " + str(port) + " " + str(avg) + "\n")
+                else:
+                    pass
+                    sys.stdout.write(str(time) + " " + str(port) + " " + str(PayloadTimePortMod.DEFAULT_VAL) + "\n")
+
+            sys.stdout.write("\n")
+
+
+    def process_final(self):
+        self.print_data()
+
+
 
 
 
@@ -3162,7 +3149,7 @@ class Captcp:
 
     modes = {
             "geoip":           "Geoip",
-            "payloadtimeport": "PayloadTimePort",
+            "payloadtimeport": "PayloadTimePortMod",
             "template":        "TemplateMod",
             "statistic":       "StatisticMod",
             "connection":      "ConnectionAnalyzeMod",
