@@ -57,6 +57,7 @@
 							<li class="dropdown">
 									<a href="#" class="dropdown-toggle" data-toggle="dropdown">Modules<b class="caret"></b> </a>
 									<ul class="dropdown-menu">
+										<li><a href="#timesequence"> Time Sequence Module </a></li>
 										<li><a href="#throughput"> Throughput Module </a></li>
 										<li><a href="#inflight"> Inflight Module </a></li>
 										<li><a href="#spacing"> Spacing Module </a> </li>
@@ -224,6 +225,7 @@ ethtool -K ethN rx off tx off sg off tso off
 		</p>
 
 		<ul class="links">
+			<li><strong>timesequence</strong> show packet sequence over time</li>
 			<li><strong>throughput</strong> show throughput for a connection</li>
 			<li><strong>highlight</strong> - similar to tcpdump but with colorful highlighting and some other features</li>
 			<li><strong>stats</strong> - print TCP flow statistics</li>
@@ -233,6 +235,33 @@ ethtool -K ethN rx off tx off sg off tso off
 			<li><strong>payloadtime</strong> - Display the payload data over time, separated by services (ports) or protocols</li>
 		</ul>
 		</p>
+
+
+		<!--***** MODULE *************-->
+		<section id="timesequence">
+	<h2>Time Sequence Module</h2>
+
+		<p>
+		Time Sequence Graph is one of the more professional modules, thus not so
+easy to interpret.
+		</p>
+
+<h3>Options</h3>
+
+<pre>
+-o OUTPUTDIR, --output-dir=OUTPUTDIR
+                      specify the output directory
+-f CONNECTIONS, --data-flow=CONNECTIONS
+                      specify the number of relevant ID's
+-t TIMEFRAME, --time=TIMEFRAME
+                      select range of displayed packet (-t <start:stop>)
+-i, --init            create Gnuplot template and Makefile in output-dir
+</pre>
+
+		<img src="images/tsg-1.png" alt="Time Sequence Graph Image image" />
+
+		</section>
+
 
 		<!--***** MODULE *************-->
 		<section id="throughput">
