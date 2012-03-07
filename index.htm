@@ -40,6 +40,40 @@
 	<body data-spy="scroll" data-target=".nav" data-offset="50">
 
 
+  <!-- Navbar
+    ================================================== -->
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </a>
+          <div class="nav-collapse">
+            <ul class="nav">
+              <li class=""> <a href="./scaffolding.html">CAPTCP</a> </li>
+              <li class=""> <a href="./base-css.html">About</a> </li>
+              <li class=""> <a href="./components.html">Modules</a> </li>
+							<li class="dropdown">
+									<a href="#" class="dropdown-toggle" data-toggle="dropdown">Modules<b class="caret"></b> </a>
+									<ul class="dropdown-menu">
+										<li>Foo</li>
+										<li>Foo</li>
+										<li>Foo</li>
+										<li>Foo</li>
+									</ul>
+							</li>
+              <li class=""> <a href="./javascript.html">Installation</a> </li>
+              <li class=""> <a href="./less.html">Miscellaneous</a> </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+
 
 		<div class="container">
 
@@ -49,6 +83,8 @@
 <header class="jumbotron subhead" id="overview">
 	<h1>CAPTCP</h1>
 	<p class="lead">Script Collection to Analyze TCP Traces</p>
+
+<!--
 	<div class="subnav">
 		<ul class="nav nav-pills">
 			<li class=""><a href="#about">About</a></li>
@@ -57,8 +93,8 @@
 			<li><a href="#miscellaneous">Miscellaneous</a></li>
 		</ul>
 	</div>
+-->
 	</header>
-
 
 			<img src="images/matrix.png" width="1170" height="200" alt="nice image" />
 
@@ -1025,7 +1061,6 @@ tracemerge pcapfile:auck-comb.gz legacyatm:auck-0.gz legacyatm:auck-1.gz
 	<script src="./data/bootstrap-collapse.js"></script>
 	<script src="./data/bootstrap-tooltip.js"></script>
 	<script src="./data/application.js"></script>
-	<script src="./data/bootswatch.js"></script> 
 
 
 
