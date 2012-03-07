@@ -52,20 +52,19 @@
           </a>
           <div class="nav-collapse">
             <ul class="nav">
-              <li class=""> <a href="./scaffolding.html">CAPTCP</a> </li>
-              <li class=""> <a href="./base-css.html">About</a> </li>
-              <li class=""> <a href="./components.html">Modules</a> </li>
+              <li class=""> <a href="#about">About</a> </li>
+              <li class=""> <a href="#modules">Modules</a> </li>
 							<li class="dropdown">
 									<a href="#" class="dropdown-toggle" data-toggle="dropdown">Modules<b class="caret"></b> </a>
 									<ul class="dropdown-menu">
-										<li>Foo</li>
-										<li>Foo</li>
-										<li>Foo</li>
-										<li>Foo</li>
+										<li><a href="#throughput"> Throughput Module </a></li>
+										<li><a href="#inflight"> Inflight Module </a></li>
+										<li><a href="#spacing"> Spacing Module </a> </li>
+										<li><a href="#show"> Show Module </a> </li>
 									</ul>
 							</li>
-              <li class=""> <a href="./javascript.html">Installation</a> </li>
-              <li class=""> <a href="./less.html">Miscellaneous</a> </li>
+              <li class=""> <a href="#installation">Installation</a> </li>
+              <li class=""> <a href="#miscellaneous">Miscellaneous</a> </li>
             </ul>
           </div>
         </div>
@@ -138,6 +137,14 @@
 				<li>Last but not least: question the results!</li>
 			</ul>
 
+			<p>
+			A last word: captcp is not optimized to analyze huge PCAP files with millions
+			of TCP connections. Captcp is primary designed and optimized to analyze
+			one TCP connection/flow. If you have a really large PCAP file (say 1 GB
+			and larger) you can use tcpslit to seperate TCP connections before. Under
+			normal circumstances this is not required.
+			</p>
+
 			<h4>General Synopsis</h4>
 
 			<p>
@@ -166,16 +173,26 @@
 			<img src="images/seq.png" alt="A before and after view of the file structure." />
 
 
-				<div class="alert alert-block">
-					<a class="close">×</a>
-					<h4 class="alert-heading">Info</h4>
-					<p>CAPTCP is not optimized to analyze huge PCAP files with millions
-					of TCP connections. CAPTCP is primary designed to analyze one TCP
-					connection/flow. If you have a really large PCAP file (say 1 GB and
-					larger) you can use tcpslit to seperate TCP connections before. Under
-					normal circumstances this is not required.
+			<p>
+				<div class="alert alert-success">
+					<h4 class="alert-heading">What you see is NOT what you get</h4>
+					<p>
+					Attention: if you capture traffic via PF_PACKET socket nowadays you may not capture real wire data!
+					Current network adapters support offloading capabilities. It is wise
+					to disable all offloading capabilities if you want a realistic
+					behaviour if you trace traffic from the sender machine.
+
+					You will note these effects if you realize more TCP ACK packets then
+					Data packets or when the data size is larger then the Maximum Segment
+					Size.
 					</p>
+
+<pre>
+ethtool -K ethN rx off tx off sg off tso off
+</pre>
+
 				</div>
+				</p>
 
 		</div>
 
@@ -207,7 +224,7 @@
 		</p>
 
 		<ul class="links">
-			<li><strong>Trhoughput</strong> show throughput for a connection</li>
+			<li><strong>throughput</strong> show throughput for a connection</li>
 			<li><strong>highlight</strong> - similar to tcpdump but with colorful highlighting and some other features</li>
 			<li><strong>stats</strong> - print TCP flow statistics</li>
 			<li><strong>geoip</strong> - for a given IP address the location is returned</li>
@@ -347,7 +364,10 @@ later with some other modules too.
 </p>
 
 		<img src="images/throughput-3.png" alt="Throughput image" />
+		</section>
 
+		<!--***** MODULE *************-->
+		<section id="inflight">
 		<h2>Inflight Module</h2>
 <p>
 TCP is a sliding window protocol, more then one packet can be in transmit at a
@@ -432,6 +452,10 @@ similar: 01:37.19 for Cubic, 01:36.14 for NewReno, 01:36.29 for Vegas and
 By the way: the inflight module functionality is called &quot;Outstanding Data Graph&quot; in TCPTrace.
 </p>
 
+		</section>
+
+		<!--***** MODULE *************-->
+		<section id="spacing">
 		<h2>Spacing Module</h2>
 
 		<p>
@@ -470,10 +494,16 @@ make pdf png
 <img src="images/spacing.png" alt="Spacing image" />
 
 
+		</section>
+
+		<!--***** MODULE *************-->
+		<section id="show">
 		<h2>Show Module</h2>
 
 		<p>
-		Display TCP flows like tcpdump. Features are connection or flow highlighting (up to 256 colors for supported terminals like rxvt-unicode-256color) or powerful matching capabilities.
+		Display TCP flows like tcpdump. Features are connection or flow
+		highlighting (up to 256 colors for supported terminals like
+		rxvt-unicode-256color) or powerful matching capabilities.
 		</p>
 
 <h3>Options</h3>
