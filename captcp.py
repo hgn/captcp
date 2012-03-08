@@ -53,6 +53,7 @@ class InternalException(Exception): pass
 class SequenceContainerException(InternalException): pass
 class NotImplementedException(InternalException): pass
 class SkipProcessStepException(Exception): pass
+class PacketNotSupportedException(Exception): pass
 
 
 # TCP flag constants
@@ -693,6 +694,7 @@ class Mod:
             self.logger.setLevel(logging.ERROR)
         else:
             raise ArgumentException("loglevel \"%s\" not supported" % self.opts.loglevel)
+
 
 
 class PayloadTimePortMod(Mod):
@@ -2938,7 +2940,18 @@ class ShowMod(Mod):
 
 
 
+
 class StatisticMod(Mod):
+
+    ETHERNET_HEADER_LEN = 14
+
+    LABEL_DB = {
+        "sent-link-layer":        [ "sent link layer",        "bytes"],
+        "sent-network-layer":     [ "sent network layer",     "bytes"],
+        "sent-transport-layer":   [ "sent transport layer",   "bytes"],
+        "sent-application-layer": [ "sent application layer", "bytes"],
+    }
+
 
     def pre_initialize(self):
         self.color = RainbowColor(mode=RainbowColor.ANSI)
@@ -2946,47 +2959,78 @@ class StatisticMod(Mod):
         self.parse_local_options()
         self.capture_level = CaptureLevel.NETWORK_LAYER
 
+
     def parse_local_options(self):
-
         parser = optparse.OptionParser()
-        parser.usage = "xx"
-        parser.add_option( "-v", "--verbose", dest="verbose", default=False,
-                action="store_true", help="show verbose")
-
-        parser.add_option( "-p", "--port", dest="portnum", default=80,
-                type="int", help="port number to run on")
-
+        parser.add_option( "-v", "--verbose", dest="loglevel", default=None,
+                type="string", help="set the loglevel (info, debug, warning, error)")
+        parser.add_option( "-i", "--filter", dest="filter", default=None,
+                type="string", help="limit number of displayed connections \"sip:sport-dip:dport\", default \"*:*-*:*\"")
+        parser.add_option( "-m", "--format", dest="format", default=None,
+                type="string", help="skip summary and display only selected values")
         self.opts, args = parser.parse_args(sys.argv[0:])
+
+        if self.opts.filter:
+            self.opts.filter = self.opts.filter.split(",")
+        else:
+            self.opts.filter = list()
         
         if len(args) < 3:
             self.logger.error("no pcap file argument given, exiting")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
  
         self.captcp.print_welcome()
-
         self.captcp.pcap_file_path = args[2]
         self.logger.info("pcapfile: \"%s\"" % self.captcp.pcap_file_path)
 
-        self.captcp.pcap_filter = None
-        if args[3:]:
-            self.captcp.pcap_filter = " ".join(args[3:])
-            self.logger.info("pcap filter: \"" + self.captcp.pcap_filter + "\"")
+
+    def check_new_subconnection(self, sc):
+        if len(sc.user_data): return 
+
+        sc.user_data["sent-link-layer"] = 0
+        sc.user_data["sent-network-layer"] = 0
+        sc.user_data["sent-transport-layer"] = 0
+        sc.user_data["sent-application-layer"] = 0
 
 
+    def type_to_label(self, label):
+        return self.LABEL_DB[label][0]
 
-    def pre_process_packet(self, ts, packet):
+
+    def right(self, text, width):
+        return text[:width].rjust(width)
 
 
+    def center(self, text, width):
+        return text[:width].center(width)
 
-        sub_connection = self.cc.sub_connection_by_packet(packet)
-        if not sub_connection:
-            return InternalException()
 
-        #sub_connection.statistic ...
-        sub_connection.statistic.bytes_sent_link_layer        += len(packet) + 14
-        sub_connection.statistic.bytes_sent_network_layer     += int(len(packet))
-        sub_connection.statistic.bytes_sent_transport_layer   += int(len(packet.data))
-        sub_connection.statistic.bytes_sent_application_layer += int(len(packet.data.data))
+    def left(self, text, width):
+        return text[:width].ljust(width)
+
+
+    def calc_max_label_length(self):
+        max_label_length = 0
+        for i in self.LABEL_DB:
+            max_label_length = max(max_label_length, len(str(self.LABEL_DB[i][0])))
+
+        return max_label_length + 3
+
+
+    def calc_max_data_length(self, statistic):
+        max_data_length = 0
+        for i in self.LABEL_DB:
+            max_data_length = max(max_data_length,
+                    len(str(statistic.user_data[i])) + len(self.LABEL_DB[i][1]))
+
+        return max_data_length + 1
+
+
+    def account_general_data(self, sc, packet):
+        sc.user_data["sent-link-layer"]        += len(packet) + StatisticMod.ETHERNET_HEADER_LEN
+        sc.user_data["sent-network-layer"]     += int(len(packet))
+        sc.user_data["sent-transport-layer"]   += int(len(packet.data))
+        sc.user_data["sent-application-layer"] += int(len(packet.data.data))
 
         self.cc.statistic.packets_processed += 1
 
@@ -2996,39 +3040,45 @@ class StatisticMod(Mod):
             self.cc.statistic.packets_nl_ipv6 += 1
         elif type(packet) == dpkt.arp.ARP:
             self.cc.statistic.packets_nl_arp += 1
-            return
+            raise PacketNotSupportedException()
         else:
             self.cc.statistic.packets_nl_unknown += 1
-            return
+            raise PacketNotSupportedException()
 
         if type(packet.data) == dpkt.tcp.TCP:
             self.cc.statistic.packets_tl_tcp += 1
         elif type(packet.data) == dpkt.udp.UDP:
             self.cc.statistic.packets_tl_udp += 1
-            return
+            raise PacketNotSupportedException()
         elif type(packet.data) == dpkt.icmp.ICMP:
             self.cc.statistic.packets_tl_icmp += 1
-            return
+            raise PacketNotSupportedException()
         elif type(packet.data) == dpkt.icmp6.ICMP6:
             self.cc.statistic.packets_tl_icmp6 += 1
-            return
+            raise PacketNotSupportedException()
         else:
             self.cc.statistic.packets_tl_unknown += 1
+            raise PacketNotSupportedException()
+
+
+    def account_tcp_data(self, sc, packet):
+        pass
+
+
+    def pre_process_packet(self, ts, packet):
+        sub_connection = self.cc.sub_connection_by_packet(packet)
+        if not sub_connection: return InternalException()
+
+        # make sure the data structure is initialized
+        self.check_new_subconnection(sub_connection)
+
+        try:
+            self.account_general_data(sub_connection, packet)
+        except PacketNotSupportedException:
             return
 
+        # .oO guaranteed TCP packet now
 
-    def format_data_column(self, hdr_left, data_left, hdr_right, data_right):
-
-        MAX_HDR_LEN = 10
-        MAX_DATA_LEN = 10
-        LEFT_WHITESPACE_GUARD = "        "
-
-        sys.stdout.write("%s%-10s %10s  %10s %10s\n" %
-                (LEFT_WHITESPACE_GUARD, hdr_left, data_left, hdr_right, data_right))
-
-    def format_data(self, format, str, strlen=20):
-        """format the returned string to strlen"""
-        pass
 
 
     def print_two_column_sc_statistic(self, cid, sc1, sc2):
@@ -3044,7 +3094,7 @@ class StatisticMod(Mod):
                 (sc1.statistic.packets_processed, sc1percent, sc2.statistic.packets_processed, sc2percent))
 
         sys.stdout.write("\tByte (link layer):        %-10d\tByte (link layer): %d\n" %
-                (sc1.statistic.bytes_sent_link_layer, sc2.statistic.bytes_sent_link_layer))
+                (sc1.statistic.bytes_sent_link_layer, sc2.statistic.sent-link-layer))
 
         sys.stdout.write("\tByte (network layer):     %-10d\tByte (network layer): %d\n" %
                 (sc1.statistic.bytes_sent_network_layer, sc2.statistic.bytes_sent_network_layer))
@@ -3055,17 +3105,39 @@ class StatisticMod(Mod):
         sys.stdout.write("\tByte (application layer): %-10d\tByte (application layer): %d\n"  %
                 (sc1.statistic.bytes_sent_application_layer, sc2.statistic.bytes_sent_application_layer))
 
+
     def print_one_column_sc_statistic(self, cid, sc):
-
-        sys.stdout.write("\n\tFlow %s.1\n" % (cid))
-        sys.stdout.write("\t\tPackets: %d\n" % (sc.statistic.packets_processed))
-
-        # please copy the left hand side parts from above
-
         raise NotImplementedException("one flow connection not supported yet")
 
 
-    def process_final(self):
+    def print_format_two_column(self, cid, statistic):
+        sc1 = statistic[0]
+        sc2 = statistic[1]
+
+        left_width  = self.calc_max_label_length()
+        right_width = max(self.calc_max_data_length(sc1), self.calc_max_data_length(sc2))
+
+        ordere_list = [
+                "sent-link-layer",
+                "sent-network-layer",
+                "sent-transport-layer",
+                "sent-application-layer",
+        ]
+
+        for i in ordere_list:
+            l1 = self.left(self.type_to_label(i) + ":", left_width)
+            r1 = self.right(str(sc1.user_data[i]) + " " + self.LABEL_DB[i][1], right_width)
+
+            l2 = self.left(self.type_to_label(i) + ":", left_width)
+            r2 = self.right(str(sc2.user_data[i])+ " " + self.LABEL_DB[i][1], right_width)
+
+            line_length = left_width + right_width + 1
+
+            sys.stdout.write("\t%s   %s\n" %
+                    (self.left("%s %s" % (l1, r1), line_length), self.left("%s %s" % (l2, r2), line_length)))
+
+
+    def format_human(self):
         one_percent = float(self.cc.statistic.packets_processed) / 100
 
         prct_nl_arp     = float(self.cc.statistic.packets_nl_arp) / one_percent
@@ -3134,15 +3206,66 @@ class StatisticMod(Mod):
                 sys.stdout.write("%s" % (self.color["green"]))
                 sys.stdout.write("\tFlow %s.2:  %s\n" % (connection.connection_id, connection.sc2))
                 sys.stdout.write("%s" % (self.color["end"]))
-                self.print_two_column_sc_statistic(connection.connection_id, connection.sc1, connection.sc2)
+                self.print_format_two_column(connection.connection_id, [connection.sc1, connection.sc2])
             elif connection.sc1:
                 sys.stdout.write("\tFlow %s.1:  %s\n" % (connection.connection_id, connection.sc1))
                 self.print_one_column_sc_statistic(connection.connection_id, connection.sc1)
             else:
                 raise InternalException("sc1 should be the only one here")
 
-
             sys.stdout.write("\n")
+
+
+    def not_limited(self, connection):
+        res = list()
+
+        if len(self.opts.filter) <= 0:
+            return True
+
+        for filter in self.opts.filter:
+            try:
+                (stupple, dtupple) = filter.split("-")
+                (sip, sport) = stupple.split(":")
+                (dip, dport) = dtupple.split(":")
+            except ValueError:
+                self.logger.error("not a valid filter string: \"%s\"" % (filter))
+                sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+            if sip != "*" and sip != connection.sip:
+                res.append(True)
+                continue
+            if dip != "*" and dip != connection.dip:
+                res.append(True)
+                continue
+            if sport != "*" and sport != connection.sport:
+                res.append(True)
+                continue
+            if dport != "*" and dport != connection.dport:
+                res.append(True)
+                continue
+
+            res.append(False)
+
+        if False in res: return True
+        return False
+
+
+    def format_machine(self):
+        for key in self.cc.container.keys():
+            connection = self.cc.container[key]
+            if connection.sc1:
+                if self.not_limited(connection.sc1):
+                    sys.stdout.write(self.opts.format % (connection.sc1.user_data))
+                    sys.stdout.write("\n")
+            if connection.sc2:
+                if self.not_limited(connection.sc2):
+                    sys.stdout.write(self.opts.format % (connection.sc2.user_data))
+                    sys.stdout.write("\n")
+
+
+
+    def process_final(self):
+        self.format_machine() if self.opts.format else self.format_human()
 
 
 class Captcp:
