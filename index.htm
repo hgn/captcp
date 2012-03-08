@@ -832,6 +832,36 @@ $ captcp show -m "sackblocks and len(sackblocks) &gt; 0 and sackblocks[0][0] &lt
 		Show summary for PCAP files
 		</p>
 
+		<h3>Options</h3>
+
+		<p>
+		<table class="table table-striped">
+		 <thead>
+				<tr>
+					<th>Short Option</th>
+					<th>Long Option</th>
+					<th>Description</th>
+					<th>Example</th>
+				</tr>
+			</thead>
+			<tbody>
+				<!--            -->
+				<tr>
+					<td>-o</td>
+					<td>--format</td>
+					<td>Start machine mode</td>
+					<td>--format '%(sent-network-layer)d byte transfered'</td>
+				</tr>
+				<!--            -->
+				<tr>
+					<td>-i</td>
+					<td>--filter</td>
+					<td>Limit number of connections</td>
+					<td>--filter '*:5001-*:*,*:*-*:5001'</td>
+				</tr>
+			</tbody>
+		</table>
+		</p>
 
 		<h3>Filter</h3>
 
