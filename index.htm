@@ -60,6 +60,7 @@
 										<li><a href="#timesequence"> Time Sequence Module </a></li>
 										<li><a href="#throughput"> Throughput Module </a></li>
 										<li><a href="#inflight"> Inflight Module </a></li>
+										<li><a href="#statistic"> Statistic Module </a></li>
 										<li><a href="#spacing"> Spacing Module </a> </li>
 										<li><a href="#show"> Show Module </a> </li>
 									</ul>
@@ -174,7 +175,6 @@
 			<img src="images/seq.png" alt="A before and after view of the file structure." />
 
 
-			<p>
 				<div class="alert alert-success">
 					<h4 class="alert-heading">What you see is <span class="label label-success">NOT</span> what you get</h4>
 					<p>
@@ -193,7 +193,6 @@ ethtool -K ethN rx off tx off sg off tso off
 </pre>
 
 				</div>
-				</p>
 
 		</div>
 
@@ -825,11 +824,41 @@ $ captcp show -m "sackblocks and len(sackblocks) &gt; 0 and sackblocks[0][0] &lt
 </table>
 </p>
 
+		<!--***** MODULE *************-->
+		<section id="statistic">
+	<h2>Statistic Module</h2>
+
+		<p>
+		Show summary for PCAP files
+		</p>
+
+
+		<h3>Filter</h3>
+
+		<p>
+		You may wan't to limit the number of displayed connections based on IP address
+		or port information. Then the filter option is your friend! The filter options
+		takes a list of several filters and works as a whitelist. The synopsis is
+		sourceIp:sourcePort-destinationIp:destinationPort. The default filter is
+		"*:*-*:*" - defacto no filtering.
+		</p>
+
+		<p>
+		To display the bytes sent on network layer for all streams with source or
+		destination port 5001 the following filter helps: "*:*-*:5001,*:5001-*:*"
+		</p>
+
+
+<pre>
+$ captcp statistic --format '%(sent-network-layer)d byte transfered' --filter '*:5001-*:*,*:*-*:5001' trace.pcap
+103804 byte transfered
+2660 byte transfered
+</pre>
+
+		</section>
 
 
 		<!--***** MODULE *************-->
-
-
 		<h3>Highlight Module</h3>
 
 				<p>
