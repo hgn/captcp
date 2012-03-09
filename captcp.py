@@ -1274,10 +1274,10 @@ class TimeSequenceMod(Mod):
         self.receiver_awnd_file.write("%lf %s\n" % (packet_time, self.calc_advertised_window(pi)))
 
         if pi.options['sackblocks']:
-            assert(float(len(pi.options['sackblocks'])) % 2 == 0)
-            for i in range(0, len(pi.options['sackblocks']), 2):
+            for i in range(len(pi.options['sackblocks'])):
                 self.data_arrow_sack_file.write("set arrow from %lf,%s.0 to %ls,%s.0 nohead lc rgb \"#aaaaff\" lw 2\n" %
-                        (packet_time, pi.options['sackblocks'][i], packet_time, pi.options['sackblocks'][i + 1]))
+                        (packet_time, pi.options['sackblocks'][i][0],
+                         packet_time, pi.options['sackblocks'][i][1]))
 
         # we set self.wscale_receiver at the end to bypass
         # the first SYN/ACK packet where a) the window option
