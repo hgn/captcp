@@ -99,7 +99,7 @@
 ================================================== -->
 <header class="jumbotron subhead" id="overview">
 	<h1>CAPTCP</h1>
-	<p class="lead">Script Collection to Analyze TCP Traces</p>
+	<p class="lead">TCP Analysis Tool for PCAP Files</p>
 
 <!--
 	<div class="subnav">
@@ -112,7 +112,6 @@
 	</div>
 -->
 	</header>
-
 			<img src="images/bg.png" alt="nice image" />
 
 
@@ -128,6 +127,11 @@
 
 
 		<div class="span12">
+
+		<p>
+		Captcp is a tool for TCP analysis of PCAP dump files recorded via tcpdump or
+		wireshark. 
+		</p>
 
 			<p>
 			Since several years I used to use a own repository of scripts to analyze
@@ -1109,6 +1113,62 @@ su -c make install
 	</p>
 
 	<h3>Requirements</h3>
+
+	# required debian packages:
+	#   python-dpkt
+	#   python-pypcap 
+
+	# optional debian packages:
+	#   python-geoip
+	#   python-cairo
+
+		<p>
+		<table class="table table-striped table-bordered">
+		 <thead>
+				<tr>
+					<th>Name</th>
+					<th>Module</th>
+					<th>Type</th>
+					<th>Package name</th>
+				</tr>
+			</thead>
+			<tbody>
+				<!--            -->
+				<tr>
+					<td>Python PCAP</td>
+					<td>Core</td>
+					<td>Mandatory</td>
+					<td>python-pypcap (Debian)</td>
+				</tr>
+				<!--            -->
+				<tr>
+					<td>DPKT Packet Parser</td>
+					<td>Core</td>
+					<td>Mandatory</td>
+					<td>python-dpkt (Debian)</td>
+				</tr>
+				<!--            -->
+				<tr>
+					<td>GeoIP Python Bindings</td>
+					<td>geoip</td>
+					<td>Optional</td>
+					<td>python-geoip (Debian)</td>
+				</tr>
+				<!--            -->
+				<tr>
+					<td>Cairo Python Bindings</td>
+					<td>Time Sequence Graph</td>
+					<td>Optional</td>
+					<td>python-cairo (Debian)</td>
+				</tr>
+			</tbody>
+		</table>
+		</p>
+
+		<p>
+		The following packages are additionally required to generate Gnuplots:
+		imagemagick (to convert from PDF to PNG), make, gnuplot-nox
+		</p>
 
 
 
