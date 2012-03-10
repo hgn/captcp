@@ -129,20 +129,12 @@
 		<div class="span12">
 
 		<p>
-		Captcp is a tool for TCP analysis of PCAP dump files recorded via tcpdump or
-		wireshark. 
+		Captcp is a tool for TCP analysis of PCAP dump files recorded via Tcpdump
+		or Wireshark. Captcp is an attempt to rewrite several analyze scripts and
+		provide a clean and consistent command line syntax. Captcp is written in
+		Python and easy extendable.
 		</p>
 
-			<p>
-			Since several years I used to use a own repository of scripts to analyze
-			network traffic. First I started with plain tcpdump, tcptrace, tcpslice,
-			tcpstat, wrapped by awk, sed and perl and the other tools. After some
-			years I started to wrote an own set of scripts, starting with Perl and C,
-			later also some Ruby scripts. Captcp is the attempt to rewrite the scripts
-			in Python. Python because the PCAP support is more feature complete compared
-			to Ruby, furthermore the Python Programming Language is heavily used in
-			Research Environment.
-			<p>
 
 			<h4>Some Words About Packet Analyzes</h4>
 
@@ -195,6 +187,7 @@
 			<img src="images/seq.png" alt="A before and after view of the file structure." />
 
 
+			<p>
 				<div class="alert alert-success">
 					<h4 class="alert-heading">What you see is <span class="label label-success">NOT</span> what you get</h4>
 					<p>
@@ -207,13 +200,11 @@
 					Data packets or when the data size is larger then the Maximum Segment
 					Size.
 					</p>
-
 <pre>
 ethtool -K ethN rx off tx off sg off tso off
 </pre>
-
 				</div>
-
+			</p>
 		</div>
 
 
