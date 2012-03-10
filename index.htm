@@ -1,72 +1,132 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <meta charset="utf-8">
-    <title>CAPTCP - TCP Analyze Scripts</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<meta name="description" content="CAPTCP - TCP Analyze Scripts">
-    <meta name="author" content="Hagen Paul Pfeifer">
+		<meta charset="utf-8">
+		<title>CAPTCP - TCP Analyze Scripts</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta name="author" content="Hagen Paul Pfeifer">
+		<meta name="description" content="PACTCP - A Python Based TCP Analyze Script">
+		<meta name="author" content="Hagen Paul Pfeifer">
+		<meta name="Copyright" content="Copyright Hagen Paul Pfeifer 2010,2011. All Rights Reserved.">
 
-    <!-- Le HTML5 shim, for IE6-8 support of HTML elements -->
-    <!--[if lt IE 9]>
-      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
+		<!-- Dublin Core Metadata : http://dublincore.org/ -->
+		<meta name="DC.title" content="PACTCP">
+		<meta name="DC.subject" content="Python network analyze tool">
+		<meta name="DC.creator" content="Hagen Paul Pfeifer">
 
-    <!-- Le styles -->
-    <link href="css/bootstrap.min.css" rel="stylesheet">
-    <link href="css/bootstrap-responsive.css" rel="stylesheet">
-    <link href="css/docs.css" rel="stylesheet">
+		<!-- Le HTML5 shim, for IE6-8 support of HTML elements -->
+		<!--[if lt IE 9]>
+			<script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+		<![endif]-->
+
+		<!-- Le styles -->
+		<link href="css/bootstrap.min.css" rel="stylesheet">
+		<link href="css/bootstrap-responsive.css" rel="stylesheet">
+		<link href="css/docs.css" rel="stylesheet">
 		<link href="css/prettify.css" rel="stylesheet">
 <script type="text/javascript">
-  var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-29732787-1']);
-  _gaq.push(['_trackPageview']);
-  (function() {
-    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-  })();
+	var _gaq = _gaq || [];
+	_gaq.push(['_setAccount', 'UA-29732787-1']);
+	_gaq.push(['_trackPageview']);
+	(function() {
+		var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+		ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+		var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+	})();
 </script>
+<script type="text/javascript">
+/* <![CDATA[ */
+    (function() {
+        var s = document.createElement('script'), t = document.getElementsByTagName('script')[0];
+        s.type = 'text/javascript';
+        s.async = true;
+        s.src = 'http://api.flattr.com/js/0.6/load.js?mode=auto';
+        t.parentNode.insertBefore(s, t);
+    })();
+/* ]]> */</script>
 
 
-  </head>
+	</head>
 
-  <body data-spy="scroll" data-target=".nav" data-offset="50">
+	<body data-spy="scroll" data-target=".nav" data-offset="50">
+
+
+  <!-- Navbar
+    ================================================== -->
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </a>
+          <div class="nav-collapse">
+            <ul class="nav">
+              <li class=""> <a href="#about">About</a> </li>
+              <li class=""> <a href="#modules">Modules</a> </li>
+							<li class="dropdown">
+									<a href="#" class="dropdown-toggle" data-toggle="dropdown">Modules<b class="caret"></b> </a>
+									<ul class="dropdown-menu">
+										<li><a href="#timesequence"> Time Sequence Module </a></li>
+										<li><a href="#throughput"> Throughput Module </a></li>
+										<li><a href="#inflight"> Inflight Module </a></li>
+										<li><a href="#statistic"> Statistic Module </a></li>
+										<li><a href="#spacing"> Spacing Module </a> </li>
+										<li><a href="#show"> Show Module </a> </li>
+									</ul>
+							</li>
+              <li class=""> <a href="#installation">Installation</a> </li>
+							<li class=""> <a href="#miscellaneous">Miscellaneous</a> </li>
+							</ul><ul class="nav pull-right"><li class="divider-vertical"></li>
+							<li class=""><br />
+						<a class="FlattrButton" style="display:none;" rev="flattr;button:compact;" href="http://hgn.github.com/captcp/"></a>
+						<noscript><a href="http://flattr.com/thing/564883/CAPTCP-Script-Collection-to-Analyze-TCP-Traces" target="_blank">
+						<img src="http://api.flattr.com/button/flattr-badge-large.png" alt="Flattr this" title="Flattr this" border="0" /></a></noscript>
+							</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
 
 
 
-    <div class="container">
+
+		<div class="container">
 
 
 <!-- Masthead
 ================================================== -->
 <header class="jumbotron subhead" id="overview">
-  <h1>CAPTCP</h1>
-  <p class="lead">Script Collection to Analyze TCP Traces</p>
-  <div class="subnav">
-    <ul class="nav nav-pills">
-      <li class=""><a href="#about">About</a></li>
-      <li class=""><a href="#modules">Modules</a></li>
-      <li class=""><a href="#installation">Installation</a></li>
-      <li><a href="#miscellaneous">Miscellaneous</a></li>
-    </ul>
-  </div>
+	<h1>CAPTCP</h1>
+	<p class="lead">Script Collection to Analyze TCP Traces</p>
+
+<!--
+	<div class="subnav">
+		<ul class="nav nav-pills">
+			<li class=""><a href="#about">About</a></li>
+			<li class=""><a href="#modules">Modules</a></li>
+			<li class=""><a href="#installation">Installation</a></li>
+			<li><a href="#miscellaneous">Miscellaneous</a></li>
+		</ul>
+	</div>
+-->
 	</header>
 
-
-			<img src="images/matrix.png" width="1170" height="200" alt="nice image" />
+			<img src="images/bg.png" alt="nice image" />
 
 
 <!-- About
 ================================================== -->
 <section id="about">
-  <div class="page-header">
-    <h1>About</h1>
-  </div>
+	<div class="page-header">
+		<h1>About</h1>
+	</div>
 
-  <!-- Headings & Paragraph Copy -->
-  <div class="row">
-	  
-	  
+	<!-- Headings & Paragraph Copy -->
+	<div class="row">
+
+
 		<div class="span12">
 
 			<p>
@@ -95,6 +155,14 @@
 				<li>Last but not least: question the results!</li>
 			</ul>
 
+			<p>
+			A last word: captcp is not optimized to analyze huge PCAP files with millions
+			of TCP connections. Captcp is primary designed and optimized to analyze
+			one TCP connection/flow. If you have a really large PCAP file (say 1 GB
+			and larger) you can use tcpslit to seperate TCP connections before. Under
+			normal circumstances this is not required.
+			</p>
+
 			<h4>General Synopsis</h4>
 
 			<p>
@@ -119,25 +187,33 @@
 			often you start by identifying the relevant connection (or flow) and
 			limit the analysis for these connection (or flow).
 			</p>
-			
+
 			<img src="images/seq.png" alt="A before and after view of the file structure." />
 
 
-	      <div class="alert alert-block">
-	        <a class="close">×</a>
-	        <h4 class="alert-heading">Info</h4>
-					<p>CAPTCP is not optimized to analyze huge PCAP files with millions
-					of TCP connections. CAPTCP is primary designed to analyze one TCP
-					connection/flow. If you have a really large PCAP file (say 1 GB and
-					larger) you can use tcpslit to seperate TCP connections before. Under
-					normal circumstances this is not required.
+				<div class="alert alert-success">
+					<h4 class="alert-heading">What you see is <span class="label label-success">NOT</span> what you get</h4>
+					<p>
+					Attention: if you capture traffic via PF_PACKET socket nowadays you may not capture real wire data!
+					Current network adapters support offloading capabilities. It is wise
+					to disable all offloading capabilities if you want a realistic
+					behaviour if you trace traffic from the sender machine.
+
+					You will note these effects if you realize more TCP ACK packets then
+					Data packets or when the data size is larger then the Maximum Segment
+					Size.
 					</p>
+
+<pre>
+ethtool -K ethN rx off tx off sg off tso off
+</pre>
+
 				</div>
 
-    </div>
-	
+		</div>
 
-  </div>
+
+	</div>
 
 </section>
 
@@ -145,15 +221,15 @@
 <!-- Modules
 ================================================== -->
 <section id="modules">
-  <div class="page-header">
-    <h1>Modules</h1>
-  </div>
+	<div class="page-header">
+		<h1>Modules</h1>
+	</div>
 
-  <!-- Headings & Paragraph Copy -->
-  <div class="row">
-	  
-	  
-    <div class="span12">
+	<!-- Headings & Paragraph Copy -->
+	<div class="row">
+
+
+		<div class="span12">
 
 
 		<p>
@@ -164,7 +240,8 @@
 		</p>
 
 		<ul class="links">
-			<li><strong>Trhoughput</strong> show throughput for a connection</li>
+			<li><strong>timesequence</strong> show packet sequence over time</li>
+			<li><strong>throughput</strong> show throughput for a connection</li>
 			<li><strong>highlight</strong> - similar to tcpdump but with colorful highlighting and some other features</li>
 			<li><strong>stats</strong> - print TCP flow statistics</li>
 			<li><strong>geoip</strong> - for a given IP address the location is returned</li>
@@ -173,6 +250,33 @@
 			<li><strong>payloadtime</strong> - Display the payload data over time, separated by services (ports) or protocols</li>
 		</ul>
 		</p>
+
+
+		<!--***** MODULE *************-->
+		<section id="timesequence">
+	<h2>Time Sequence Module</h2>
+
+		<p>
+		Time Sequence Graph is one of the more professional modules, thus not so
+easy to interpret.
+		</p>
+
+<h3>Options</h3>
+
+<pre>
+-o OUTPUTDIR, --output-dir=OUTPUTDIR
+                      specify the output directory
+-f CONNECTIONS, --data-flow=CONNECTIONS
+                      specify the number of relevant ID's
+-t TIMEFRAME, --time=TIMEFRAME
+                      select range of displayed packet (-t <start:stop>)
+-i, --init            create Gnuplot template and Makefile in output-dir
+</pre>
+
+		<img src="images/tsg-1.png" alt="Time Sequence Graph Image image" />
+
+		</section>
+
 
 		<!--***** MODULE *************-->
 		<section id="throughput">
@@ -185,17 +289,17 @@
 		<h3>Options</h3>
 <pre>
 -f CONNECTIONS, --flow=CONNECTIONS
-                      specify the number of displayed ID's
+											specify the number of displayed ID's
 -s SAMPLELENGTH, --samplelength=SAMPLELENGTH
-                      length in seconds (float) where data is accumulated
-                      (1.0)
+											length in seconds (float) where data is accumulated
+											(1.0)
 -m MODE, --mode=MODE  layer where the data len measurement is taken
-                      (default: goodput
+											(default: goodput
 -u UNIT, --unit=UNIT  unit: byte, kbyte, mbyte
 -i, --init            create Gnuplot template and Makefile in output-dir
 -t, --stdio           don't create Gnuplot data, just stdio
 -o OUTPUTDIR, --output-dir=OUTPUTDIR
-                      specify the output directory
+											specify the output directory
 </pre>
 
 		<h3>Usage</h3>
@@ -304,7 +408,10 @@ later with some other modules too.
 </p>
 
 		<img src="images/throughput-3.png" alt="Throughput image" />
+		</section>
 
+		<!--***** MODULE *************-->
+		<section id="inflight">
 		<h2>Inflight Module</h2>
 <p>
 TCP is a sliding window protocol, more then one packet can be in transmit at a
@@ -364,12 +471,12 @@ transfer is rather large. Therefore we switch to the graphical Gnuplot output.
 
 <pre>
 -f CONNECTIONS, --data-flow=CONNECTIONS
-                      specify the number of relevant ID's
+											specify the number of relevant ID's
 -m MODE, --mode=MODE  display packets or bytes in flight
 -s, --stdio           don't create Gnuplot files, instead print to stdout
 -i, --init            create Gnuplot template and Makefile in output-dir
 -o OUTPUTDIR, --output-dir=OUTPUTDIR
-                      specify the output directory
+											specify the output directory
 </pre>
 
 <p>
@@ -389,6 +496,10 @@ similar: 01:37.19 for Cubic, 01:36.14 for NewReno, 01:36.29 for Vegas and
 By the way: the inflight module functionality is called &quot;Outstanding Data Graph&quot; in TCPTrace.
 </p>
 
+		</section>
+
+		<!--***** MODULE *************-->
+		<section id="spacing">
 		<h2>Spacing Module</h2>
 
 		<p>
@@ -397,14 +508,14 @@ By the way: the inflight module functionality is called &quot;Outstanding Data G
 
 <pre>
 -f CONNECTIONS, --data-flow=CONNECTIONS
-                      specify the number of relevant ID's
+											specify the number of relevant ID's
 -m MODE, --mode=MODE  display packets or bytes in flight (default packets)
 -s, --stdio           don't create Gnuplot files, instead print to stdout
 -i, --init            create Gnuplot template and Makefile in output-dir
 -o OUTPUTDIR, --output-dir=OUTPUTDIR
-                      specify the output directory
+											specify the output directory
 -a SAMPLE_NO, --samples=SAMPLE_NO
-                      number of packet sampled (default: 10)
+											number of packet sampled (default: 10)
 </pre>
 
 <p>
@@ -427,27 +538,34 @@ make pdf png
 <img src="images/spacing.png" alt="Spacing image" />
 
 
+		</section>
+
+		<!--***** MODULE *************-->
+		<section id="show">
 		<h2>Show Module</h2>
 
 		<p>
-		Display TCP flows like tcpdump. Features are connection or flow highlighting (up to 256 colors for supported terminals like rxvt-unicode-256color) or powerful matching capabilities.
+		Display TCP flows like tcpdump. Features are connection or flow
+		highlighting (up to 256 colors for supported terminals like
+		rxvt-unicode-256color) or powerful matching capabilities.
 		</p>
 
 <h3>Options</h3>
 
 <pre>
 -i CONNECTIONS, --connection-id=CONNECTIONS
-                      specify the number of displayed ID's
+											specify the number of displayed ID's
 -d DIFFERENTIATE, --differentiate=DIFFERENTIATE
-                      specify if "connection" or "flow" should be colored
+											specify if "connection" or "flow" should be colored
 -m MATCH, --match=MATCH
-                      if statment is true the string is color in red
+											if statment is true the string is color in red
 -s, --suppress        don't display other packets
 -n, --number          number the packets
 </pre>
 
 		<h3>Usage</h3>
 
+		<p>
 				Highlight different connections or different flows. If several
 				connections are captured then the connection options provide a quick
 				way to see how many connections are captured and when. If one flow is
@@ -463,18 +581,23 @@ make pdf png
 
 				Show in first row the absolute packet number. This can be used to
 				correlate one packet with the packet in wireshark or tcpdump.
+		</p>
 
 
 		<h4>Examples</h4>
 
+		<p>
 		Highlight different flows
+		<p>
 
 <pre>
 $ captcp show -d flow capture.pcap
 </pre>
 
+<p>
 The next example and image illustrate the default options to differentiate
 connections.
+</p>
 
 <pre>
 $ captcp show capture.pcap
@@ -483,12 +606,15 @@ $ captcp show capture.pcap
 image::images/show-connections.png
 
 
+<p>
 Matching can be really powerfull. We start with the hello world example:
+</p>
 
 <pre>
 $ captcp show --match True trace.pcap
 </pre>
 
+<p>
 This will match all packets, thus all packets are red colored.
 
 
@@ -496,34 +622,46 @@ Another usefull option is --suppress: only packets are displayed where the
 match evalutated to true. This can be used to count special packets. As an
 example: to display only packets with TCP SACK (selective acknowledgements)
 you can filter for it and suppress all other packets
+</p>
 
 <pre>
 $ captcp show --match "sackblocks" --suppress trace.pcap
 </pre>
 
+<p>
 Highlight packet where the TCP SYN and ACK flag is set:
+</p>
 
 <pre>
 $ captcp show --match "syn_flag and ack_flag" trace.pcap
 </pre>
 
+<p>
 Show packets where the Maximum Segment Size is less then 1000:
+</p>
 
 <pre>
 $ captcp show --match "mss and mss &lt; 1000" trace.pcap
 </pre>
 
+<p>
 It is important to note that MSS must be checked before the values can be
 compared. A packet where no MSS is present (the MSS option is only set at the
 Three Way Handshake) the mss value is False. So a plain statement like "mss &lt;
 1400" will evalulate to "False &lt; 100" which is true in Python. Therefore the
 additional check is required.
+</p>
 
+<p>
+		<img src="images/captcp-show.png" alt="Captcp Show Output on urxvt" />
+</p>
 
+<p>
 Show all packets with SACK blocks and where the first TCP SACK block
 (left-edge) starts with a number less then the acknowledgenumber. Normally
 this is not superfluous, but sometimes DUP-ACKs are cached and retransmitted
 and the SACK information is not updated.
+</p>
 
 <pre>
 $ captcp show -m "sackblocks and len(sackblocks) &gt; 0 and sackblocks[0][0] &lt; ack" --suppress --number trace2.pcap
@@ -533,40 +671,241 @@ $ captcp show -m "sackblocks and len(sackblocks) &gt; 0 and sackblocks[0][0] &lt
 		The following match keywords are valid and can be used
 		</p>
 
+<p>
+<table class="table table-striped table-bordered">
+ <thead>
+		<tr>
+			<th>Keyword</th>
+			<th>Description</th>
+			<th>Type</th>
+			<th>Example</th>
+		</tr>
+	</thead>
+	<tbody>
+		<!--            -->
+		<tr>
+			<td>sip</td>
+			<td>Source IP address, IPv4 or IPv6</td>
+			<td>str</td>
+			<td>sip == "192.168.0.1" or sip == "192.168.0.2"</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>dip</td>
+			<td>Destination IP address, IPv4 or IPv6</td>
+			<td>str</td>
+			<td>re.search( r'192\.168.*', dip) and re.search( r'.*\.2$', dip)</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>seq</td>
+			<td>TCP Sequence Number</td>
+			<td>int</td>
+			<td>seq &gt; 23233</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>ack</td>
+			<td>TCP Acknowledgement number</td>
+			<td>int</td>
+			<td>ack &gt; 1000</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>urp</td>
+			<td>TCP Urgend Data pointer</td>
+			<td>int</td>
+			<td>urp == 1000000</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>sum</td>
+			<td>TCP Checksum</td>
+			<td>int</td>
+			<td>sum != 0</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>sport</td>
+			<td>TCP Source Port</td>
+			<td>int</td>
+			<td>sport == 80 and dport != 80</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>dport</td>
+			<td>TCP Destination Port</td>
+			<td>int</td>
+			<td>dport in (80, 443) or dport in range(1000, 2000)</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>ack_flag</td>
+			<td>Acknowledgement Flag</td>
+			<td>bool</td>
+			<td>ack_flag == False</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>syn_flag</td>
+			<td>Synchronization Flag</td>
+			<td>bool</td>
+			<td>ack_flag and syn_flag</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>urg_flag</td>
+			<td>Urgend Pointer Flag</td>
+			<td>bool</td>
+			<td>urg_flag == True and ack_flag</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>psh_flag</td>
+			<td>Push Flag</td>
+			<td>bool</td>
+			<td>psh_flag and not ack_flag</td>
+		</tr>
+		 <!--            -->
+		<tr>
+			<td>fin_flag</td>
+			<td>FIN Flag, Type</td>
+			<td>bool</td>
+			<td>syn_flag and fin_flag</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>rst_flag</td>
+			<td>Reset Flag</td>
+			<td>bool</td>
+			<td>rst_flag and not fin_flag</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>ece_flag</td>
+			<td>ECE (ECN) Flag</td>
+			<td>bool</td>
+			<td>ece_flag and cwr_flag</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>cwr_flag</td>
+			<td>CWR Flag</td>
+			<td>bool</td>
+			<td>not cwr_flag</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>mss</td>
+			<td>Maximum Segement Size (MSS)</td>
+			<td>int</td>
+			<td>mss &lt; 1400</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>wsc</td>
+			<td>Window Scaled Option</td>
+			<td>int</td>
+			<td>wsc == 0</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>tsval</td>
+			<td>TCP Timestamp TSVAL value</td>
+			<td>int</td>
+			<td>tsval == 0 and tsecr == 0</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>tsecr</td>
+			<td>TCP Timestamp TSECR value</td>
+			<td>int</td>
+			<td>tsval != 0 and tsecr != 0</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>sackok</td>
+			<td>Selective Acknowledgements OK flag, Used during Three Way Handshake</td>
+			<td>bool</td>
+			<td>sackok</td>
+		</tr>
+		<!--            -->
+		<tr>
+			<td>sackblocks</td>
+			<td>If SACK is transmitted</td>
+			<td>list of list</td>
+			<td>sackblocks and len(sackblocks) &tg; 2</td>
+		</tr>
+	</tbody>
+</table>
+</p>
+
+		<!--***** MODULE *************-->
+		<section id="statistic">
+	<h2>Statistic Module</h2>
+
 		<p>
-		<ul>
-		<li>sip</li>
-		<li>dip</li>
-		<li>seq</li>
-		<li>ack</li>
-		<li>win</li>
-		<li>urp</li>
-		<li>sum</li>
-		<li>sport</li>
-		<li>dport</li>
-		<li>ack_flag</li>
-		<li>syn_flag</li>
-		<li>urg_flag</li>
-		<li>psh_flag</li>
-		<li>fin_flag</li>
-		<li>rst_flag</li>
-		<li>ece_flag</li>
-		<li>cwr_flag</li>
-		<li>mss</li>
-		<li>wsc</li>
-		<li>tsval</li>
-		<li>tsecr</li>
-		<li>sackok</li>
-		<li>sackblocks</li>
-		</ul>
+		Show summary for PCAP files
+		</p>
+
+		<h3>Options</h3>
+
+		<p>
+		<table class="table table-striped table-bordered">
+		 <thead>
+				<tr>
+					<th>Short Option</th>
+					<th>Long Option</th>
+					<th>Description</th>
+					<th>Example</th>
+				</tr>
+			</thead>
+			<tbody>
+				<!--            -->
+				<tr>
+					<td>-o &lt;format&gt;</td>
+					<td>--format &lt;format&gt;</td>
+					<td>Start machine mode</td>
+					<td>--format '%(sent-network-layer)d byte transfered'</td>
+				</tr>
+				<!--            -->
+				<tr>
+					<td>-i &lt;filter&gt;</td>
+					<td>--filter &lt;filter&gt;</td>
+					<td>Limit number of connections</td>
+					<td>--filter '*:5001-*:*,*:*-*:5001'</td>
+				</tr>
+			</tbody>
+		</table>
+		</p>
+
+		<h3>Filter</h3>
+
+		<p>
+		You may wan't to limit the number of displayed connections based on IP address
+		or port information. Then the filter option is your friend! The filter options
+		takes a list of several filters and works as a whitelist. The synopsis is
+		sourceIp:sourcePort-destinationIp:destinationPort. The default filter is
+		"*:*-*:*" - defacto no filtering.
+		</p>
+
+		<p>
+		To display the bytes sent on network layer for all streams with source or
+		destination port 5001 the following filter helps: "*:*-*:5001,*:5001-*:*"
 		</p>
 
 
+<pre>
+$ captcp statistic --format '%(sent-network-layer)d byte transfered' --filter '*:5001-*:*,*:*-*:5001' trace.pcap
+103804 byte transfered
+2660 byte transfered
+</pre>
+
+		</section>
+
 
 		<!--***** MODULE *************-->
-
-
-		<h3>Highlight Module</h3>
+		<h2>Highlight Module</h2>
 
 				<p>
 		The Highlight module is show a similar output compared to tcpdump.
@@ -600,7 +939,7 @@ $ captcp show -m "sackblocks and len(sackblocks) &gt; 0 and sackblocks[0][0] &lt
 	expression.
 
 --nocolor (-c)
-  This disables ANSI color sequences. This option is useful
+	This disables ANSI color sequences. This option is useful
 	in combination with "--suppress-other" and Terminals where
 	no ANSI color codes are available.
 
@@ -690,30 +1029,32 @@ captcp highlight -s -m 'tcp.flags &amp; TH_ACK and tcp.flags &amp; TH_SYN' trace
 Usage: captcp sequencegraph [options] <pcapfile>
 
 Options:
-  -h, --help            show this help message and exit
-  -v LOGLEVEL, --loglevel=LOGLEVEL
-                        set the loglevel (info, debug, warning, error)
-  -l LOCALADDR, --local=LOCALADDR
-                        specify list of local ip addresses
-  -s SIZE, --size=SIZE  specify the size of the image (default: 600x1200)
-  -r RTT, --rtt=RTT     specify the average rtt per connection (default
-                        0.025s)
-  -f FILENAME, --filename=FILENAME
-                        specify the name of the generated PDF file (default:
-                        sequence.pdf)
-  -i CONNECTIONS, --connection-id=CONNECTIONS
-                        specify the number of relevant ID's
-  -y STYLE, --style=STYLE
-                        specify the style of the labels (normal or minimal)
-  -p LOCALLABEL, --locallabel=LOCALLABEL
-                        the default string left axis (default: Local)
-  -q REMOTELABEL, --remotelabel=REMOTELABEL
-                        the default string right axis (default: Remote)
+	-h, --help            show this help message and exit
+	-v LOGLEVEL, --loglevel=LOGLEVEL
+												set the loglevel (info, debug, warning, error)
+	-l LOCALADDR, --local=LOCALADDR
+												specify list of local ip addresses
+	-s SIZE, --size=SIZE  specify the size of the image (default: 600x1200)
+	-r RTT, --rtt=RTT     specify the average rtt per connection (default
+												0.025s)
+	-f FILENAME, --filename=FILENAME
+												specify the name of the generated PDF file (default:
+												sequence.pdf)
+	-i CONNECTIONS, --connection-id=CONNECTIONS
+												specify the number of relevant ID's
+	-y STYLE, --style=STYLE
+												specify the style of the labels (normal or minimal)
+	-p LOCALLABEL, --locallabel=LOCALLABEL
+												the default string left axis (default: Local)
+	-q REMOTELABEL, --remotelabel=REMOTELABEL
+												the default string right axis (default: Remote)
 		</pre>
 
+		<p>
 		The illustation provides another nice visualization of data. Not the
 		pure amount of data can be seen, rather a nice feeling of how many
 		packets are transmitted and received at a given time.
+		</p>
 
 		<figure>
 		<img src="images/sequence-graph-mass.png" alt="All connection from one trace file visualized" />
@@ -728,61 +1069,85 @@ Options:
 
 
 
-    </div>
+	</div>
 
-  </div>
+</div>
 </section>
 
 
 <!-- Installation
 ================================================== -->
 <section id="installation">
-  <div class="page-header">
-    <h1>Installation</h1>
-  </div>
+<div class="page-header">
+	<h1>Installation</h1>
+</div>
 
-  <!-- Headings & Paragraph Copy -->
-  <div class="row">
-	  
-	  
-		<div class="span12">
+<!-- Headings & Paragraph Copy -->
+<div class="row">
 
-			<p>
-			There is no binary distribution of the python script. I decided to bundle
-			the whole functionality in one Python script. So just grab the repository and type make install.
-			The lattest version can be downloaded from github via:
-			<p>
+
+	<div class="span12">
+
+	<h3>Installation Instructions</h3>
+
+		<p>
+		There is no binary distribution of the python script. I decided to bundle
+		the whole functionality in one Python script. So just grab the repository and type make install.
+		The lattest version can be downloaded from github via:
+		<p>
 
 <pre>
 git clone git://github.com/hgn/captcp.git
 su -c make install
+# don't forget to 'rehash' if you use zsh
 </pre>
 
-    </div>
-  </div>
+		<p>
+		The project is currently hosted at <a href="http://github.com">github.com</a>. If
+		you wan't to fork or participate on github please see <a
+		href="https://github.com/hgn/captcp">https://github.com/hgn/captcp</a>
+	</p>
+
+	<h3>Bugs or Feature Request</h3>
+
+	<p>
+	Unlikely, but if you trigger a bug, it is best if you send me the PCAP file
+	(or upload somewhere and send the link) including the complete comandline. I
+	should reproduce the error at home then. Make sure you have the newest
+	version installed.
+	</p>
+
+	<p>
+	If you have programmed a module and want to integrate it in the main
+	distribution: no problem. Just sent me the patch and a description of the
+	functionality.
+	</p>
+
+		</div>
+	</div>
 	</section>
 
-<!-- Miscellaneous
-================================================== -->
-<section id="miscellaneous">
-  <div class="page-header">
-    <h1>Miscellaneous</h1>
-  </div>
+	<!-- Miscellaneous
+	================================================== -->
+	<section id="miscellaneous">
+	<div class="page-header">
+		<h1>Miscellaneous</h1>
+	</div>
 
-  <!-- Headings & Paragraph Copy -->
-  <div class="row">
-	  
-	  
+	<!-- Headings & Paragraph Copy -->
+	<div class="row">
+
+
 		<div class="span12">
 
 
-		<h4>Network Emulation</h4>
+			<h4>Network Emulation</h4>
 
-		<p>
-		Some tips if you plan to emulate network characteristics:
-		</p>
+			<p>
+			Some tips if you plan to emulate network characteristics:
+			</p>
 
-		<pre>
+			<pre>
 Disable NIC offloading capabilities
 $ ethtool -K eth5 tso off gso off gro off sg off
 Don’t save metrics (ssthresh, cwnd, …)
@@ -791,21 +1156,21 @@ Causes 1/10th of a percent (i.e 1 out of 1000) packets to be randomly dropped wi
 $ tc qdisc add dev eth5 root netem loss 30% 50%
 		</pre>
 
-		<h4>Trace Files</h4>
+			<h4>Trace Files</h4>
 
-		<p>
-Sample trace files can be downloaded via FTP from Waikato University 
-</p>
+			<p>
+			Sample trace files can be downloaded via FTP from Waikato University 
+			</p>
 
 <pre>
 lftp ftp://wits.cs.waikato.ac.nz waikato/1
 </pre>
 
-<p>
-Libtrace comes with a program (traceconvert) that lets you convert from any
-trace type that libtrace understands, to any trace type libtrace can output.
-Under Debian simple type aptitude install libtrace-tools to install the tool.
-</p>
+			<p>
+			Libtrace comes with a program (traceconvert) that lets you convert from any
+			trace type that libtrace understands, to any trace type libtrace can output.
+			Under Debian simple type aptitude install libtrace-tools to install the tool.
+			</p>
 
 <pre>
 traceconvert legacyatm:auck4--0.gz pcapfile:auck4-0.pcap.gz
@@ -815,45 +1180,44 @@ traceconvert erf:auck8-20031215-.gz pcapfile:auck8-20031215-.pcap.gz
 traceconvert erf:leip1-20021121.gz pcapfile:leip1.pcap.gz
 </pre>
 
-<p>
-To merge trace files:
-</p>
+			<p>
+			To merge trace files:
+			</p>
 
 <pre>
 tracemerge pcapfile:auck-comb.gz legacyatm:auck-0.gz legacyatm:auck-1.gz
 </pre>
 
 
-    </div>
-  </div>
-</section>
+			</div>
+		</div>
+		</section>
 
 
-     <!-- Footer
-      ================================================== -->
-			<footer class="footer">
-			<p class="pull-left">
-			© Copyright Hagen Paul Pfeifer 2010, 2011. All Rights Reserved.
-			</p>
-        <p class="pull-right"><a href="#">Back to top</a></p>
-      </footer>
+		<!-- Footer
+		================================================== -->
+		<footer class="footer">
+		<p class="pull-left">
+		© Copyright Hagen Paul Pfeifer 2012. All Rights Reserved.
+		</p>
+		<p class="pull-right"><a href="#">Back to top</a></p>
+		</footer>
 
-    </div><!-- /container -->
-
-
-
-    <!-- Le javascript
-    ================================================== -->
-		<!-- Placed at the end of the document so the pages load faster -->
-		<script src="./data/jquery.js"></script> 
-    <script src="./data/bootstrap-dropdown.js"></script>
-    <script src="./data/bootstrap-scrollspy.js"></script>
-    <script src="./data/bootstrap-collapse.js"></script>
-	  <script src="./data/bootstrap-tooltip.js"></script>
-    <script src="./data/application.js"></script>
-		<script src="./data/bootswatch.js"></script> 
+	</div><!-- /container -->
 
 
-  
+
+	<!-- Le javascript
+	================================================== -->
+	<!-- Placed at the end of the document so the pages load faster -->
+	<script src="./data/jquery.js"></script> 
+	<script src="./data/bootstrap-dropdown.js"></script>
+	<script src="./data/bootstrap-scrollspy.js"></script>
+	<script src="./data/bootstrap-collapse.js"></script>
+	<script src="./data/bootstrap-tooltip.js"></script>
+	<script src="./data/application.js"></script>
+
+
+
 
 </body><link rel="stylesheet" type="text/css" href="data:text/css,"></html>

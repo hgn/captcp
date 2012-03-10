@@ -67,7 +67,7 @@ a:hover{color:#888888;text-decoration:underline;}
 .container:after{clear:both;}
 .container-fluid{padding-left:20px;padding-right:20px;*zoom:1;}.container-fluid:before,.container-fluid:after{display:table;content:"";}
 .container-fluid:after{clear:both;}
-p{margin:0 0 9px;font-family:'Open Sans',sans-serif;font-size:14px;line-height:18px;}p small{font-size:12px;color:#999999;}
+p{margin:20px 0px 20px 0px;font-family:'Open Sans',sans-serif;font-size:14px;line-height:18px;}p small{font-size:12px;color:#999999;}
 .lead{margin-bottom:18px;font-size:20px;font-weight:200;line-height:27px;font-family: 'Doppio One', sans-serif}
 h1,h2,h3,h4,h5,h6{margin:0;font-weight:bold;color:#333333;text-rendering:optimizelegibility;}h1 small,h2 small,h3 small,h4 small,h5 small,h6 small{font-weight:normal;color:#999999;}
 h1{font-size:30px;line-height:36px;}h1 small{font-size:18px;}
@@ -195,7 +195,7 @@ legend+.control-group{margin-top:18px;-webkit-margin-top-collapse:separate;}
 .form-horizontal .controls{margin-left:160px;}
 .form-horizontal .form-actions{padding-left:160px;}
 table{max-width:100%;border-collapse:collapse;border-spacing:0;}
-.table{width:100%;margin-bottom:18px;}.table th,.table td{padding:8px;line-height:18px;text-align:left;vertical-align:top;border-top:1px solid #ddd;}
+.table{width:100%;margin-bottom:18px;}.table th,.table td{padding:8px;line-height:18px;text-align:left;vertical-align:top;border-top:1px solid #ddd;font-family: Menlo,Monaco, "Courier New", monospace}
 .table th{font-weight:bold;}
 .table thead th{vertical-align:bottom;}
 .table thead:first-child tr th,.table thead:first-child tr td{border-top:0;}
