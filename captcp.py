@@ -2949,7 +2949,13 @@ class ShowMod(Mod):
 
 class SoundMod(Mod):
 
-    FREQUENCY_DATA_START = 400
+    FREQUENCY_DATA_START =  300
+    FREQUENCY_DATA_END   = 1500
+
+    FREQUENCY_ACK_START = 3500
+    FREQUENCY_ACK_START = 5000
+
+    FREQUENCY_STEP = 50
 
     # helper class
     class WaveGenerator:
@@ -2991,6 +2997,7 @@ class SoundMod(Mod):
         self.capture_time_start = None
         self.last_packet_plus_transmission = None
         self.frequency_data = SoundMod.FREQUENCY_DATA_START
+        self.frequency_ack  = SoundMod.FREQUENCY_ACK_START
 
         if not numpy:
             self.logger.error("Python numpy module not installed - but required for sound")
@@ -3058,15 +3065,17 @@ class SoundMod(Mod):
         return duration
 
 
-    def insert_silent_sample(self, time, is_data_flow, packet):
-        pass
-
     def data_frequency(self):
-        self.frequency_data += 50
-        if self.frequency_data > 1000:
+        self.frequency_data += SoundMod.FREQUENCY_STEP
+        if self.frequency_data > SoundMod.FREQUENCY_DATA_END:
             self.frequency_data = SoundMod.FREQUENCY_DATA_START
-
         return self.frequency_data
+
+    def ack_frequency(self):
+        self.frequency_ack += SoundMod.FREQUENCY_STEP
+        if self.frequency_ack > SoundMod.FREQUENCY_ACK_END:
+            self.frequency_ack = SoundMod.FREQUENCY_ACK_START
+        return self.frequency_ack
 
 
     def generate_sound_sample(self, time, is_data_flow, packet):
