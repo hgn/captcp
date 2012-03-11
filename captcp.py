@@ -18,6 +18,7 @@ import datetime
 import subprocess
 import select
 import re
+import wave
 
 # optional packages
 try:
@@ -30,6 +31,11 @@ try:
 except ImportError:
     cairo = None
 
+try:
+    import numpy
+except ImportError:
+    cairo = None
+
 pp = pprint.PrettyPrinter(indent=4)
 
 # required debian packages:
@@ -39,6 +45,7 @@ pp = pprint.PrettyPrinter(indent=4)
 # optional debian packages:
 #   python-geoip
 #   python-cairo
+#   python-numpy
 
 
 __programm__ = "captcp"
@@ -1064,7 +1071,6 @@ class TimeSequenceMod(Mod):
     class Sequence: pass
 
     def pre_initialize(self):
-
         self.logger = logging.getLogger()
 
         self.ids                   = None
@@ -2541,10 +2547,12 @@ class SpacingMod(Mod):
 
     def pre_initialize(self):
         self.logger = logging.getLogger()
+
         self.parse_local_options()
+
         self.packet_sequence = list()
-        self.packet_prev = False
-        self.start_time = False
+        self.packet_prev     = False
+        self.start_time      = False
 
         self.prev_tx_time = False
         self.prev_rx_time = False
@@ -2939,6 +2947,201 @@ class ShowMod(Mod):
         pass
 
 
+class SoundMod(Mod):
+
+    FREQUENCY_DATA_START = 400
+
+    # helper class
+    class WaveGenerator:
+
+        def __init__(self, filename, samplerate=44100):
+            self.filename   = filename
+            self.samplerate = samplerate
+            self.signal     = str()
+            self.duration   = 0.0
+            self.file       = wave.open(filename, 'wb')
+
+
+        def add_sample(self, frequency, duration, volume=1.0):
+            samples = int(float(duration) * self.samplerate)
+
+            period = self.samplerate / float(frequency) # in sample points
+            omega = numpy.pi * 2 / period
+
+            xaxis = numpy.arange(samples, dtype = numpy.float)
+            ydata = 32768 * numpy.sin(xaxis * omega)
+
+            signal = numpy.resize(ydata, (samples,))
+
+            self.signal += ''.join((wave.struct.pack('h', item) for item in signal))
+            self.duration += duration
+
+
+        def close(self):
+            samples = int(float(self.duration) * self.samplerate)
+            self.file.setparams((1, 2, self.samplerate,
+                int(float(self.samplerate) * self.duration), 'NONE', 'noncompressed'))
+            self.file.writeframes(self.signal)
+            self.file.close()
+
+
+    def pre_initialize(self):
+        self.logger = logging.getLogger()
+        self.parse_local_options()
+        self.capture_time_start = None
+        self.last_packet_plus_transmission = None
+        self.frequency_data = SoundMod.FREQUENCY_DATA_START
+
+        if not numpy:
+            self.logger.error("Python numpy module not installed - but required for sound")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+
+    def parse_local_options(self):
+        self.ids = False
+        parser = optparse.OptionParser()
+        parser.usage = "sound [options] <pcapfile>"
+        parser.add_option( "-v", "--verbose", dest="loglevel", default=None,
+                type="string", help="set the loglevel (info, debug, warning, error)")
+        parser.add_option( "-f", "--data-flow", dest="connections", default=None,
+                type="string", help="specify the number of relevant ID's")
+        parser.add_option( "-m", "--mode", dest="mode", default="packets",
+                type="string", help="display packets or bytes in flight (default packets)")
+        parser.add_option( "-o", "--outfile", dest="filename", default="packets.wav",
+                type="string", help="name of the generated wav file (default: packets.wav)")
+        parser.add_option( "-i", "--duration-min", dest="duration_min", default=None,
+                type="float", help="minimum length of sound sample in seconds")
+        parser.add_option( "-a", "--duration-max", dest="duration_max", default=None,
+                type="float", help="maximum length of sound sample in seconds")
+        parser.add_option( "-b", "--bandwidth", dest="link_bandwidth", default=100000000,
+                type="int", help="netto bandwith of channel in byte/s (default 100MB)")
+        parser.add_option( "-c", "--accelerator", dest="accelerator", default=0.0001,
+                type="float", help="accelerator, 0.0001 times faster is default")
+        parser.add_option( "-r", "--cut-silence-periodes", dest="cut_silence_periodes", default=0.5,
+                type="float", help="remove all longer silence periodes, default 0.5")
+
+        self.opts, args = parser.parse_args(sys.argv[0:])
+        self.set_opts_logevel()
+        
+        if len(args) < 3:
+            self.logger.error("no pcap file argument given, exiting")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        self.captcp.print_welcome()
+        self.captcp.pcap_file_path = args[2]
+        self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
+
+        if not self.opts.connections:
+            self.logger.error("No data flow specified! Call \"captcp statistics for valid ID's\"")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        (self.connection_id, self.data_flow_id) = self.opts.connections.split('.')
+        if int(self.data_flow_id) == 1:
+            self.ack_flow_id = 2
+        elif int(self.data_flow_id) == 2:
+            self.ack_flow_id = 1
+        else:
+            raise ArgumentException("sub flow must be 1 or 2")
+
+        sys.stderr.write("# connection: %s (data flow: %s, ACK flow: %s)\n" %
+                (self.connection_id, self.data_flow_id, self.ack_flow_id))
+
+        self.wg = SoundMod.WaveGenerator(self.opts.filename)
+
+
+    def bound(self, duration):
+        if self.opts.duration_min:
+            duration = max(self.opts.duration_min, duration)
+        if self.opts.duration_max:
+            duration = min(self.opts.duration_max, duration)
+
+        return duration
+
+
+    def insert_silent_sample(self, time, is_data_flow, packet):
+        pass
+
+    def data_frequency(self):
+        self.frequency_data += 50
+        if self.frequency_data > 1000:
+            self.frequency_data = SoundMod.FREQUENCY_DATA_START
+
+        return self.frequency_data
+
+
+    def generate_sound_sample(self, time, is_data_flow, packet):
+
+        # 10MB/s
+        packet_len = (len(packet) + StatisticMod.ETHERNET_HEADER_LEN) * 8
+        packet_in_flight_time = 1.0 / (float(self.opts.link_bandwidth) / packet_len)
+        accelerator = 1.0/self.opts.accelerator
+
+        if is_data_flow:
+            frequency = self.data_frequency()
+        else:
+            frequency = 2000
+
+        if self.last_packet_plus_transmission:
+            if self.last_packet_plus_transmission > time:
+                self.logger.error("Seems the bandwith is to small: packet is still in transmission but new packet is put on wire.")
+                self.logger.error("last_packet_plus_transmission: %.5lf  time:  %.5lf" % (self.last_packet_plus_transmission, time))
+                self.logger.error("I ignore this, but the results are not strict realistic.")
+
+            if self.last_packet_plus_transmission < time:
+                # ok, there was a gap, we now insert "nothing in here"
+                silence_time = time - self.last_packet_plus_transmission
+                silence_time = silence_time * accelerator
+                silence_time = self.bound(silence_time)
+                if silence_time > self.opts.cut_silence_periodes:
+                    silence_time = self.opts.cut_silence_periodes
+                sys.stdout.write("SILENCE time: %lf  sound-sample-duration: %.7fs\n" % (time, silence_time))
+
+                self.wg.add_sample(2, silence_time)
+
+
+        # make faster/flower
+        duration = float(packet_in_flight_time) * accelerator
+
+        duration = self.bound(duration)
+
+
+        self.wg.add_sample(frequency, duration)
+
+        sys.stdout.write("PACKET time: %lf  packet-len: %4dbyte  in-flight-time: %.7fs  frequency: %4dHz  sound-sample-duration: %.7fs\n" %
+                (time, int(packet_len/8), packet_in_flight_time, frequency, duration))
+
+        self.last_packet_plus_transmission = time + packet_in_flight_time
+
+
+    def pre_process_packet(self, ts, packet):
+        sub_connection = self.cc.sub_connection_by_packet(packet)
+        if not sub_connection: return
+        if not self.capture_time_start: self.capture_time_start = ts
+        time = Utils.ts_tofloat(ts - self.capture_time_start)
+        is_data_flow = None
+
+
+        if sub_connection.sub_connection_id == int(self.data_flow_id):
+            is_data_flow = True
+        elif sub_connection.sub_connection_id == int(self.ack_flow_id):
+            is_data_flow = False
+        else:
+            raise InternalException
+
+        self.generate_sound_sample(time, is_data_flow, packet)
+
+
+
+    def process_final(self):
+        self.wg.close()
+        sys.stderr.write("# [x,sr] = wavread('%s');\n" % (self.opts.filename))
+        sys.stderr.write("# specgram(x,8192,sr); or\n")
+        sys.stderr.write("# logfsgram(x,8192,sr);\n\n")
+        sys.stderr.write("# wav -> mp3\n")
+        sys.stderr.write("# ffmpeg -i packets.wav -vn -acodec libmp3lame packets.mp3\n")
+        sys.stderr.write("# wav -> Ogg Vorbis\n")
+        sys.stderr.write("# ffmpeg -i packets.wav -f ogg -acodec libvorbis -ab 192k packets.ogg\n")
+
 
 
 class StatisticMod(Mod):
@@ -3282,7 +3485,8 @@ class Captcp:
             "throughput":      "ThroughputMod",
             "inflight":        "InFlightMod",
             "spacing":         "SpacingMod",
-            "stacktrace":      "StackTraceMod"
+            "stacktrace":      "StackTraceMod",
+            "sound":           "SoundMod"
             }
 
     def __init__(self):
