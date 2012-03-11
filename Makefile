@@ -17,6 +17,7 @@ ssh_upload:
 	scp -r index.htm $(SSH_USER)@$(SSH_HOST):$(SSH_TARGET_DIR)
 	scp -r css $(SSH_USER)@$(SSH_HOST):$(SSH_TARGET_DIR)
 	scp -r data $(SSH_USER)@$(SSH_HOST):$(SSH_TARGET_DIR)
+	scp -r data-sound $(SSH_USER)@$(SSH_HOST):$(SSH_TARGET_DIR)
 	scp -r images $(SSH_USER)@$(SSH_HOST):$(SSH_TARGET_DIR)
 
 

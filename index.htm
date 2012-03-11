@@ -66,6 +66,7 @@
 										<li><a href="#statistic"> Statistic Module </a></li>
 										<li><a href="#spacing"> Spacing Module </a> </li>
 										<li><a href="#show"> Show Module </a> </li>
+										<li><a href="#sound"> Sound Module </a> </li>
 									</ul>
 							</li>
               <li class=""> <a href="#installation">Installation</a> </li>
@@ -829,6 +830,8 @@ $ captcp show -m "sackblocks and len(sackblocks) &gt; 0 and sackblocks[0][0] &lt
 </table>
 </p>
 
+
+
 		<!--***** MODULE *************-->
 		<section id="statistic">
 	<h2>Statistic Module</h2>
@@ -892,6 +895,40 @@ $ captcp statistic --format '%(sent-network-layer)d byte transfered' --filter '*
 
 		</section>
 
+
+
+
+
+
+
+		<!--***** MODULE *************-->
+		<section id="sound">
+	<h2>Sound Module</h2>
+
+		<p>
+		Generate audio waveform from PCAP file
+		</p>
+
+		<h3>Options</h3>
+
+
+
+<pre>
+$ captcp.py sound -f 1.1 -r 0.5 -i 0.1 -a 3.0 trace.pcap
+[...]
+</pre>
+
+		<p>
+
+		<audio controls preload="auto" autobuffer> 
+		<source src="data-sound/packet.ogg" />
+		<source src="data-sound/packet.mp3" />
+		</audio>
+
+
+		</p>
+
+		</section>
 
 		<!--***** MODULE *************-->
 		<h2>Highlight Module</h2>
