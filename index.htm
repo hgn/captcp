@@ -925,6 +925,14 @@ $ captcp sound -f 1.1 -r 0.5 -i 0.1 -a 3.0 trace.pcap
 		</audio>
 		</p>
 
+		<p>
+		A little bit faster:
+		</p>
+
+<pre>
+captcp sound -f 1.1 --duration-max 0.05 -c 0.0005 -r 0.2 trace.pcap
+</pre>
+
 <p>
 		<img src="images/spectrum.png" alt="Audio Spectrum" />
 </p>
@@ -1231,7 +1239,6 @@ su -c make install
 
 
 			<h4>Network Emulation</h4>
-
 			<p>
 			Some tips if you plan to emulate network characteristics:
 			</p>
@@ -1241,9 +1248,35 @@ Disable NIC offloading capabilities
 $ ethtool -K eth5 tso off gso off gro off sg off
 Don’t save metrics (ssthresh, cwnd, …)
 $ sysctl -w net.ipv4.tcp_no_metrics_save=1
-Causes 1/10th of a percent (i.e 1 out of 1000) packets to be randomly dropped with a correction of 25%
-$ tc qdisc add dev eth5 root netem loss 30% 50%
+Causes 1th of a percent (i.e 1 out of 100) packets to be randomly dropped with a correction of 25%
+$ tc qdisc add dev eth5 root netem loss 1% 50%
 		</pre>
+
+			<h4>Capture Time and Time Accuracy</h4>
+
+			<p>
+Keeo in mind that the capture time saved in each packet is not 100%
+accurate! For example: take a capture traced at a 1Gigabit/s link:
+</p>
+
+<pre>
+     Packet Capture Time: 8.845649 sec, packet len: 1506 byte
+Next Packet Capture Time: 8.845652 sec
+</pre>
+
+<p>
+		 Thats 0.00299 ms difference. But: on a Gigabit link a 1506 byte packet occupy
+		 the link for at least 0.012048 ms! Is this an indicator that we send faster
+		 then Gigabit? No! It just means that the timer resolution can be to imprecise
+		 or that due to scheduling the packet was faster in the network stack as on the
+		 wire! The network adapter must add a Ethernet preambel and send the packet
+		 with accurate wirespeed. This happened mainly on transmission side. On
+		 reception side the spacing is more relaxed because DSL lines space a packet
+		 and for each packet a interrupt is generated. But this is not true for streams
+		 generated in the local network segment: network adapter try to accumulate
+		 packets also on the receive path. This is called Receive Side Scaling (RSS)
+		 and is supported by all modern Gigabit Network Adaptors.
+			</p>
 
 			<h4>Trace Files</h4>
 
