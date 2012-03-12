@@ -133,31 +133,27 @@
 
 			<h4>Some Words About Packet Analyzes</h4>
 
-			<p>
-			During the years some wisdoms are here collected. You can ignore them,
-			sure, but eventually there are some tricks for you.
-			</p>
-
 			<ul>
-				<li>Don't capture data life - capture the data via tcpdump and analyze the data off-line</li>
+				<li>Don't capture data live - capture the data via Tcpdump and analyze the recorded data off-line</li>
 				<li>If you know what you want to analyze you can adjust tcpdump to capture the required data</li>
-				<li>Make backups of your traces</li>
+				<li>Capture the complete packet (-s 0, snaplen)</li>
+				<li>Make backups of your traces (just for the case you missed something)</li>
 				<li>Don't use one tool, find the most useful tool for your requirements</li>
 				<li>Last but not least: question the results!</li>
 			</ul>
 
 			<p>
-			A last word: captcp is not optimized to analyze huge PCAP files with millions
+			A last word: Captcp is not optimized to analyze huge PCAP files with millions
 			of TCP connections. Captcp is primary designed and optimized to analyze
 			one TCP connection/flow. If you have a really large PCAP file (say 1 GB
-			and larger) you can use tcpslit to seperate TCP connections before. Under
+			and larger) you can use tcpslit to separate TCP connections before. Under
 			normal circumstances this is not required.
 			</p>
 
 			<h4>General Synopsis</h4>
 
 			<p>
-			Captcp synopsis is similar to git or perf: <code>captcp module
+			Captcp syntax is similar to git or perf: <code>captcp module
 			&lt;module-args&gt; pcap-file</code>. To get a overview over all
 			arguments for a given submodule you can call <code>captcp module
 			--help</code>. Another similarity for all modules is the verbose mode:
@@ -167,10 +163,10 @@
 
 			<h4>Connections and Flows</h4>
 			<p>
-			A fundamental concept in Captcp are Connections and Flows. Connections
-			are between two TCP endpoints are bidirectional. A connection consist of
+			A fundamental concept of Captcp are Connections and Flows. Connections
+			are bidirectional between two TCP endpoints. A connection consist of
 			two flows - flows are unidirectional. It can happened that a connection
-			consist of only one flow because the capture duration was to short or
+			consist of only one flow because the recorded duration was to short or
 			packets are missing - but this is an exception. Via <code>captcp
 			statistic &lt;pcapfile&gt;</code> all connections and flows of a PCAP
 			file can be displayed. The numbering (e.g. 1, 2, 3, for a connection and
@@ -186,10 +182,11 @@
 				<div class="alert alert-success">
 					<h4 class="alert-heading">What you see is <span class="label label-success">NOT</span> what you get</h4>
 					<p>
-					Attention: if you capture traffic via PF_PACKET socket nowadays you may not capture real wire data!
-					Current network adapters support offloading capabilities. It is wise
-					to disable all offloading capabilities if you want a realistic
-					behaviour if you trace traffic from the sender machine.
+					Attention: if you capture traffic via PF_PACKET socket nowadays you
+					may not capture real wire data!  Current network adapters support
+					offloading capabilities. It is wise to disable all offloading
+					capabilities if you want a realistic behaviour if you trace traffic
+					from the sender machine.
 
 					You will note these effects if you realize more TCP ACK packets then
 					Data packets or when the data size is larger then the Maximum Segment
@@ -1139,6 +1136,8 @@ su -c make install
 # don't forget to 'rehash' if you use zsh
 </pre>
 
+		<h3>Github</h3>
+
 		<p>
 		The project is currently hosted at <a href="http://github.com">github.com</a>. If
 		you wan't to fork or participate on github please see <a
@@ -1146,14 +1145,6 @@ su -c make install
 	</p>
 
 	<h3>Requirements</h3>
-
-	# required debian packages:
-	#   python-dpkt
-	#   python-pypcap 
-
-	# optional debian packages:
-	#   python-geoip
-	#   python-cairo
 
 		<p>
 		<table class="table table-striped table-bordered">
@@ -1193,6 +1184,12 @@ su -c make install
 					<td>Time Sequence Graph</td>
 					<td>Optional</td>
 					<td>python-cairo (Debian)</td>
+				</tr>
+				<tr>
+					<td>Numpy</td>
+					<td>Sound Module</td>
+					<td>Optional</td>
+					<td>python-numpy (Debian)</td>
 				</tr>
 			</tbody>
 		</table>
