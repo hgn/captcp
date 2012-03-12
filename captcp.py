@@ -2949,13 +2949,19 @@ class ShowMod(Mod):
 
 class SoundMod(Mod):
 
+    PERIOD_DATA    = 1
+    PERIOD_ACK     = 2
+    PERIOD_GAP = 3
+
     FREQUENCY_DATA_START =  300
-    FREQUENCY_DATA_END   = 1500
+    FREQUENCY_DATA_END   = 1000
 
     FREQUENCY_ACK_START = 3500
-    FREQUENCY_ACK_START = 5000
+    FREQUENCY_ACK_END = 5000
 
     FREQUENCY_STEP = 50
+
+    class Sample: pass
 
     # helper class
     class WaveGenerator:
@@ -2998,6 +3004,7 @@ class SoundMod(Mod):
         self.last_packet_plus_transmission = None
         self.frequency_data = SoundMod.FREQUENCY_DATA_START
         self.frequency_ack  = SoundMod.FREQUENCY_ACK_START
+        self.packet_db  = list()
 
         if not numpy:
             self.logger.error("Python numpy module not installed - but required for sound")
@@ -3020,12 +3027,12 @@ class SoundMod(Mod):
                 type="float", help="minimum length of sound sample in seconds")
         parser.add_option( "-a", "--duration-max", dest="duration_max", default=None,
                 type="float", help="maximum length of sound sample in seconds")
-        parser.add_option( "-b", "--bandwidth", dest="link_bandwidth", default=100000000,
-                type="int", help="netto bandwith of channel in byte/s (default 100MB)")
+        parser.add_option( "-b", "--bandwidth", dest="link_bandwidth", default=100000000.0,
+                type="int", help="netto bandwith of channel in bit/s (default 100MB)")
         parser.add_option( "-c", "--accelerator", dest="accelerator", default=0.0001,
                 type="float", help="accelerator, 0.0001 times faster is default")
-        parser.add_option( "-r", "--cut-silence-periodes", dest="cut_silence_periodes", default=0.5,
-                type="float", help="remove all longer silence periodes, default 0.5")
+        parser.add_option( "-r", "--cut-gap-periodes", dest="cut_gap_periodes", default=0.5,
+                type="float", help="crop longer silence periodes to this, default 0.5")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
@@ -3078,48 +3085,43 @@ class SoundMod(Mod):
         return self.frequency_ack
 
 
-    def generate_sound_sample(self, time, is_data_flow, packet):
-
-        # 10MB/s
+    def calc_duration(self, packet):
         packet_len = (len(packet) + StatisticMod.ETHERNET_HEADER_LEN) * 8
-        packet_in_flight_time = 1.0 / (float(self.opts.link_bandwidth) / packet_len)
-        accelerator = 1.0/self.opts.accelerator
-
-        if is_data_flow:
-            frequency = self.data_frequency()
-        else:
-            frequency = 2000
-
-        if self.last_packet_plus_transmission:
-            if self.last_packet_plus_transmission > time:
-                self.logger.error("Seems the bandwith is to small: packet is still in transmission but new packet is put on wire.")
-                self.logger.error("last_packet_plus_transmission: %.5lf  time:  %.5lf" % (self.last_packet_plus_transmission, time))
-                self.logger.error("I ignore this, but the results are not strict realistic.")
-
-            if self.last_packet_plus_transmission < time:
-                # ok, there was a gap, we now insert "nothing in here"
-                silence_time = time - self.last_packet_plus_transmission
-                silence_time = silence_time * accelerator
-                silence_time = self.bound(silence_time)
-                if silence_time > self.opts.cut_silence_periodes:
-                    silence_time = self.opts.cut_silence_periodes
-                sys.stdout.write("SILENCE time: %lf  sound-sample-duration: %.7fs\n" % (time, silence_time))
-
-                self.wg.add_sample(2, silence_time)
+        duration = 1.0 / (float(self.opts.link_bandwidth) / packet_len)
+        return duration
 
 
-        # make faster/flower
-        duration = float(packet_in_flight_time) * accelerator
+    def add_silence(self, time):
+        if not len(self.packet_db): return
 
-        duration = self.bound(duration)
+        last_sample = self.packet_db[-1]
+        assert(last_sample.end != time)
+
+        if last_sample.end > time:
+            self.logger.error(" time anomalie: last_sample: %lf  current time: %lf" %
+                    (last_sample.end, time))
+            return
+
+        sample = SoundMod.Sample()
+        sample.type  = SoundMod.PERIOD_GAP
+        sample.start = last_sample.end
+        sample.end   = time
+        self.packet_db.append(sample)
 
 
-        self.wg.add_sample(frequency, duration)
+    def account_packet(self, time, is_data_flow, packet):
+        # if required (mostly), add silence period
+        self.add_silence(time)
 
-        sys.stdout.write("PACKET time: %lf  packet-len: %4dbyte  in-flight-time: %.7fs  frequency: %4dHz  sound-sample-duration: %.7fs\n" %
-                (time, int(packet_len/8), packet_in_flight_time, frequency, duration))
-
-        self.last_packet_plus_transmission = time + packet_in_flight_time
+        sample = SoundMod.Sample()
+        sample.type = SoundMod.PERIOD_DATA if is_data_flow else SoundMod.PERIOD_ACK
+        # it can happend that the time from the last packet
+        # is larger as time. But we cannot add a real clever solution
+        # to this problem because we don't know the exact time. Something
+        # went wrong and we did not know where it went wrong
+        sample.start = time
+        sample.end   = time + self.calc_duration(packet)
+        self.packet_db.append(sample)
 
 
     def pre_process_packet(self, ts, packet):
@@ -3129,7 +3131,6 @@ class SoundMod(Mod):
         time = Utils.ts_tofloat(ts - self.capture_time_start)
         is_data_flow = None
 
-
         if sub_connection.sub_connection_id == int(self.data_flow_id):
             is_data_flow = True
         elif sub_connection.sub_connection_id == int(self.ack_flow_id):
@@ -3137,11 +3138,58 @@ class SoundMod(Mod):
         else:
             raise InternalException
 
-        self.generate_sound_sample(time, is_data_flow, packet)
+        self.account_packet(time, is_data_flow, packet)
 
+
+    def format_period(self, period):
+        if period == SoundMod.PERIOD_DATA:
+            return "DATA"
+        if period == SoundMod.PERIOD_ACK:
+            return " ACK"
+        if period == SoundMod.PERIOD_GAP:
+            return " GAP"
+
+
+    def finish(self):
+
+        times = dict()
+        times[SoundMod.PERIOD_GAP]  = [0, 0.0]
+        times[SoundMod.PERIOD_DATA] = [0, 0.0]
+        times[SoundMod.PERIOD_ACK]  = [0, 0.0]
+
+        for sample in self.packet_db:
+            assert(sample.end >= sample.start)
+            duration = sample.end - sample.start
+            times[sample.type][0] += 1
+            times[sample.type][1] += duration
+            self.logger.error("%s start: %lfs  end: %lfs  duration: %lfs" %
+                    (self.format_period(sample.type), sample.start, sample.end, duration))
+
+            normalized_duration = duration / self.opts.accelerator
+            self.logger.error("\t\tnormalized duration: %lfs" % (normalized_duration))
+
+            if sample.type == SoundMod.PERIOD_GAP:
+                normalized_duration = min(normalized_duration, self.opts.cut_gap_periodes)
+                frequency = 2
+            if sample.type == SoundMod.PERIOD_DATA:
+                normalized_duration = self.bound(normalized_duration)
+                frequency = self.data_frequency()
+            if sample.type == SoundMod.PERIOD_ACK:
+                normalized_duration = self.bound(normalized_duration)
+                frequency = self.ack_frequency()
+
+            self.logger.error("\t\tbounded duration: %lfs" % (normalized_duration))
+
+            self.wg.add_sample(frequency, normalized_duration)
+
+
+        sys.stderr.write("data time: %lfs, ack time: %lfs, silence time: %lfs\n" %
+                (times[SoundMod.PERIOD_DATA][1], times[SoundMod.PERIOD_ACK][1],
+                    times[SoundMod.PERIOD_GAP][1]))
 
 
     def process_final(self):
+        self.finish()
         self.wg.close()
         sys.stderr.write("# [x,sr] = wavread('%s');\n" % (self.opts.filename))
         sys.stderr.write("# specgram(x,8192,sr); or\n")
