@@ -3205,11 +3205,18 @@ class StatisticMod(Mod):
 
     ETHERNET_HEADER_LEN = 14
 
+    LABEL_DB_INDEX_DESCRIPTION = 0
+    LABEL_DB_INDEX_UNIT        = 1
+    LABEL_DB_INDEX_INIT_VALUE  = 2
+
     LABEL_DB = {
-        "sent-link-layer":        [ "sent link layer",        "bytes"],
-        "sent-network-layer":     [ "sent network layer",     "bytes"],
-        "sent-transport-layer":   [ "sent transport layer",   "bytes"],
-        "sent-application-layer": [ "sent application layer", "bytes"],
+        "sent-link-layer":        [ "sent link layer",        "bytes", 0],
+        "sent-network-layer":     [ "sent network layer",     "bytes", 0],
+        "sent-transport-layer":   [ "sent transport layer",   "bytes", 0],
+        "sent-application-layer": [ "sent application layer", "bytes", 0],
+
+        "rexmt-data-bytes":   [ "retransmissions", "bytes",   0],
+        "rexmt-data-packets": [ "retransmissions", "packets", 0],
     }
 
 
@@ -3245,16 +3252,20 @@ class StatisticMod(Mod):
 
 
     def check_new_subconnection(self, sc):
-        if len(sc.user_data): return 
+        if len(sc.user_data): return
 
-        sc.user_data["sent-link-layer"] = 0
-        sc.user_data["sent-network-layer"] = 0
-        sc.user_data["sent-transport-layer"] = 0
-        sc.user_data["sent-application-layer"] = 0
+        # initialize the data values in a loop, e.g
+        #   sc.user_data["sent-link-layer"] = 0
+        #   [...]
+        index = StatisticMod.LABEL_DB_INDEX_INIT_VALUE
+        for key in self.LABEL_DB:
+            sc.user_data[key] = self.LABEL_DB[key][index]
+
+        # helper variables comes here
 
 
     def type_to_label(self, label):
-        return self.LABEL_DB[label][0]
+        return self.LABEL_DB[label][StatisticMod.LABEL_DB_INDEX_DESCRIPTION]
 
 
     def right(self, text, width):
@@ -3271,17 +3282,19 @@ class StatisticMod(Mod):
 
     def calc_max_label_length(self):
         max_label_length = 0
+        index = StatisticMod.LABEL_DB_INDEX_DESCRIPTION
         for i in self.LABEL_DB:
-            max_label_length = max(max_label_length, len(str(self.LABEL_DB[i][0])))
+            max_label_length = max(max_label_length, len(str(self.LABEL_DB[i][index])))
 
         return max_label_length + 3
 
 
     def calc_max_data_length(self, statistic):
         max_data_length = 0
+        index = StatisticMod.LABEL_DB_INDEX_UNIT
         for i in self.LABEL_DB:
             max_data_length = max(max_data_length,
-                    len(str(statistic.user_data[i])) + len(self.LABEL_DB[i][1]))
+                    len(str(statistic.user_data[i])) + len(self.LABEL_DB[i][index]))
 
         return max_data_length + 1
 
@@ -3320,9 +3333,12 @@ class StatisticMod(Mod):
             self.cc.statistic.packets_tl_unknown += 1
             raise PacketNotSupportedException()
 
+    def account_rexmt(self, sc, packet):
+        pass
+
 
     def account_tcp_data(self, sc, packet):
-        pass
+        self.account_rexmt(sc, packet)
 
 
     def pre_process_packet(self, ts, packet):
@@ -3382,6 +3398,7 @@ class StatisticMod(Mod):
                 "sent-network-layer",
                 "sent-transport-layer",
                 "sent-application-layer",
+                "rexmt-data-bytes",
         ]
 
         for i in ordere_list:
