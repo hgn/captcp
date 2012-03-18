@@ -205,7 +205,10 @@ class SequenceContainer:
                 break
 
 
-class UtilMod:
+class U:
+    """ Utility module, to collect usefull functionality
+    needed by several other classes. We name it U to make it short
+    and non bloated"""
     
     @staticmethod
     def byte_to_unit(byte, unit):
@@ -255,13 +258,13 @@ class UtilMod:
         last_val  = float(byte) * 8
         units = ("kbit", "Mbit", "Gbit")
         for unit in units:
-            val = UtilMod.byte_to_unit(byte, unit)
+            val = U.byte_to_unit(byte, unit)
             if val < 1.0:
                 return "%.2f %s" % (last_val, last_unit)
             last_unit = unit
             last_val  = val
 
-        return "%.2f %s" % (UtilMod.byte_to_unit(byte, "Gbit"), "Gbit")
+        return "%.2f %s" % (U.byte_to_unit(byte, "Gbit"), "Gbit")
 
     @staticmethod
     def percent(a, b):
@@ -2369,7 +2372,7 @@ class ThroughputMod(Mod):
         timediff = Utils.ts_tofloat(ts - self.start_time)
 
         if timediff > self.last_sample + self.opts.samplelength:
-            amount = UtilMod.byte_to_unit(self.data, self.opts.unit)
+            amount = U.byte_to_unit(self.data, self.opts.unit)
             self.output_data(self.last_sample + self.opts.samplelength, amount)
             self.data  = 0
             self.last_sample += self.opts.samplelength
@@ -2382,10 +2385,10 @@ class ThroughputMod(Mod):
             timediff =  Utils.ts_tofloat(self.end_time - self.start_time)
             sys.stdout.write("# total data (%s): %d %s (%s)\n" %
                     (self.opts.mode, self.total_data_len, self.opts.unit,
-                    UtilMod.best_match(self.total_data_len)))
+                    U.best_match(self.total_data_len)))
             sys.stdout.write("# throughput (%s): %.2f %s/s (%s/s)\n" %
                     (self.opts.mode, float(self.total_data_len)/timediff, self.opts.unit,
-                    UtilMod.best_match(float(self.total_data_len)/timediff)))
+                    U.best_match(float(self.total_data_len)/timediff)))
             return
 
         self.close_data_files()
@@ -3221,8 +3224,8 @@ class StatisticMod(Mod):
         "sent-transport-layer":   [ "Data transport layer",   "bytes  ", 0],
         "sent-application-layer": [ "Data application layer", "bytes  ", 0],
 
-        "rexmt-data-bytes":   [ "Retransmissions", "bytes  ",   0],
-        "rexmt-data-packets": [ "Retransmissions", "packets", 0],
+        "rexmt-data-bytes":   [ "Retransmissions",          "bytes  ",   0],
+        "rexmt-data-packets": [ "Retransmissions",          "packets", 0],
         "rexmt-data-percent": [ "Retransmissions per byte", "percent", 0.0],
     }
 
@@ -3348,7 +3351,7 @@ class StatisticMod(Mod):
         # called at the end of traxing to check values
         # or do some final calculations, based on intermediate
         # values
-        res = UtilMod.percent(sc.user_data["rexmt-data-bytes"], sc.user_data["sent-application-layer"])
+        res = U.percent(sc.user_data["rexmt-data-bytes"], sc.user_data["sent-application-layer"])
         sc.user_data["rexmt-data-percent"] = "%.2f" % (res)
 
 
