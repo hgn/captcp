@@ -3403,32 +3403,6 @@ class StatisticMod(Mod):
         self.account_tcp_data(sc, ts, packet, pi)
 
 
-
-    def print_two_column_sc_statistic(self, cid, sc1, sc2):
-
-        all_packets = sc1.statistic.packets_processed + sc2.statistic.packets_processed
-        sc1percent = float(sc1.statistic.packets_processed) / all_packets * 100
-        sc2percent = float(sc2.statistic.packets_processed) / all_packets * 100
-
-        sys.stdout.write("\n\t%sFlow %s.1\t\t\t\t%sFlow %s.2\n" %
-                (self.color["yellow"], cid, self.color["green"], cid))
-        sys.stdout.write("%s" % (self.color["end"]))
-        sys.stdout.write("\tPackets: %-7d (%.2f%%)     Packets: %d (%.2f%%)\n" %
-                (sc1.statistic.packets_processed, sc1percent, sc2.statistic.packets_processed, sc2percent))
-
-        sys.stdout.write("\tByte (link layer):        %-10d\tByte (link layer): %d\n" %
-                (sc1.statistic.bytes_sent_link_layer, sc2.statistic.sent-link-layer))
-
-        sys.stdout.write("\tByte (network layer):     %-10d\tByte (network layer): %d\n" %
-                (sc1.statistic.bytes_sent_network_layer, sc2.statistic.bytes_sent_network_layer))
-
-        sys.stdout.write("\tByte (tranport layer):    %-10d\tByte (transport layer): %d\n" %
-                (sc1.statistic.bytes_sent_transport_layer, sc2.statistic.bytes_sent_transport_layer))
-
-        sys.stdout.write("\tByte (application layer): %-10d\tByte (application layer): %d\n"  %
-                (sc1.statistic.bytes_sent_application_layer, sc2.statistic.bytes_sent_application_layer))
-
-
     def print_one_column_sc_statistic(self, cid, sc):
         raise NotImplementedException("one flow connection not supported yet")
 
