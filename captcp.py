@@ -50,7 +50,7 @@ pp = pprint.PrettyPrinter(indent=4)
 
 __programm__ = "captcp"
 __author__   = "Hagen Paul Pfeifer"
-__version__  = "0.5"
+__version__  = "0.6"
 __license__  = "GPLv3"
 
 # custom exceptions
@@ -262,6 +262,12 @@ class UtilMod:
             last_val  = val
 
         return "%.2f %s" % (UtilMod.byte_to_unit(byte, "Gbit"), "Gbit")
+
+    @staticmethod
+    def percent(a, b):
+        if b == 0: return 0.0
+        return float(a) / b * 100
+
 
 
 class RainbowColor:
@@ -3210,13 +3216,14 @@ class StatisticMod(Mod):
     LABEL_DB_INDEX_INIT_VALUE  = 2
 
     LABEL_DB = {
-        "sent-link-layer":        [ "sent link layer",        "bytes", 0],
-        "sent-network-layer":     [ "sent network layer",     "bytes", 0],
-        "sent-transport-layer":   [ "sent transport layer",   "bytes", 0],
-        "sent-application-layer": [ "sent application layer", "bytes", 0],
+        "sent-link-layer":        [ "Data link layer",        "bytes  ", 0],
+        "sent-network-layer":     [ "Data network layer",     "bytes  ", 0],
+        "sent-transport-layer":   [ "Data transport layer",   "bytes  ", 0],
+        "sent-application-layer": [ "Data application layer", "bytes  ", 0],
 
-        "rexmt-data-bytes":   [ "retransmissions", "bytes",   0],
-        "rexmt-data-packets": [ "retransmissions", "packets", 0],
+        "rexmt-data-bytes":   [ "Retransmissions", "bytes  ",   0],
+        "rexmt-data-packets": [ "Retransmissions", "packets", 0],
+        "rexmt-data-percent": [ "Retransmissions per byte", "percent", 0.0],
     }
 
 
@@ -3261,7 +3268,10 @@ class StatisticMod(Mod):
         for key in self.LABEL_DB:
             sc.user_data[key] = self.LABEL_DB[key][index]
 
-        # helper variables comes here
+        # helper variables comes here, helper
+        # variables are marked with a leading
+        # underscore.
+        sc.user_data["_highest_data_seen"] = None
 
 
     def type_to_label(self, label):
@@ -3333,27 +3343,61 @@ class StatisticMod(Mod):
             self.cc.statistic.packets_tl_unknown += 1
             raise PacketNotSupportedException()
 
-    def account_rexmt(self, sc, packet):
-        pass
+
+    def rexmt_final(self, sc):
+        # called at the end of traxing to check values
+        # or do some final calculations, based on intermediate
+        # values
+        res = UtilMod.percent(sc.user_data["rexmt-data-bytes"], sc.user_data["sent-application-layer"])
+        sc.user_data["rexmt-data-percent"] = "%.2f" % (res)
 
 
-    def account_tcp_data(self, sc, packet):
-        self.account_rexmt(sc, packet)
+    def rexmt_account(self, sc, packet, pi):
+        data_len = int(len(packet.data.data))
+
+        actual_data = pi.seq + data_len
+
+        if not sc.user_data["_highest_data_seen"]:
+            # no rexmt possible, skip rexmt processing
+            sc.user_data["_highest_data_seen"] = actual_data
+            return
+
+        if actual_data > sc.user_data["_highest_data_seen"]:
+            # packet sequence number is highest sequence
+            # number seen so far, no rexmt therefore
+            sc.user_data["_highest_data_seen"] = actual_data
+            return
+
+        if data_len == 0:
+            # no data packet, cannot be a retransmission
+            return
+
+        # ok, rexmt happened
+        sc.user_data["rexmt-data-packets"] += 1
+        
+        # now account rexmt bytes, we add one to take care
+        sc.user_data["rexmt-data-bytes"] += data_len
+
+
+    def account_tcp_data(self, sc, ts, packet, pi):
+        self.rexmt_account(sc, packet, pi)
 
 
     def pre_process_packet(self, ts, packet):
-        sub_connection = self.cc.sub_connection_by_packet(packet)
-        if not sub_connection: return InternalException()
+        sc = self.cc.sub_connection_by_packet(packet)
+        if not sc: return InternalException()
 
         # make sure the data structure is initialized
-        self.check_new_subconnection(sub_connection)
+        self.check_new_subconnection(sc)
 
         try:
-            self.account_general_data(sub_connection, packet)
+            self.account_general_data(sc, packet)
         except PacketNotSupportedException:
             return
 
         # .oO guaranteed TCP packet now
+        pi = PacketInfo(packet)
+        self.account_tcp_data(sc, ts, packet, pi)
 
 
 
@@ -3399,6 +3443,8 @@ class StatisticMod(Mod):
                 "sent-transport-layer",
                 "sent-application-layer",
                 "rexmt-data-bytes",
+                "rexmt-data-packets",
+                "rexmt-data-percent",
         ]
 
         for i in ordere_list:
@@ -3473,7 +3519,8 @@ class StatisticMod(Mod):
             # statistic
             sys.stdout.write("\tPackets processed: %d (%.1f%%)\n" %
                     (connection.statistic.packets_processed,
-                        float(self.cc.statistic.packets_processed) / connection.statistic.packets_processed * 100.0))
+                        float(self.cc.statistic.packets_processed) /
+                        connection.statistic.packets_processed * 100.0))
 
             sys.stdout.write("\n")
 
@@ -3541,7 +3588,23 @@ class StatisticMod(Mod):
 
 
 
+    def process_final_data(self):
+        # first we sort in an separate dict
+        d = dict()
+        for key in self.cc.container.keys():
+            connection = self.cc.container[key]
+            d[connection.connection_id] = connection
+
+        for key in sorted(d.keys()):
+            connection = d[key]
+            if connection.sc1:
+                self.rexmt_final(connection.sc1)
+            if connection.sc2:
+                self.rexmt_final(connection.sc2)
+
+
     def process_final(self):
+        self.process_final_data()
         self.format_machine() if self.opts.format else self.format_human()
 
 
