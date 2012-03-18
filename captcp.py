@@ -3219,10 +3219,10 @@ class StatisticMod(Mod):
     LABEL_DB_INDEX_INIT_VALUE  = 2
 
     LABEL_DB = {
-        "sent-link-layer":        [ "Data link layer",        "bytes  ", 0],
-        "sent-network-layer":     [ "Data network layer",     "bytes  ", 0],
-        "sent-transport-layer":   [ "Data transport layer",   "bytes  ", 0],
-        "sent-application-layer": [ "Data application layer", "bytes  ", 0],
+        "link-layer-byte":        [ "Data link layer",        "bytes  ", 0],
+        "network-layer-byte":     [ "Data network layer",     "bytes  ", 0],
+        "transport-layer-byte":   [ "Data transport layer",   "bytes  ", 0],
+        "application-layer-byte": [ "Data application layer", "bytes  ", 0],
 
         "rexmt-data-bytes":   [ "Retransmissions",          "bytes  ",   0],
         "rexmt-data-packets": [ "Retransmissions",          "packets", 0],
@@ -3265,7 +3265,7 @@ class StatisticMod(Mod):
         if len(sc.user_data): return
 
         # initialize the data values in a loop, e.g
-        #   sc.user_data["sent-link-layer"] = 0
+        #   sc.user_data["link-layer-byte"] = 0
         #   [...]
         index = StatisticMod.LABEL_DB_INDEX_INIT_VALUE
         for key in self.LABEL_DB:
@@ -3313,10 +3313,10 @@ class StatisticMod(Mod):
 
 
     def account_general_data(self, sc, packet):
-        sc.user_data["sent-link-layer"]        += len(packet) + StatisticMod.ETHERNET_HEADER_LEN
-        sc.user_data["sent-network-layer"]     += int(len(packet))
-        sc.user_data["sent-transport-layer"]   += int(len(packet.data))
-        sc.user_data["sent-application-layer"] += int(len(packet.data.data))
+        sc.user_data["link-layer-byte"]        += len(packet) + StatisticMod.ETHERNET_HEADER_LEN
+        sc.user_data["network-layer-byte"]     += int(len(packet))
+        sc.user_data["transport-layer-byte"]   += int(len(packet.data))
+        sc.user_data["application-layer-byte"] += int(len(packet.data.data))
 
         self.cc.statistic.packets_processed += 1
 
@@ -3351,7 +3351,7 @@ class StatisticMod(Mod):
         # called at the end of traxing to check values
         # or do some final calculations, based on intermediate
         # values
-        res = U.percent(sc.user_data["rexmt-data-bytes"], sc.user_data["sent-application-layer"])
+        res = U.percent(sc.user_data["rexmt-data-bytes"], sc.user_data["application-layer-byte"])
         sc.user_data["rexmt-data-percent"] = "%.2f" % (res)
 
 
@@ -3441,10 +3441,10 @@ class StatisticMod(Mod):
         right_width = max(self.calc_max_data_length(sc1), self.calc_max_data_length(sc2))
 
         ordere_list = [
-                "sent-link-layer",
-                "sent-network-layer",
-                "sent-transport-layer",
-                "sent-application-layer",
+                "link-layer-byte",
+                "network-layer-byte",
+                "transport-layer-byte",
+                "application-layer-byte",
                 "rexmt-data-bytes",
                 "rexmt-data-packets",
                 "rexmt-data-percent",
