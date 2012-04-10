@@ -3219,6 +3219,8 @@ class StatisticMod(Mod):
     LABEL_DB_INDEX_INIT_VALUE  = 2
 
     LABEL_DB = {
+        "packets-packets":        [ "Packets",        "packets", 0],
+
         "link-layer-byte":        [ "Data link layer",        "bytes  ", 0],
         "network-layer-byte":     [ "Data network layer",     "bytes  ", 0],
         "transport-layer-byte":   [ "Data transport layer",   "bytes  ", 0],
@@ -3315,6 +3317,8 @@ class StatisticMod(Mod):
 
 
     def account_general_data(self, sc, packet):
+        sc.user_data["packets-packets"] += 1
+
         sc.user_data["link-layer-byte"]        += len(packet) + StatisticMod.ETHERNET_HEADER_LEN
         sc.user_data["network-layer-byte"]     += int(len(packet))
         sc.user_data["transport-layer-byte"]   += int(len(packet.data))
@@ -3422,7 +3426,15 @@ class StatisticMod(Mod):
         left_width  = self.calc_max_label_length()
         right_width = max(self.calc_max_data_length(sc1), self.calc_max_data_length(sc2))
 
+        # flow specific header per column
+        # l1 = self.left("%d.1" % (cid), left_width)
+        # r1 = self.right("%d.2" % (cid), right_width)
+        # line_length = left_width + right_width + 1
+        # sys.stdout.write("\t%s   %s\n" % (self.left("%s" % (l1), line_length), self.left("%s" % (r1), line_length)))
+
         ordere_list = [
+                "packets-packets",
+
                 "link-layer-byte",
                 "network-layer-byte",
                 "transport-layer-byte",
@@ -3514,10 +3526,13 @@ class StatisticMod(Mod):
 
             if connection.sc1 and connection.sc2:
                 sys.stdout.write("%s" % (self.color["yellow"]))
-                sys.stdout.write("\tFlow %s.1:  %s\n" % (connection.connection_id, connection.sc1))
+                sys.stdout.write("\tFlow %s.1:  %s" % (connection.connection_id, connection.sc1))
+                sys.stdout.write("%s\n" % (self.color["end"]))
+
                 sys.stdout.write("%s" % (self.color["green"]))
-                sys.stdout.write("\tFlow %s.2:  %s\n" % (connection.connection_id, connection.sc2))
-                sys.stdout.write("%s" % (self.color["end"]))
+                sys.stdout.write("\tFlow %s.2:  %s" % (connection.connection_id, connection.sc2))
+                sys.stdout.write("%s\n" % (self.color["end"]))
+
                 self.print_format_two_column(connection.connection_id, [connection.sc1, connection.sc2])
             elif connection.sc1:
                 sys.stdout.write("\tFlow %s.1:  %s\n" % (connection.connection_id, connection.sc1))
