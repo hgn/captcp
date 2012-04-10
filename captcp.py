@@ -3357,7 +3357,7 @@ class StatisticMod(Mod):
         sc.user_data["rexmt-data-percent"] = "%.2f" % (res)
 
 
-    def rexmt_account(self, sc, packet, pi):
+    def account_rexmt(self, sc, packet, pi):
         data_len = int(len(packet.data.data))
 
         actual_data = pi.seq + data_len
@@ -3384,14 +3384,14 @@ class StatisticMod(Mod):
         sc.user_data["rexmt-data-bytes"] += data_len
 
 
-    def pure_ack_account(self, sc, packet, pi):
+    def account_pure_ack(self, sc, packet, pi):
         if pi.is_ack_flag() and int(len(packet.data.data)) == 0:
             sc.user_data["pure-ack-packets"] += 1
 
 
     def account_tcp_data(self, sc, ts, packet, pi):
-        self.rexmt_account(sc, packet, pi)
-        self.pure_ack_account(sc, packet, pi)
+        self.account_rexmt(sc, packet, pi)
+        self.account_pure_ack(sc, packet, pi)
 
 
     def pre_process_packet(self, ts, packet):
