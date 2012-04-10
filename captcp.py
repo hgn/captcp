@@ -3225,8 +3225,10 @@ class StatisticMod(Mod):
         "application-layer-byte": [ "Data application layer", "bytes  ", 0],
 
         "rexmt-data-bytes":   [ "Retransmissions",          "bytes  ",   0],
-        "rexmt-data-packets": [ "Retransmissions",          "packets", 0],
+        "rexmt-data-packets": [ "Retransmissions",          "packets",   0],
         "rexmt-data-percent": [ "Retransmissions per byte", "percent", 0.0],
+
+        "pure-ack-packets": [ "ACK flag set but no payload", "packets", 0],
     }
 
 
@@ -3382,8 +3384,14 @@ class StatisticMod(Mod):
         sc.user_data["rexmt-data-bytes"] += data_len
 
 
+    def pure_ack_account(self, sc, packet, pi):
+        if pi.is_ack_flag() and int(len(packet.data.data)) == 0:
+            sc.user_data["pure-ack-packets"] += 1
+
+
     def account_tcp_data(self, sc, ts, packet, pi):
         self.rexmt_account(sc, packet, pi)
+        self.pure_ack_account(sc, packet, pi)
 
 
     def pre_process_packet(self, ts, packet):
@@ -3422,6 +3430,8 @@ class StatisticMod(Mod):
                 "rexmt-data-bytes",
                 "rexmt-data-packets",
                 "rexmt-data-percent",
+
+                "pure-ack-packets",
         ]
 
         for i in ordere_list:
