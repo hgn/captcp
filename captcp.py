@@ -3226,9 +3226,10 @@ class StatisticMod(Mod):
         "transport-layer-byte":   [ "Data transport layer",   "bytes  ", 0],
         "application-layer-byte": [ "Data application layer", "bytes  ", 0],
 
-        "rexmt-data-bytes":   [ "Retransmissions",          "bytes  ",   0],
-        "rexmt-data-packets": [ "Retransmissions",          "packets",   0],
-        "rexmt-data-percent": [ "Retransmissions per byte", "percent", 0.0],
+        "rexmt-data-bytes":      [ "Retransmissions",            "bytes  ",   0],
+        "rexmt-data-packets":    [ "Retransmissions",            "packets",   0],
+        "rexmt-bytes-percent":   [ "Retransmissions per byte",   "percent", 0.0],
+        "rexmt-packets-percent": [ "Retransmissions per packet", "percent", 0.0],
 
         "pure-ack-packets": [ "ACK flag set but no payload", "packets", 0],
     }
@@ -3316,16 +3317,7 @@ class StatisticMod(Mod):
         return max_data_length + 1
 
 
-    def account_general_data(self, sc, packet):
-        sc.user_data["packets-packets"] += 1
-
-        sc.user_data["link-layer-byte"]        += len(packet) + StatisticMod.ETHERNET_HEADER_LEN
-        sc.user_data["network-layer-byte"]     += int(len(packet))
-        sc.user_data["transport-layer-byte"]   += int(len(packet.data))
-        sc.user_data["application-layer-byte"] += int(len(packet.data.data))
-
-        self.cc.statistic.packets_processed += 1
-
+    def account_general_data(self, packet):
         if type(packet) == dpkt.ip.IP:
             self.cc.statistic.packets_nl_ipv4 += 1
         elif type(packet) == dpkt.ip6.IP6:
@@ -3353,12 +3345,26 @@ class StatisticMod(Mod):
             raise PacketNotSupportedException()
 
 
+    def account_general_tcp_data(self, sc, packet):
+        sc.user_data["packets-packets"] += 1
+
+        sc.user_data["link-layer-byte"]        += len(packet) + StatisticMod.ETHERNET_HEADER_LEN
+        sc.user_data["network-layer-byte"]     += int(len(packet))
+        sc.user_data["transport-layer-byte"]   += int(len(packet.data))
+        sc.user_data["application-layer-byte"] += int(len(packet.data.data))
+
+        self.cc.statistic.packets_processed += 1
+
+
     def rexmt_final(self, sc):
         # called at the end of traxing to check values
         # or do some final calculations, based on intermediate
         # values
         res = U.percent(sc.user_data["rexmt-data-bytes"], sc.user_data["application-layer-byte"])
-        sc.user_data["rexmt-data-percent"] = "%.2f" % (res)
+        sc.user_data["rexmt-bytes-percent"] = "%.2f" % (res)
+
+        res = U.percent(sc.user_data["rexmt-data-packets"], sc.user_data["packets-packets"])
+        sc.user_data["rexmt-packets-percent"] = "%.2f" % (res)
 
 
     def account_rexmt(self, sc, packet, pi):
@@ -3399,16 +3405,18 @@ class StatisticMod(Mod):
 
 
     def pre_process_packet(self, ts, packet):
+        try:
+            self.account_general_data(packet)
+        except PacketNotSupportedException:
+            return
+
         sc = self.cc.sub_connection_by_packet(packet)
         if not sc: return InternalException()
 
         # make sure the data structure is initialized
         self.check_new_subconnection(sc)
 
-        try:
-            self.account_general_data(sc, packet)
-        except PacketNotSupportedException:
-            return
+        self.account_general_tcp_data(sc, packet)
 
         # .oO guaranteed TCP packet now
         pi = PacketInfo(packet)
@@ -3442,7 +3450,8 @@ class StatisticMod(Mod):
 
                 "rexmt-data-bytes",
                 "rexmt-data-packets",
-                "rexmt-data-percent",
+                "rexmt-bytes-percent",
+                "rexmt-packets-percent",
 
                 "pure-ack-packets",
         ]
