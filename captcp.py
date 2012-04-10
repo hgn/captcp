@@ -3528,8 +3528,8 @@ class StatisticMod(Mod):
             # statistic
             sys.stdout.write("\tPackets processed: %d (%.1f%%)\n" %
                     (connection.statistic.packets_processed,
-                        float(self.cc.statistic.packets_processed) /
-                        connection.statistic.packets_processed * 100.0))
+                        float(connection.statistic.packets_processed) /
+                        float(self.cc.statistic.packets_processed) * 100.0))
 
             sys.stdout.write("\n")
 
