@@ -3427,6 +3427,7 @@ class StatisticMod(Mod):
                 "network-layer-byte",
                 "transport-layer-byte",
                 "application-layer-byte",
+
                 "rexmt-data-bytes",
                 "rexmt-data-packets",
                 "rexmt-data-percent",
