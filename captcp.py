@@ -614,6 +614,7 @@ class Geoip:
                 action="store_true", help="show verbose")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
+        self.set_opts_logevel()
         
         if len(args) < 3:
             sys.stderr.write("no IP address argument given, exiting\n")
@@ -741,6 +742,7 @@ class PayloadTimePortMod(Mod):
                 type="string", help="name of the output file (default: payload-time-port.data)")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
+        self.set_opts_logevel()
         
         if len(args) < 3:
             sys.stderr.write("no pcap file argument given, exiting\n")
@@ -2185,6 +2187,7 @@ class ConnectionAnalyzeMod(Mod):
                 default=False, action="store_true", help="show verbose")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
+        self.set_opts_logevel()
         
         if len(args) < 3:
             self.logger.error("no pcap file argument given, exiting")
@@ -3250,6 +3253,7 @@ class StatisticMod(Mod):
                 type="string", help="limit number of displayed connections \"sip:sport-dip:dport\", default \"*:*-*:*\"")
         parser.add_option( "-m", "--format", dest="format", default=None,
                 type="string", help="skip summary and display only selected values")
+
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
 
