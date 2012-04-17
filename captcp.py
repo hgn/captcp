@@ -3251,6 +3251,7 @@ class StatisticMod(Mod):
         parser.add_option( "-m", "--format", dest="format", default=None,
                 type="string", help="skip summary and display only selected values")
         self.opts, args = parser.parse_args(sys.argv[0:])
+        self.set_opts_logevel()
 
         if self.opts.filter:
             self.opts.filter = self.opts.filter.split(",")
