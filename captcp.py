@@ -877,6 +877,10 @@ class TemplateMod(Mod):
             elif m.group(2) == "make":
                 tc.type = TemplateMod.TYPE_MAKEFILE
                 tc.name = m.group(1)
+            else:
+                # catch unknown file formats (e.g. *.m - matlab files)
+                tc.type = str()
+                tc.name = str()
 
             self.db.append(tc)
 
