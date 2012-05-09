@@ -1768,11 +1768,7 @@ class SequenceGraphMod(Mod):
             self.cr.fill()
 
             
-
-
-
     def is_drawable_packet(self, ts, packet):
-
         if type(packet) != dpkt.ip.IP and type(packet) != dpkt.ip6.IP6:
             return False
 
@@ -1794,8 +1790,8 @@ class SequenceGraphMod(Mod):
 
         return False
 
-    def pre_process_packet(self, ts, packet):
 
+    def pre_process_packet(self, ts, packet):
         if not self.reference_time:
             # time time where the first packet is
             # captured
@@ -1808,7 +1804,6 @@ class SequenceGraphMod(Mod):
 
 
     def process_packet(self, ts, packet):
-
         if not self.is_drawable_packet(ts, packet):
             return
 
@@ -1845,6 +1840,7 @@ class SequenceGraphMod(Mod):
 
 
     def process_final(self):
+        self.logger.debug("generate PDF file \"%s\"" % (self.opts.filename))
         self.cr.show_page()
 
 
