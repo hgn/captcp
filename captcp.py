@@ -1844,6 +1844,7 @@ class SequenceGraphMod(Mod):
         self.cr.show_page()
 
 
+
 class TcpConn:
 
     def __init__(self, packet):
@@ -1858,7 +1859,6 @@ class TcpConn:
 
         self.sipnum = ip.src
         self.dipnum = ip.dst
-
 
         l = [ord(a) ^ ord(b) for a,b in zip(self.sipnum, self.dipnum)]
 
@@ -1925,11 +1925,12 @@ class SubConnection(TcpConn):
     def update(self, ts, packet):
         self.statistic.packets_processed += 1
 
+
     def set_subconnection_id(self, sub_connection_id):
         self.sub_connection_id = sub_connection_id
 
-    def is_in(self, ids):
 
+    def is_in(self, ids):
         for i in ids:
             if i.find('.') != -1:
                 assert(i.count('.') == 1)
@@ -1944,6 +1945,7 @@ class SubConnection(TcpConn):
         return False
 
 
+
 class ConnectionStatistic:
 
     def __init__(self):
@@ -1952,6 +1954,7 @@ class ConnectionStatistic:
         self.bytes_sent_network_layer   = 0
         self.bytes_sent_transport_layer = 0
         self.bytes_sent_application_layer = 0
+
 
 
 class Connection(TcpConn):
@@ -1976,8 +1979,8 @@ class Connection(TcpConn):
     def __del__(self):
         Connection.static_connection_id -= 1
 
-    def __cmp__(self, other):
 
+    def __cmp__(self, other):
         if self.ipversion != other.ipversion:
             return False
         if (self.dipnum == other.dipnum and
@@ -1998,12 +2001,10 @@ class Connection(TcpConn):
 
 
     def update_statistic(self, packet):
-
         self.statistic.packets_processed  += 1
 
 
     def update(self, ts, packet):
-
         self.update_statistic(packet)
 
         sc = SubConnection(self, packet)
@@ -2033,9 +2034,7 @@ class Connection(TcpConn):
 
 
     def get_subconnection(self, packet):
-
         # we know that packet is a TCP packet
-
         if self.sc1 == None:
             raise InternalException("a connection without a subconnection?!")
 
@@ -2094,7 +2093,6 @@ class ConnectionContainer:
 
 
     def tcp_check(self, packet):
-
         if type(packet) != dpkt.ip.IP and type(packet) != dpkt.ip6.IP6:
             return False
 
@@ -2105,7 +2103,6 @@ class ConnectionContainer:
 
 
     def sub_connection_by_packet(self, packet):
-
         if not self.tcp_check(packet):
             return None
 
@@ -2121,7 +2118,6 @@ class ConnectionContainer:
 
 
     def connection_by_packet(self, packet):
-
         if not self.tcp_check(packet):
             return None
 
@@ -2133,9 +2129,7 @@ class ConnectionContainer:
             return self.container[c.uid]
 
 
-
     def is_packet_connection(self, packet, uid):
-
         if not self.tcp_check(packet):
             return None
 
@@ -2153,7 +2147,6 @@ class ConnectionContainer:
 
 
     def update(self, ts, packet):
-
         if type(packet) != dpkt.ip.IP and type(packet) != dpkt.ip6.IP6:
             return
 
