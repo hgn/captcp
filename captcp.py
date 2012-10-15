@@ -2341,12 +2341,14 @@ class ThroughputMod(Mod):
             time_format = "%.5f"
             amount_format = " %.3f"
         
-        sys.stdout.write(time_format % time)
+        target.write(time_format % time)
+
         if self.opts.separate:
-            for data in amount: sys.stdout.write(amount_format % data)
+            for data in amount:
+                target.write(amount_format % data)
         else:
-            sys.stdout.write(amount_format % sum(amount))
-        sys.stdout.write("\n")
+            target.write(amount_format % sum(amount))
+        target.write("\n")
 
 
     def pre_process_packet(self, ts, packet):
