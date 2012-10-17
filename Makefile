@@ -1,31 +1,28 @@
-
-prefix=/usr
+PREFIX=/usr
 
 ALL: install
 
 INSTALL = /usr/bin/install -c -m 0755
 INSTALLDATA = /usr/bin/install -c -m 0644
 
-
 install: captcp.py
-	test -d $(prefix) || mkdir --parents $(prefix)
-	test -d $(prefix)/share || mkdir --parents $(prefix)/share
-	test -d $(prefix)/share/captcp || mkdir --parents $(prefix)/share/captcp
-	test -d $(prefix)/share/captcp/data || mkdir --parents $(prefix)/share/captcp/data
-	test -d $(prefix)/share/captcp/data/stap-scripts || mkdir --parents $(prefix)/share/captcp/data/stap-scripts
-	test -d $(prefix)/share/captcp/data/templates || mkdir --parents $(prefix)/share/captcp/data/templates
+	test -d $(PREFIX) || mkdir --parents $(PREFIX)
+	test -d $(PREFIX)/bin || mkdir --parents $(PREFIX)/bin
+	test -d $(PREFIX)/share || mkdir --parents $(PREFIX)/share
+	test -d $(PREFIX)/share/captcp || mkdir --parents $(PREFIX)/share/captcp
+	test -d $(PREFIX)/share/captcp/data || mkdir --parents $(PREFIX)/share/captcp/data
+	test -d $(PREFIX)/share/captcp/data/stap-scripts || mkdir --parents $(PREFIX)/share/captcp/data/stap-scripts
+	test -d $(PREFIX)/share/captcp/data/templates || mkdir --parents $(PREFIX)/share/captcp/data/templates
 
-	$(INSTALL) -m 0755 captcp.py $(prefix)/share/captcp
-	$(INSTALLDATA) data/stap-scripts/* $(prefix)/share/captcp/data/stap-scripts
-	$(INSTALLDATA) data/templates/* $(prefix)/share/captcp/data/templates
+	$(INSTALL) -m 0755 captcp.py $(PREFIX)/share/captcp
+	$(INSTALLDATA) data/stap-scripts/* $(PREFIX)/share/captcp/data/stap-scripts
+	$(INSTALLDATA) data/templates/* $(PREFIX)/share/captcp/data/templates
 
-	rm -f $(prefix)/bin/captcp
-	ln -s $(prefix)/share/captcp/captcp.py $(prefix)/bin/captcp
-
+	rm -f $(PREFIX)/bin/captcp
+	ln -s $(PREFIX)/share/captcp/captcp.py $(PREFIX)/bin/captcp
 
 uninstall:
-	rm -rf $(prefix)/share/captcp
-	rm -rf $(prefix)/bin/captcp
-
+	rm -rf $(PREFIX)/share/captcp
+	rm -rf $(PREFIX)/bin/captcp
 
 .PHONY: install uninstall
