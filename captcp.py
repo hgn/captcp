@@ -2370,6 +2370,12 @@ class ThroughputMod(Mod):
         timediff = Utils.ts_tofloat(ts - self.start_time)
 
         if timediff >= self.last_sample + self.opts.samplelength:
+
+            # fill silent periods between a samplelength
+            while self.last_sample + (self.opts.samplelength * 2) < timediff:
+                self.last_sample += self.opts.samplelength
+                self.output_data(self.last_sample, 0)
+
             amount = U.byte_to_unit(self.data, self.opts.unit)
             self.output_data(self.last_sample + self.opts.samplelength, amount)
             self.data  = 0
