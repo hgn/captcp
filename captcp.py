@@ -2309,8 +2309,6 @@ class ThroughputMod(Mod):
                 action="store_true", help="don't create Gnuplot data, just stdio")
         parser.add_option( "-o", "--output-dir", dest="outputdir", default=None,
                 type="string", help="specify the output directory")
-        parser.add_option( "-x", "--separate", dest="separate", default=False,
-                action="store_true", help="print values for the streams separately")
 
 
         self.opts, args = parser.parse_args(sys.argv[0:])
@@ -2327,28 +2325,13 @@ class ThroughputMod(Mod):
         if self.opts.connections:
             self.ids = self.opts.connections.split(',')
             self.logger.info("show limited to the following connections: %s" % (str(self.ids)))
-        else:
-            self.opts.separate = False
 
 
     def output_data(self, time, amount):
         if self.opts.stdio:
-            target = sys.stdout
-            time_format = "%5.1f"
-            amount_format = " %10.1f"
+            sys.stdout.write("%5.1f  %10.1f\n" % (time, amount))
         else:
-            target = self.throughput_file
-            time_format = "%.5f"
-            amount_format = " %.3f"
-        
-        target.write(time_format % time)
-
-        if self.opts.separate:
-            for data in amount:
-                target.write(amount_format % data)
-        else:
-            target.write(amount_format % sum(amount))
-        target.write("\n")
+            self.throughput_file.write("%.5f %.8f\n" % (time, amount))
 
 
     def pre_process_packet(self, ts, packet):
@@ -2379,21 +2362,17 @@ class ThroughputMod(Mod):
         if not self.start_time:
             self.start_time = ts
             self.last_sample = 0.0
-            self.data = [0 for id in self.ids] if self.opts.separate else [0]
-            #line += "%.5f" % (Utils.ts_tofloat(time))
+            self.data = 0
 
-        if self.opts.separate:
-            self.data[self.ids.index(str(sub_connection.connection.connection_id))] += data_len
-        else:
-            self.data[0] += data_len
+        self.data += data_len
         self.total_data_len += data_len
 
         timediff = Utils.ts_tofloat(ts - self.start_time)
 
-        if timediff > self.last_sample + self.opts.samplelength:
-            amount = [U.byte_to_unit(data, self.opts.unit) for data in self.data]
+        if timediff >= self.last_sample + self.opts.samplelength:
+            amount = U.byte_to_unit(self.data, self.opts.unit)
             self.output_data(self.last_sample + self.opts.samplelength, amount)
-            self.data = [0 for id in self.ids] if self.opts.separate else [0]
+            self.data  = 0
             self.last_sample += self.opts.samplelength
 
         self.end_time = ts
