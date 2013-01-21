@@ -115,6 +115,11 @@ class SequenceContainer:
     def __init__(self):
         self.sequnce_list = list()
 
+        if not numpy:
+            self.logger.error("Python numpy module not installed - but required")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+
     def __len__(self):
         return len(self.sequnce_list)
 
@@ -122,10 +127,6 @@ class SequenceContainer:
         for i in self.sequnce_list:
             sys.stdout.write(str(i.left_edge) + "-" +
                     str(i.right_edge) + "\n" )
-
-    # is there an other way in python to do some
-    # unsigned arithmetic? Not sure but numpy seems adequate
-    import numpy
 
     def before(self, seq1, seq2):
         s1 = numpy.array(seq1, dtype=numpy.np.dtype('uint32'))
