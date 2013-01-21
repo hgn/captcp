@@ -21,7 +21,6 @@ import datetime
 import subprocess
 import select
 import re
-import wave
 
 # optional packages
 try:
@@ -38,6 +37,11 @@ try:
     import numpy
 except ImportError:
     cairo = None
+
+try:
+    import wave
+except ImportError:
+    wave = None
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -3021,6 +3025,10 @@ class SoundMod(Mod):
 
         if not numpy:
             self.logger.error("Python numpy module not installed - but required for sound")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        if not wave:
+            self.logger.error("Python wave module not installed - but required for sound")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
 
