@@ -2243,6 +2243,7 @@ class ConnectionAnalyzeMod(Mod):
 
 
 
+
 class ThroughputMod(Mod):
 
     def create_gnuplot_environment(self):
@@ -2286,6 +2287,8 @@ class ThroughputMod(Mod):
         self.parse_local_options()
         self.end_time = self.start_time = False
         self.total_data_len = 0
+        self.time_clipping_delta = 0.0
+        self.first_packet_seen = None
         if not self.opts.stdio:
             # no need to check and generate Gnuplot
             # environment
@@ -2316,7 +2319,9 @@ class ThroughputMod(Mod):
                 action="store_true", help="don't create Gnuplot data, just stdio")
         parser.add_option( "-o", "--output-dir", dest="outputdir", default=None,
                 type="string", help="specify the output directory")
-
+        parser.add_option("-r", "--reference-time", dest="reference_time",
+                        action="store_true", default=False, help="don't shift time axis start to "
+                        "start of flow, use global capture time start")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
@@ -2342,6 +2347,9 @@ class ThroughputMod(Mod):
 
 
     def pre_process_packet(self, ts, packet):
+        if self.opts.reference_time and not self.first_packet_seen:
+            self.first_packet_seen = ts
+
         sub_connection = self.cc.sub_connection_by_packet(packet)
         # only for TCP flows this can be true, therefore
         # no additional checks that this is TCP are required
@@ -2370,6 +2378,8 @@ class ThroughputMod(Mod):
             self.start_time = ts
             self.last_sample = 0.0
             self.data = 0
+            if self.opts.reference_time:
+                self.time_clipping_delta = Utils.ts_tofloat(self.start_time - self.first_packet_seen)
 
         self.data += data_len
         self.total_data_len += data_len
@@ -2381,10 +2391,10 @@ class ThroughputMod(Mod):
             # fill silent periods between a samplelength
             while self.last_sample + (self.opts.samplelength * 2) < timediff:
                 self.last_sample += self.opts.samplelength
-                self.output_data(self.last_sample, 0)
+                self.output_data(self.last_sample + self.time_clipping_delta, 0)
 
             amount = U.byte_to_unit(self.data, self.opts.unit)
-            self.output_data(self.last_sample + self.opts.samplelength, amount)
+            self.output_data(self.last_sample + self.opts.samplelength + self.time_clipping_delta, amount)
             self.data  = 0
             self.last_sample += self.opts.samplelength
 
@@ -2398,8 +2408,8 @@ class ThroughputMod(Mod):
                     (self.opts.mode, self.total_data_len, self.opts.unit,
                     U.best_match(self.total_data_len)))
             sys.stdout.write("# throughput (%s): %.2f %s/s (%s/s)\n" %
-                    (self.opts.mode, float(self.total_data_len)/timediff, self.opts.unit,
-                    U.best_match(float(self.total_data_len)/timediff)))
+                    (self.opts.mode, float(self.total_data_len) / timediff, self.opts.unit,
+                    U.best_match(float(self.total_data_len) / timediff)))
             return
 
         self.close_data_files()
