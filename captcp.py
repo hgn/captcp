@@ -45,13 +45,15 @@ except ImportError:
 
 pp = pprint.PrettyPrinter(indent=4)
 
-# required debian packages:
+# Required debian packages:
 #   python-dpkt
 #   python-pypcap 
 
-# optional debian packages:
-#   python-geoip
+# Suggested debian packages:
 #   python-cairo
+
+# Optional debian packages:
+#   python-geoip
 #   python-numpy
 
 
