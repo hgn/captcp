@@ -2379,7 +2379,8 @@ class ThroughputMod(Mod):
             self.last_sample = 0.0
             self.data = 0
             if self.opts.reference_time:
-                self.time_clipping_delta = Utils.ts_tofloat(self.start_time - self.first_packet_seen)
+                self.time_clipping_delta = Utils.ts_tofloat(self.start_time -
+                                                            self.first_packet_seen)
 
         self.data += data_len
         self.total_data_len += data_len
@@ -2394,7 +2395,8 @@ class ThroughputMod(Mod):
                 self.output_data(self.last_sample + self.time_clipping_delta, 0)
 
             amount = U.byte_to_unit(self.data, self.opts.unit)
-            self.output_data(self.last_sample + self.opts.samplelength + self.time_clipping_delta, amount)
+            self.output_data(self.last_sample + self.opts.samplelength +
+                             self.time_clipping_delta, amount)
             self.data  = 0
             self.last_sample += self.opts.samplelength
 
