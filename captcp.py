@@ -3684,6 +3684,9 @@ class Captcp:
         self.logger.setLevel(logging.WARNING)
         self.logger.addHandler(ch)
 
+    def print_usage(self):
+        sys.stderr.write("Usage: captcp [-h | --help] <modulename> [modulename-options] <pcap-file>\n")
+
 
     def print_welcome(self):
         major, minor, micro, releaselevel, serial = sys.version_info
@@ -3698,7 +3701,7 @@ class Captcp:
     def parse_global_otions(self):
 
         if len(sys.argv) <= 1:
-            sys.stderr.write("Usage: " + sys.argv[0] + " <modulename> [options] pcapfile\n")
+            self.print_usage()
             sys.stderr.write("Available modules:\n")
             self.print_modules()
             return None
@@ -3706,7 +3709,7 @@ class Captcp:
         submodule = sys.argv[1].lower()
 
         if submodule == "-h" or submodule == "--help":
-            sys.stderr.write("Usage: captcp [-h] modulename [modulename-options] <pcap-file>\n")
+            self.print_usage()
             sys.stderr.write("Available modules:\n")
             self.print_modules()
             return None
