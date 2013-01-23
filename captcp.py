@@ -3684,8 +3684,14 @@ class Captcp:
         self.logger.setLevel(logging.WARNING)
         self.logger.addHandler(ch)
 
+    def print_version(self):
+        sys.stdout.write("%s\n" % (__version__))
+
+
     def print_usage(self):
-        sys.stderr.write("Usage: captcp [-h | --help] <modulename> [modulename-options] <pcap-file>\n")
+        sys.stderr.write("Usage: captcp [-h | --help]" +
+                         " [--version]" +
+                         " <modulename> [<module-options>] <pcap-file>\n")
 
 
     def print_welcome(self):
@@ -3694,12 +3700,13 @@ class Captcp:
         self.logger.info("python: %s.%s.%s [releaselevel: %s, serial: %s]" %
                 (major, minor, micro, releaselevel, serial))
 
+
     def print_modules(self):
         for i in Captcp.modes.keys():
             sys.stderr.write("    %s\n" % (i))
 
-    def parse_global_otions(self):
 
+    def parse_global_otions(self):
         if len(sys.argv) <= 1:
             self.print_usage()
             sys.stderr.write("Available modules:\n")
@@ -3708,6 +3715,10 @@ class Captcp:
 
         submodule = sys.argv[1].lower()
 
+        if submodule == "--version":
+            self.print_version()
+            return None
+
         if submodule == "-h" or submodule == "--help":
             self.print_usage()
             sys.stderr.write("Available modules:\n")
@@ -3715,6 +3726,7 @@ class Captcp:
             return None
 
         if submodule not in Captcp.modes:
+            self.print_usage()
             sys.stderr.write("Module \"%s\" not known, available modules are:\n" % (submodule))
             self.print_modules()
             return None
