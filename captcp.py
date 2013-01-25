@@ -10,7 +10,6 @@ import os
 import logging
 import optparse
 import dpkt
-import pcap
 import socket
 import struct
 import inspect
@@ -47,7 +46,6 @@ pp = pprint.PrettyPrinter(indent=4)
 
 # Required debian packages:
 #   python-dpkt
-#   python-pypcap 
 
 # Suggested debian packages:
 #   python-cairo
@@ -440,9 +438,6 @@ class PcapParser:
             self.logger.error("Cannot open pcap file: %s" % (pcap_file_path))
             sys.exit(ExitCodes.EXIT_ERROR)
         self.pc = dpkt.pcap.Reader(self.pcap_file)
-        self.decode = { pcap.DLT_LOOP:dpkt.loopback.Loopback,
-                        pcap.DLT_NULL:dpkt.loopback.Loopback,
-                        pcap.DLT_EN10MB:dpkt.ethernet.Ethernet } [self.pc.datalink()]
 
         if pcap_filter:
             self.pc.setfilter(pcap_filter)
@@ -460,7 +455,7 @@ class PcapParser:
     def run(self):
         try:
             for ts, pkt in self.pc:
-                packet = self.decode(pkt)
+                packet = dpkt.ethernet.Ethernet(pkt)
                 dt = datetime.datetime.fromtimestamp(ts)
                 self.callback(dt, packet.data)
         except SkipProcessStepException:
