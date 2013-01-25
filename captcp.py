@@ -36,7 +36,7 @@ except ImportError:
 try:
     import numpy
 except ImportError:
-    cairo = None
+    numpy = None
 
 try:
     import wave
