@@ -438,6 +438,19 @@ class PcapParser:
             self.logger.error("Cannot open pcap file: %s" % (pcap_file_path))
             sys.exit(ExitCodes.EXIT_ERROR)
         self.pc = dpkt.pcap.Reader(self.pcap_file)
+        try:
+            self.decode = {
+                dpkt.pcap.DLT_LOOP:      dpkt.loopback.Loopback,
+                dpkt.pcap.DLT_NULL:      dpkt.loopback.Loopback,
+                dpkt.pcap.DLT_EN10MB:    dpkt.ethernet.Ethernet,
+                dpkt.pcap.DLT_LINUX_SLL: dpkt.sll.SLL
+            }[self.pc.datalink()]
+        except KeyError:
+            self.logger.error("Packet link type not know (%d)! "
+                              "Interpret at Ethernet now - but be carefull!" % (
+                              self.pc.datalink()))
+            self.decode = dpkt.ethernet.Ethernet
+
 
         if pcap_filter:
             self.pc.setfilter(pcap_filter)
@@ -447,15 +460,22 @@ class PcapParser:
         if self.pcap_file:
             self.pcap_file.close()
 
-
     def register_callback(self, callback):
         self.callback = callback
+
+    def packet_len_error(self, snaplen, packet_len):
+        self.logger.critical("Captured data was to short (packet: %d, snaplen: %d)"
+                             "- please recapture with snaplen 0: inf" %
+                             (packet_len, snaplen))
 
 
     def run(self):
         try:
             for ts, pkt in self.pc:
-                packet = dpkt.ethernet.Ethernet(pkt)
+                if self.pc.snaplen < len(pkt):
+                    self.packet_len_error(self.pc.snaplen, len(pkt))
+                    sys.exit(1)
+                packet = self.decode(pkt)
                 dt = datetime.datetime.fromtimestamp(ts)
                 self.callback(dt, packet.data)
         except SkipProcessStepException:
