@@ -482,6 +482,17 @@ class PcapParser:
             self.logger.debug("skip processing step")
 
 
+
+class PacketInfo:
+
+    @staticmethod
+    def is_tcp_packet(packet):
+        if type(packet.data) == TCP:
+            return True
+        return False
+
+
+
 class TcpPacketInfo:
 
     class TcpOptions:
