@@ -3711,7 +3711,7 @@ class Captcp:
 
     def print_welcome(self):
         major, minor, micro, releaselevel, serial = sys.version_info
-        self.logger.info("captcp 2010-2013 Hagen Paul Pfeifer (c)")
+        self.logger.critical("captcp 2010-2013 Hagen Paul Pfeifer (c)")
         self.logger.info("python: %s.%s.%s [releaselevel: %s, serial: %s]" %
                 (major, minor, micro, releaselevel, serial))
 
