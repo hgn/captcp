@@ -687,7 +687,7 @@ class Mod:
         self.cc.update(ts, packet)
         self.pre_process_packet(ts, packet)
 
-    def pre_initialize(self):
+    def initialize(self):
         """ called at the very beginning of module lifetime"""
         pass
 
@@ -745,7 +745,7 @@ class PayloadTimePortMod(Mod):
     PORT_END   = 65535
     DEFAULT_VAL = 0.0
 
-    def pre_initialize(self):
+    def initialize(self):
         self.logger = logging.getLogger()
         self.parse_local_options()
 
@@ -855,7 +855,7 @@ class TemplateMod(Mod):
         self.init_db()
 
 
-    def pre_initialize(self):
+    def initialize(self):
         self.parse_local_options()
 
 
@@ -972,7 +972,7 @@ class StackTraceMod(Mod):
 
     DEFAULT_FILTER = '*.*.*.*:*-*.*.*.*:5001'
 
-    def pre_initialize(self):
+    def initialize(self):
 
         self.logger = logging.getLogger()
 
@@ -1110,7 +1110,7 @@ class TimeSequenceMod(Mod):
 
     class Sequence: pass
 
-    def pre_initialize(self):
+    def initialize(self):
         self.logger = logging.getLogger()
 
         self.ids                   = None
@@ -1361,7 +1361,7 @@ class SequenceGraphMod(Mod):
     # is reduced
     PACKET_LABELING_THRESH = 100
 
-    def pre_initialize(self):
+    def initialize(self):
         self.ids = None
         self.timeframe_start = self.timeframe_end = False
 
@@ -2196,7 +2196,7 @@ class ConnectionContainer:
 
 class ConnectionAnalyzeMod(Mod):
 
-    def pre_initialize(self):
+    def initialize(self):
 
         self.logger = logging.getLogger()
         parser = optparse.OptionParser()
@@ -2297,7 +2297,7 @@ class ThroughputMod(Mod):
         self.throughput_file.close()
 
 
-    def pre_initialize(self):
+    def initialize(self):
         self.logger = logging.getLogger()
         self.parse_local_options()
         self.end_time = self.start_time = False
@@ -2436,7 +2436,7 @@ class ThroughputMod(Mod):
 
 class InFlightMod(Mod):
 
-    def pre_initialize(self):
+    def initialize(self):
         self.logger = logging.getLogger()
         self.parse_local_options()
         self.packet_sequence = list()
@@ -2592,7 +2592,7 @@ class InFlightMod(Mod):
 
 class SpacingMod(Mod):
 
-    def pre_initialize(self):
+    def initialize(self):
         self.logger = logging.getLogger()
 
         self.parse_local_options()
@@ -2801,7 +2801,7 @@ class SpacingMod(Mod):
 class ShowMod(Mod):
 
 
-    def pre_initialize(self):
+    def initialize(self):
 
         self.logger = logging.getLogger()
         self.parse_local_options()
@@ -3044,7 +3044,7 @@ class SoundMod(Mod):
             self.file.close()
 
 
-    def pre_initialize(self):
+    def initialize(self):
         self.logger = logging.getLogger()
         self.parse_local_options()
         self.capture_time_start = None
@@ -3277,7 +3277,7 @@ class StatisticMod(Mod):
     }
 
 
-    def pre_initialize(self):
+    def initialize(self):
         self.color = RainbowColor(mode=RainbowColor.ANSI)
         self.logger = logging.getLogger()
         self.parse_local_options()
@@ -3759,7 +3759,7 @@ class Captcp:
         classinstance = globals()[classtring]()
         classinstance.register_captcp(self)
 
-        classinstance.pre_initialize()
+        classinstance.initialize()
 
         # there are other usages two (without pcap parsing)
         # We check here and if pcap_file_path is not true
