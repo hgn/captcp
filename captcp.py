@@ -523,7 +523,18 @@ class PcapParser:
             self.logger.debug("skip processing step")
 
 
+
 class PacketInfo:
+
+    @staticmethod
+    def is_tcp_packet(packet):
+        if type(packet.data) == TCP:
+            return True
+        return False
+
+
+
+class TcpPacketInfo:
 
     class TcpOptions:
         def __init__(self):
@@ -635,7 +646,7 @@ class PacketInfo:
 
     def parse_tcp_options(self):
 
-        self.options = PacketInfo.TcpOptions()
+        self.options = TcpPacketInfo.TcpOptions()
         self.options['mss'] = False
         self.options['wsc'] = False
         self.options['tsval'] = False
@@ -1317,7 +1328,7 @@ class TimeSequenceMod(Mod):
 
     def process_data_flow_packet(self, ts, packet):
         packet_time = self.calculate_offset_time(ts)
-        pi = PacketInfo(packet)
+        pi = TcpPacketInfo(packet)
         self.data_flow_file.write("%lf %s\n" % (packet_time, pi.seq))
 
         # support the sender wscale?
@@ -1348,7 +1359,7 @@ class TimeSequenceMod(Mod):
 
     def process_ack_flow_packet(self, ts, packet):
         packet_time = self.calculate_offset_time(ts)
-        pi = PacketInfo(packet)
+        pi = TcpPacketInfo(packet)
 
         # ignore first ACK packet
         if pi.ack == 0:
@@ -1699,7 +1710,7 @@ class SequenceGraphMod(Mod):
 
 
     def construct_label_string(self, packet):
-        pi = PacketInfo(packet)
+        pi = TcpPacketInfo(packet)
 
         if self.opts.style == "minimal":
             text = "%s seq:%u ack:%u len: %u" % ( pi.create_flag_brakets(),
@@ -2417,7 +2428,7 @@ class ThroughputMod(Mod):
         if self.ids and not sub_connection.is_in(self.ids):
             return
 
-        pi = PacketInfo(packet)
+        pi = TcpPacketInfo(packet)
 
         if self.opts.mode == "goodput" or self.opts.mode == "application-layer":
             data_len = len(packet.data.data)
@@ -2572,13 +2583,13 @@ class InFlightMod(Mod):
 
 
     def process_data_flow(self, ts, packet):
-        pi = PacketInfo(packet)
+        pi = TcpPacketInfo(packet)
         data = (pi.seq, ts, packet)
         self.packet_sequence.append(data)
 
 
     def process_ack_flow(self, ts, packet):
-        pi = PacketInfo(packet)
+        pi = TcpPacketInfo(packet)
         for i in list(self.packet_sequence):
             if pi.ack >= i[0]:
                 self.packet_sequence.remove(i)
@@ -2743,14 +2754,14 @@ class SpacingMod(Mod):
 
 
     def process_data_flow(self, ts, packet):
-        pi = PacketInfo(packet)
+        pi = TcpPacketInfo(packet)
 
         data = (pi.seq, ts, packet)
         self.packet_sequence.append(data)
 
 
     def process_ack_flow(self, ts, packet):
-        pi = PacketInfo(packet)
+        pi = TcpPacketInfo(packet)
         for i in list(self.packet_sequence):
             if pi.ack >= i[0]:
                 self.packet_sequence.remove(i)
@@ -2778,7 +2789,7 @@ class SpacingMod(Mod):
         if not sub_connection: return
         if not self.capture_time_start: self.capture_time_start = ts
         time = Utils.ts_tofloat(ts - self.capture_time_start)
-        pi = PacketInfo(packet)
+        pi = TcpPacketInfo(packet)
         delta = 0.0
         is_data_flow = None
 
@@ -2991,7 +3002,7 @@ class ShowMod(Mod):
                 sub_connection.user_data["color"] = \
                         self.color_iter.infinite_next()
 
-        pi = PacketInfo(packet)
+        pi = TcpPacketInfo(packet)
         data_len = len(packet.data.data)
         time = Utils.ts_tofloat(ts - self.cc.capture_time_start)
 
@@ -3504,7 +3515,7 @@ class StatisticMod(Mod):
         self.account_general_tcp_data(sc, packet)
 
         # .oO guaranteed TCP packet now
-        pi = PacketInfo(packet)
+        pi = TcpPacketInfo(packet)
         self.account_tcp_data(sc, ts, packet, pi)
 
 
