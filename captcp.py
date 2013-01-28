@@ -3667,19 +3667,19 @@ class StatisticMod(Mod):
 class Captcp:
 
     modes = {
-            "geoip":           "Geoip",
-            "payloadtimeport": "PayloadTimePortMod",
-            "template":        "TemplateMod",
-            "statistic":       "StatisticMod",
-            "connection":      "ConnectionAnalyzeMod",
-            "sequencegraph":   "SequenceGraphMod",
-            "timesequence":    "TimeSequenceMod",
-            "show":            "ShowMod",
-            "throughput":      "ThroughputMod",
-            "inflight":        "InFlightMod",
-            "spacing":         "SpacingMod",
-            "stacktrace":      "StackTraceMod",
-            "sound":           "SoundMod"
+            "geoip":           [ "Geoip", "Show country/location information about peers" ],
+            "payloadtimeport": [ "PayloadTimePortMod", "Show distribution of data over ports" ],
+            "template":        [ "TemplateMod", "Metamodule to generate template files for Gnuplot" ],
+            "statistic":       [ "StatisticMod", "Show statistic about all connections" ],
+            "connection":      [ "ConnectionAnalyzeMod", "Visualize all communicating peers" ],
+            "sequencegraph":   [ "SequenceGraphMod", "Graph a TCP sequencegraph (flow graph)" ],
+            "timesequence":    [ "TimeSequenceMod", "Plot a Time-Sequence graph" ],
+            "show":            [ "ShowMod", "Tcpdump/tshark like mode" ],
+            "throughput":      [ "ThroughputMod", "Graph the throughput over time graph" ],
+            "inflight":        [ "InFlightMod", "Visualize all packets in flight and not ACKed" ],
+            "spacing":         [ "SpacingMod", "Time between packets and acks" ],
+            "stacktrace":      [ "StackTraceMod", "Hook into Linux Kernel to trace cwnd, ssthresh, ..." ],
+            "sound":           [ "SoundMod", "Play sound based on payload/ack packets" ]
             }
 
     def __init__(self):
@@ -3718,7 +3718,7 @@ class Captcp:
 
     def print_modules(self):
         for i in Captcp.modes.keys():
-            sys.stderr.write("    %s\n" % (i))
+            sys.stderr.write("   %-15s - %s\n" % (i, Captcp.modes[i][1]))
 
 
     def parse_global_otions(self):
@@ -3746,7 +3746,7 @@ class Captcp:
             self.print_modules()
             return None
 
-        classname = Captcp.modes[submodule]
+        classname = Captcp.modes[submodule][0]
         return classname
 
 
