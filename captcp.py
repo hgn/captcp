@@ -1286,10 +1286,10 @@ class TimeSequenceMod(Mod):
         # differentiate between new data send
         # or already sent data (thus retransmissins)
         if pi.seq > self.highest_seq:
-            self.data_arrow_file.write("set arrow from %lf,%s.0 to %ls,%s.0 lc rgb \"#008800\" lw 1\n" %
+            self.data_arrow_file.write("set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"#008800\" lw 1\n" %
                             (packet_time, pi.seq, packet_time, pi.seq + len(packet.data.data)))
         else:
-            self.data_arrow_retrans_file.write("set arrow from %lf,%s.0 to %ls,%s.0 lc rgb \"red\" lw 1\n" %
+            self.data_arrow_retrans_file.write("set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"red\" lw 1\n" %
                             (packet_time, pi.seq, packet_time, pi.seq + len(packet.data.data)))
 
         # only real data packets should be accounted, no plain ACKs
@@ -1321,7 +1321,7 @@ class TimeSequenceMod(Mod):
 
         if pi.options['sackblocks']:
             for i in range(len(pi.options['sackblocks'])):
-                self.data_arrow_sack_file.write("set arrow from %lf,%s.0 to %ls,%s.0 nohead lc rgb \"#aaaaff\" lw 2\n" %
+                self.data_arrow_sack_file.write("set arrow from %lf,%s.0 to %ls,%s.0 nohead front lc rgb \"#aaaaff\" lw 2\n" %
                         (packet_time, pi.options['sackblocks'][i][0],
                          packet_time, pi.options['sackblocks'][i][1]))
 
