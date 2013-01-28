@@ -3664,6 +3664,23 @@ class StatisticMod(Mod):
         self.format_machine() if self.opts.format else self.format_human()
 
 
+
+class ConnectionAnimationMod(Mod):
+
+    def initialize(self):
+        pass
+
+    def pre_process_packet(self, ts, packet):
+        pass
+
+    def process_packet(self, ts, packet):
+        pass
+
+    def process_final(self):
+        pass
+
+
+
 class Captcp:
 
     modes = {
@@ -3679,7 +3696,8 @@ class Captcp:
             "inflight":        [ "InFlightMod", "Visualize all packets in flight and not ACKed" ],
             "spacing":         [ "SpacingMod", "Time between packets and acks" ],
             "stacktrace":      [ "StackTraceMod", "Hook into Linux Kernel to trace cwnd, ssthresh, ..." ],
-            "sound":           [ "SoundMod", "Play sound based on payload/ack packets" ]
+            "sound":           [ "SoundMod", "Play sound based on payload/ack packets" ],
+            "animation":       [ "ConnectionAnimationMod", "Generate animation (javascript) of packet flow" ]
             }
 
     def __init__(self):
