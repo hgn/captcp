@@ -3679,8 +3679,8 @@ class ConnectionAnimationMod(Mod):
                 type="string", help="set the loglevel (info, debug, warning, error)")
         parser.add_option( "-f", "--data-flow", dest="connections", default=None,
                 type="string", help="specify the number of relevant ID's")
-        parser.add_option( "-o", "--outfile", dest="filename", default="packets.wav",
-                type="string", help="name of the generated wav file (default: packets.wav)")
+        parser.add_option( "-o", "--output-dir", dest="outputdir", default=None,
+                type="string", help="specify the output directory")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
