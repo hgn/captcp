@@ -21,6 +21,7 @@ import subprocess
 import select
 import re
 import shutil
+import distutils.dir_util
 
 # optional packages
 try:
@@ -3720,7 +3721,24 @@ class StatisticMod(Mod):
 class ConnectionAnimationMod(Mod):
 
     def initialize(self):
-        pass
+        self.logger = logging.getLogger()
+        self.parse_local_options()
+
+
+    def create_html_environment(self):
+        path = "%s/data/connection-animation-data/" % (os.path.dirname(os.path.realpath(__file__)))
+        distutils.dir_util.copy_tree(path, self.opts.outputdir)
+
+
+    def check_options(self):
+        if not self.opts.outputdir:
+            self.logger.error("No output directory specified: --output-dir")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        if not os.path.exists(self.opts.outputdir):
+            self.logger.error("Not a valid directory: \"%s\"" %
+                    (self.opts.outputdir))
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
 
 
     def parse_local_options(self):
@@ -3733,6 +3751,8 @@ class ConnectionAnimationMod(Mod):
                 type="string", help="specify the number of relevant ID's")
         parser.add_option( "-o", "--output-dir", dest="outputdir", default=None,
                 type="string", help="specify the output directory")
+        parser.add_option( "-i", "--init", dest="init",  default=False,
+                action="store_true", help="create/overwrite HTML/Javascript files in output-dir")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
@@ -3744,6 +3764,11 @@ class ConnectionAnimationMod(Mod):
         self.captcp.print_welcome()
         self.captcp.pcap_file_path = args[2]
         self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
+
+        self.check_options()
+
+        if self.opts.init:
+            self.create_html_environment()
 
         if not self.opts.connections:
             self.logger.error("No data flow specified! Call \"captcp statistics for valid ID's\"")
@@ -3757,9 +3782,8 @@ class ConnectionAnimationMod(Mod):
         else:
             raise ArgumentException("sub flow must be 1 or 2")
 
-        sys.stderr.write("# connection: %s (DATA flow: %s, ACK flow: %s)\n" %
+        self.logger.error("connection: %s (DATA flow: %s, ACK flow: %s)" %
                 (self.connection_id, self.data_flow_id, self.ack_flow_id))
-
 
 
     def pre_process_packet(self, ts, packet):
@@ -3769,7 +3793,8 @@ class ConnectionAnimationMod(Mod):
         pass
 
     def process_final(self):
-        pass
+        self.logger.error("finish, now (cd %s; google-chrome index.html)" %
+                (self.opts.outputdir))
 
 
 
