@@ -3670,6 +3670,46 @@ class ConnectionAnimationMod(Mod):
     def initialize(self):
         pass
 
+
+    def parse_local_options(self):
+        self.ids = False
+        parser = optparse.OptionParser()
+        parser.usage = "animation [options] <pcapfile>"
+        parser.add_option( "-v", "--verbose", dest="loglevel", default=None,
+                type="string", help="set the loglevel (info, debug, warning, error)")
+        parser.add_option( "-f", "--data-flow", dest="connections", default=None,
+                type="string", help="specify the number of relevant ID's")
+        parser.add_option( "-o", "--outfile", dest="filename", default="packets.wav",
+                type="string", help="name of the generated wav file (default: packets.wav)")
+
+        self.opts, args = parser.parse_args(sys.argv[0:])
+        self.set_opts_logevel()
+
+        if len(args) < 3:
+            self.logger.error("no pcap file argument given, exiting")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        self.captcp.print_welcome()
+        self.captcp.pcap_file_path = args[2]
+        self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
+
+        if not self.opts.connections:
+            self.logger.error("No data flow specified! Call \"captcp statistics for valid ID's\"")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        (self.connection_id, self.data_flow_id) = self.opts.connections.split('.')
+        if int(self.data_flow_id) == 1:
+            self.ack_flow_id = 2
+        elif int(self.data_flow_id) == 2:
+            self.ack_flow_id = 1
+        else:
+            raise ArgumentException("sub flow must be 1 or 2")
+
+        sys.stderr.write("# connection: %s (DATA flow: %s, ACK flow: %s)\n" %
+                (self.connection_id, self.data_flow_id, self.ack_flow_id))
+
+
+
     def pre_process_packet(self, ts, packet):
         pass
 
