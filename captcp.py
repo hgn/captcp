@@ -529,12 +529,16 @@ class PacketInfo:
 
     @staticmethod
     def is_tcp(packet):
+        if type(packet) != dpkt.ip.IP and type(packet) != dpkt.ip6.IP6:
+            return False
         if type(packet.data) == TCP:
             return True
         return False
 
     @staticmethod
     def is_udp(packet):
+        if type(packet) != dpkt.ip.IP and type(packet) != dpkt.ip6.IP6:
+            return False
         if type(packet.data) == UDP:
             return True
         return False
@@ -3726,9 +3730,14 @@ class StatisticMod(Mod):
 
 class ConnectionAnimationMod(Mod):
 
+    LOCAL  = 1
+    REMOTE = 2
+
     def initialize(self):
         self.logger = logging.getLogger()
         self.parse_local_options()
+
+        self.rtt_data = dict()
 
 
     def create_html_environment(self):
@@ -3792,11 +3801,50 @@ class ConnectionAnimationMod(Mod):
                 (self.connection_id, self.data_flow_id, self.ack_flow_id))
 
 
+    def calc_rtt(self, where, ts, packet, tpi):
+        if tpi.is_syn_flag() and not tpi.is_ack_flag():
+            self.logger.debug("TWH - SYN received")
+            self.rtt_data["syn-received"] = dict()
+            self.rtt_data["syn-received"]["ts"] = ts
+            self.rtt_data["syn-received"]["seq"] = tpi.seq
+
+        if tpi.is_syn_flag() and tpi.is_ack_flag() and \
+                tpi.ack == self.rtt_data["syn-received"]["seq"] + 1:
+            self.rtt_data["twh-rtt"] = Utils.ts_tofloat(ts - self.rtt_data["syn-received"]["ts"])
+            self.logger.debug("TWH - SYN/ACK received (%.3f ms later)" % (self.rtt_data["twh-rtt"] * 1000.0))
+            self.rtt_data["twh-delay"] = self.rtt_data["twh-rtt"] / 2.0
+
+
+
+    def process_local_side(self, ts, packet, tpi):
+        self.calc_rtt(ConnectionAnimationMod.LOCAL, ts, packet, tpi)
+
+    def process_remote_side(self, ts, packet, tpi):
+        self.calc_rtt(ConnectionAnimationMod.REMOTE, ts, packet, tpi)
+
+
     def pre_process_packet(self, ts, packet):
-        pass
+        if not PacketInfo.is_tcp(packet):
+            return
+
+        if not self.cc.is_packet_connection(packet, int(self.connection_id)):
+            return False
+
+        tpi = TcpPacketInfo(packet)
+
+        sub_connection = self.cc.sub_connection_by_packet(packet)
+
+        if sub_connection.sub_connection_id == int(self.data_flow_id):
+            self.process_local_side(ts, packet, tpi)
+        elif sub_connection.sub_connection_id == int(self.ack_flow_id):
+            self.process_remote_side(ts, packet, tpi)
+        else:
+            raise InternalException
+
 
     def process_packet(self, ts, packet):
         pass
+
 
     def process_final(self):
         self.logger.error("finish, now (cd %s; google-chrome index.html)" %
