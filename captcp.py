@@ -533,6 +533,12 @@ class PacketInfo:
             return True
         return False
 
+    @staticmethod
+    def is_udp_packet(packet):
+        if type(packet.data) == UDP:
+            return True
+        return False
+
 
 
 class TcpPacketInfo:
