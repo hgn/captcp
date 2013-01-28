@@ -528,13 +528,13 @@ class PcapParser:
 class PacketInfo:
 
     @staticmethod
-    def is_tcp_packet(packet):
+    def is_tcp(packet):
         if type(packet.data) == TCP:
             return True
         return False
 
     @staticmethod
-    def is_udp_packet(packet):
+    def is_udp(packet):
         if type(packet.data) == UDP:
             return True
         return False
