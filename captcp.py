@@ -3736,8 +3736,20 @@ class ConnectionAnimationMod(Mod):
     def initialize(self):
         self.logger = logging.getLogger()
         self.parse_local_options()
+        self.write_js_header()
 
+        self.reference_time = None
+        self.first_packt_in_flow = None
         self.rtt_data = dict()
+        self.acceleration = 0.001
+
+
+    def write_js_header(self):
+        js_filepath = "%s/%s" % (self.opts.outputdir, "data.js")
+        self.js_fd = open(js_filepath, 'w')
+        self.js_fd.write("var image_path = \"images/old-computer.png\"\n")
+        self.js_fd.write("function main() {\n\n")
+
 
 
     def create_html_environment(self):
@@ -3789,19 +3801,19 @@ class ConnectionAnimationMod(Mod):
             self.logger.error("No data flow specified! Call \"captcp statistics for valid ID's\"")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
-        (self.connection_id, self.data_flow_id) = self.opts.connections.split('.')
-        if int(self.data_flow_id) == 1:
-            self.ack_flow_id = 2
-        elif int(self.data_flow_id) == 2:
-            self.ack_flow_id = 1
+        (self.connection_id, self.local_flow_id) = self.opts.connections.split('.')
+        if int(self.local_flow_id) == 1:
+            self.remote_flow_id = 2
+        elif int(self.local_flow_id) == 2:
+            self.remote_flow_id = 1
         else:
             raise ArgumentException("sub flow must be 1 or 2")
 
-        self.logger.error("connection: %s (DATA flow: %s, ACK flow: %s)" %
-                (self.connection_id, self.data_flow_id, self.ack_flow_id))
+        self.logger.error("connection: %s (local flow: %s, remote flow: %s)" %
+                (self.connection_id, self.local_flow_id, self.remote_flow_id))
 
 
-    def calc_rtt(self, where, ts, packet, tpi):
+    def calc_rtt(self, ts, packet, tpi):
         if tpi.is_syn_flag() and not tpi.is_ack_flag():
             self.logger.debug("TWH - SYN received")
             self.rtt_data["syn-received"] = dict()
@@ -3810,17 +3822,33 @@ class ConnectionAnimationMod(Mod):
 
         if tpi.is_syn_flag() and tpi.is_ack_flag() and \
                 tpi.ack == self.rtt_data["syn-received"]["seq"] + 1:
-            self.rtt_data["twh-rtt"] = Utils.ts_tofloat(ts - self.rtt_data["syn-received"]["ts"])
-            self.logger.debug("TWH - SYN/ACK received (%.3f ms later)" % (self.rtt_data["twh-rtt"] * 1000.0))
+            self.rtt_data["twh-rtt"] = Utils.ts_tofloat(ts - self.rtt_data["syn-received"]["ts"]) * 1000.0
+            self.logger.debug("TWH - SYN/ACK received (%.3f ms later)" % (self.rtt_data["twh-rtt"]))
             self.rtt_data["twh-delay"] = self.rtt_data["twh-rtt"] / 2.0
-
+            self.logger.debug("set delay to %.3f ms " % (self.rtt_data["twh-delay"]))
+            # we add a small margin buffer of 20%
+            self.rtt_data["twh-delay"] *= 0.9
+            self.logger.debug("add 20%% buffer %.3f ms " % (self.rtt_data["twh-delay"]))
 
 
     def process_local_side(self, ts, packet, tpi):
-        self.calc_rtt(ConnectionAnimationMod.LOCAL, ts, packet, tpi)
+        """ we animate the packet send from us to the peer """
+        td = Utils.ts_tofloat(ts - self.reference_time) * 1000.0 / self.acceleration
+
+        self.js_fd.write("\t//ts: %s\n" % (td))
+        self.js_fd.write("\tregister_packet(%d, r1, r2, 'data', %d, %d);\n" %
+                         (td, len(packet) / 2, self.rtt_data["twh-delay"] / self.acceleration))
+
 
     def process_remote_side(self, ts, packet, tpi):
-        self.calc_rtt(ConnectionAnimationMod.REMOTE, ts, packet, tpi)
+        """ we animate the packet send from remote to us """
+        td = Utils.ts_tofloat(ts - self.reference_time) * 1000.0 / self.acceleration
+
+        self.js_fd.write("\t//ts: %s\n" % (td))
+        self.js_fd.write("\tregister_packet(%d, r2, r1, 'data', %d, %d);\n" %
+                         ((td - (self.rtt_data["twh-delay"] / self.acceleration)), len(packet) / 2, self.rtt_data["twh-delay"] / self.acceleration))
+
+
 
 
     def pre_process_packet(self, ts, packet):
@@ -3830,23 +3858,51 @@ class ConnectionAnimationMod(Mod):
         if not self.cc.is_packet_connection(packet, int(self.connection_id)):
             return False
 
+        if not self.reference_time:
+            self.reference_time = ts
+
+        sub_connection = self.cc.sub_connection_by_packet(packet)
+
+        if not self.first_packt_in_flow:
+            self.first_packt_in_flow = sub_connection.sub_connection_id
+
+        tpi = TcpPacketInfo(packet)
+
+        self.calc_rtt(ts, packet, tpi)
+
+
+    def pre_process_final(self):
+        return
+        # FIXME
+        if self.first_packt_in_flow == int(self.remote_flow_id):
+            self.reference_time += self.rtt_data["twh-delay"]
+
+
+    def process_packet(self, ts, packet):
+        if not PacketInfo.is_tcp(packet):
+            return
+
+        if not self.cc.is_packet_connection(packet, int(self.connection_id)):
+            return False
+
+        if not self.reference_time:
+            self.reference_time = ts
+
         tpi = TcpPacketInfo(packet)
 
         sub_connection = self.cc.sub_connection_by_packet(packet)
 
-        if sub_connection.sub_connection_id == int(self.data_flow_id):
+        if sub_connection.sub_connection_id == int(self.local_flow_id):
             self.process_local_side(ts, packet, tpi)
-        elif sub_connection.sub_connection_id == int(self.ack_flow_id):
+        elif sub_connection.sub_connection_id == int(self.remote_flow_id):
             self.process_remote_side(ts, packet, tpi)
         else:
             raise InternalException
 
 
-    def process_packet(self, ts, packet):
-        pass
-
-
     def process_final(self):
+        self.js_fd.write("}\n")
+        self.js_fd.close()
         self.logger.error("finish, now (cd %s; google-chrome index.html)" %
                 (self.opts.outputdir))
 
