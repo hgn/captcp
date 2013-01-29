@@ -56,6 +56,7 @@ window.onload = function () {
 	var windowsize = wndsize();
 	var paper = Raphael("canvas", window.innerWidth, 250);
 	var btn   = document.getElementById("run");
+	var btn_stop   = document.getElementById("stop");
 	var id = 0;
 
 	draw_packet = function(src, dst, packet_type, packet_len, duration) {
@@ -86,6 +87,12 @@ window.onload = function () {
 
 	register_packet = function(time_start, src, dst, packet_type, packet_len, duration) {
 		id = window.setTimeout ( function() { draw_packet(src, dst, packet_type, packet_len, duration) }, time_start);
+	};
+
+	btn_stop.onclick = function () {
+		while (id--) {
+			window.clearTimeout(id);
+		}
 	};
 
 
