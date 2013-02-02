@@ -589,6 +589,14 @@ class TcpPacketInfo(PacketInfo):
 
         self.parse_tcp_options()
 
+
+    def caller(self):
+        stack = inspect.stack()
+        sys.stderr.write("%s" % (stack))
+        frame = stack[2][0]
+        caller = frame.f_locals.get('self', None)
+        return caller
+
     def is_ack_flag(self):
         return self.tcp.flags & TH_ACK
 
