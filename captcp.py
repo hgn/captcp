@@ -545,7 +545,7 @@ class PacketInfo:
 
 
 
-class TcpPacketInfo:
+class TcpPacketInfo(PacketInfo):
 
     class TcpOptions:
         def __init__(self):
