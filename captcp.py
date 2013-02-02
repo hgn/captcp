@@ -556,11 +556,16 @@ class TcpPacketInfo(PacketInfo):
             self.data[key] = val
 
 
-    def __init__(self, packet):
+    def __init__(self, packet, module=None):
         self.tcp = packet.data
 
         if type(self.tcp) != TCP:
             raise InternalException("Only TCP packets are allowed")
+
+        if module != None and not isinstance(module, Mod):
+            raise InternalException(
+                    "Argument module must be a subclass of module (not %s)" %
+                    (type(module)))
 
         if type(packet) == dpkt.ip.IP:
             self.sip = Converter.dpkt_addr_to_string(packet.src)
@@ -3866,7 +3871,7 @@ class ConnectionAnimationMod(Mod):
         if not self.first_packt_in_flow:
             self.first_packt_in_flow = sub_connection.sub_connection_id
 
-        tpi = TcpPacketInfo(packet)
+        tpi = TcpPacketInfo(packet, module=self)
 
         self.calc_rtt(ts, packet, tpi)
 
