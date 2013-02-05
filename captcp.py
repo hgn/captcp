@@ -130,6 +130,22 @@ class SequenceContainer:
             sys.stdout.write(str(i.left_edge) + "-" +
                     str(i.right_edge) + "\n" )
 
+    @staticmethod
+    def uint32_add(num, summand):
+        """ the caller (Module) must make sure that module is available """
+        s1 = numpy.array(num, dtype=numpy.dtype('uint32'))
+        s2 = numpy.array(summand, dtype=numpy.dtype('uint32'))
+        return int(numpy.array((s1 + s2), dtype=numpy.dtype('uint32')))
+
+
+    @staticmethod
+    def uint32_sub(num, summand):
+        """ the caller (Module) must make sure that module is available """
+        s1 = numpy.array(num, dtype=numpy.dtype('uint32'))
+        s2 = numpy.array(summand, dtype=numpy.dtype('uint32'))
+        return int(numpy.array((s1 - s2), dtype=numpy.dtype('uint32')))
+
+
     def before(self, seq1, seq2):
         s1 = numpy.array(seq1, dtype=numpy.np.dtype('uint32'))
         s2 = numpy.array(seq2, dtype=numpy.np.dtype('uint32'))
@@ -1192,6 +1208,7 @@ class TimeSequenceMod(Mod):
         self.ids                   = None
         self.timeframe_start       = self.timeframe_end = None
         self.reference_time        = False
+        self.reference_tx_seq      = None
         self.highest_seq           = -1
         self.wscale_receiver       = 1
         self.wscale_sender_support = False
@@ -1270,6 +1287,10 @@ class TimeSequenceMod(Mod):
             self.logger.error("No data flow specified (where the data flows)")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
+        if self.opts.zero and not numpy:
+            sys.logger.error("Python numpy module not installed - but required\n")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
         (self.connection_id, self.data_flow_id) = self.opts.connections.split('.')
         if int(self.data_flow_id) == 1:
             self.ack_flow_id = 2
@@ -1303,6 +1324,9 @@ class TimeSequenceMod(Mod):
 
         parser.add_option( "-i", "--init", dest="init",  default=False,
                 action="store_true", help="create Gnuplot template and Makefile in output-dir")
+
+        parser.add_option( "-z", "--zero", dest="zero",  default=False,
+                action="store_true", help="start with TCP sequence number 0")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
@@ -1340,9 +1364,18 @@ class TimeSequenceMod(Mod):
         return True
 
 
+    def pre_process_data_flow_packet(self, ts, packet):
+        packet_time = self.calculate_offset_time(ts)
+        if not self.reference_tx_seq:
+            self.reference_tx_seq = TcpPacketInfo(packet).seq;
+
     def pre_process_packet(self, ts, packet):
         if not self.check_packet(ts, packet):
             return
+
+        sub_connection = self.cc.sub_connection_by_packet(packet)
+        if sub_connection.sub_connection_id == int(self.data_flow_id):
+            self.pre_process_data_flow_packet(ts, packet)
 
 
     def calculate_offset_time(self, ts):
@@ -1353,7 +1386,10 @@ class TimeSequenceMod(Mod):
     def process_data_flow_packet(self, ts, packet):
         packet_time = self.calculate_offset_time(ts)
         pi = TcpPacketInfo(packet)
-        self.data_flow_file.write("%lf %s\n" % (packet_time, pi.seq))
+        sequence_number = int(pi.seq)
+        if self.opts.zero:
+            sequence_number = SequenceContainer.uint32_sub(sequence_number, self.reference_tx_seq)
+        self.data_flow_file.write("%lf %u\n" % (packet_time, sequence_number))
 
         # support the sender wscale?
         if pi.options['wsc']:
