@@ -1215,7 +1215,7 @@ class TimeSequenceMod(Mod):
 
         self.parse_local_options()
 
-        sys.stderr.write("# ADVICE: capture the data at sender side!\n")
+        sys.logger.warning("# ADVICE: capture the data at sender side!\n")
 
 
     def create_files(self):
@@ -1311,7 +1311,7 @@ class TimeSequenceMod(Mod):
         parser.usage = "%prog timesequence [options] <pcapfile>"
 
         parser.add_option( "-v", "--verbose", dest="loglevel", default=None,
-                type="string", help="set the loglevel (info, debug, warning, error)")
+                type="string", help="set the loglevel (debug, info, warning, error)")
 
         parser.add_option( "-o", "--output-dir", dest="outputdir", default=None,
                 type="string", help="specify the output directory")
@@ -1332,7 +1332,8 @@ class TimeSequenceMod(Mod):
         self.set_opts_logevel()
         
         if len(args) < 3:
-            parser.error("no pcap file argument given, exiting")
+            self.logger.critical("No pcap file argument given, exiting\n")
+            parser.print_help(sys.stderr)
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
         self.captcp.print_welcome()
