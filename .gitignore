@@ -21,6 +21,9 @@ Documentation/*.1
 Documentation/captcp.pdf
 Documentation/captcp.html
 
+traces/*.pcap
+out-*
+
 *.pcap
 
 *.orig
