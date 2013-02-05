@@ -147,9 +147,9 @@ class SequenceContainer:
 
 
     def before(self, seq1, seq2):
-        s1 = numpy.array(seq1, dtype=numpy.np.dtype('uint32'))
-        s2 = numpy.array(seq2, dtype=numpy.np.dtype('uint32'))
-        res = numpy.array((s1 - s2), dtype=numpy.np.dtype('int32'))
+        s1 = numpy.array(seq1, dtype=numpy.dtype('uint32'))
+        s2 = numpy.array(seq2, dtype=numpy.dtype('uint32'))
+        res = numpy.array((s1 - s2), dtype=numpy.dtype('int32'))
         if res < 0:
             return True
         else:
@@ -160,9 +160,9 @@ class SequenceContainer:
 
     # is s2 <= s1 <= s3
     def between(self, seq1, seq2, seq3):
-        s1 = numpy.array(seq1, dtype=numpy.np.dtype('uint32'))
-        s2 = numpy.array(seq2, dtype=numpy.np.dtype('uint32'))
-        s3 = numpy.array(seq3, dtype=numpy.np.dtype('uint32'))
+        s1 = numpy.array(seq1, dtype=numpy.dtype('uint32'))
+        s2 = numpy.array(seq2, dtype=numpy.dtype('uint32'))
+        s3 = numpy.array(seq3, dtype=numpy.dtype('uint32'))
 
         if s3 - s2 >= s1 - s2:
             return True
