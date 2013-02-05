@@ -1215,7 +1215,7 @@ class TimeSequenceMod(Mod):
 
         self.parse_local_options()
 
-        sys.logger.warning("# ADVICE: capture the data at sender side!\n")
+        self.logger.warning("ADVICE: capture the data at sender side!")
 
 
     def create_files(self):
@@ -1399,11 +1399,13 @@ class TimeSequenceMod(Mod):
         # differentiate between new data send
         # or already sent data (thus retransmissins)
         if pi.seq > self.highest_seq:
-            self.data_arrow_file.write("set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"#008800\" lw 1\n" %
-                            (packet_time, pi.seq, packet_time, pi.seq + len(packet.data.data)))
+            self.data_arrow_file.write(
+                    "set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"#008800\" lw 1\n" %
+                    (packet_time, sequence_number, packet_time, sequence_number + len(packet.data.data)))
         else:
-            self.data_arrow_retrans_file.write("set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"red\" lw 1\n" %
-                            (packet_time, pi.seq, packet_time, pi.seq + len(packet.data.data)))
+            self.data_arrow_retrans_file.write(
+                    "set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"red\" lw 1\n" %
+                    (packet_time, sequence_number, packet_time, sequence_number + len(packet.data.data)))
 
         # only real data packets should be accounted, no plain ACKs
         if len(packet.data.data) > 0:
@@ -1426,17 +1428,27 @@ class TimeSequenceMod(Mod):
         if pi.ack == 0:
             return
 
+        if self.opts.zero:
+            pi.ack = SequenceContainer.uint32_sub(int(pi.ack), self.reference_tx_seq)
+
         # write ACK number
-        self.ack_flow_file.write("%lf %s\n" % (packet_time, pi.ack))
+        self.ack_flow_file.write("%lf %d\n" % (packet_time, pi.ack))
 
         # write advertised window
         self.receiver_awnd_file.write("%lf %s\n" % (packet_time, self.calc_advertised_window(pi)))
 
         if pi.options['sackblocks']:
             for i in range(len(pi.options['sackblocks'])):
-                self.data_arrow_sack_file.write("set arrow from %lf,%s.0 to %ls,%s.0 nohead front lc rgb \"#aaaaff\" lw 2\n" %
-                        (packet_time, pi.options['sackblocks'][i][0],
-                         packet_time, pi.options['sackblocks'][i][1]))
+                sack_start = int(pi.options['sackblocks'][i][0])
+                sack_end   = int(pi.options['sackblocks'][i][1])
+                if self.opts.zero:
+                    sack_start = SequenceContainer.uint32_sub(sack_start, self.reference_tx_seq)
+                    sack_end   = SequenceContainer.uint32_sub(sack_end, self.reference_tx_seq)
+
+                self.data_arrow_sack_file.write(
+                        "set arrow from %lf,%s.0 to %ls,%s.0 nohead front lc rgb \"#aaaaff\" lw 2\n" %
+                        (packet_time, sack_start,
+                         packet_time, sack_end))
 
         # we set self.wscale_receiver at the end to bypass
         # the first SYN/ACK packet where a) the window option
@@ -1462,7 +1474,7 @@ class TimeSequenceMod(Mod):
     def process_final(self):
 
         self.close_files()
-        sys.stderr.write("# now execute \"make\" in %s\n" % (self.opts.outputdir))
+        self.logger.warning("now execute (cd %s; make preview)" % (self.opts.outputdir))
 
 
 
