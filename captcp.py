@@ -523,14 +523,14 @@ class PcapParser:
 
     def packet_len_error(self, snaplen, packet_len):
         self.logger.critical("Captured data was to short (packet: %d, snaplen: %d)"
-                             "- please recapture with snaplen 0: inf" %
+                            " - please recapture with snaplen 0: inf" %
                              (packet_len, snaplen))
 
 
     def run(self):
         try:
             for ts, pkt in self.pc:
-                if self.pc.snaplen < len(pkt):
+                if self.pc.snaplen <= len(pkt):
                     self.packet_len_error(self.pc.snaplen, len(pkt))
                     sys.exit(1)
                 packet = self.decode(pkt)
