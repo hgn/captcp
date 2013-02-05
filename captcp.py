@@ -1206,7 +1206,8 @@ class TimeSequenceMod(Mod):
         self.logger = logging.getLogger()
 
         self.ids                   = None
-        self.timeframe_start       = self.timeframe_end = None
+        self.timeframe_start       = None
+        self.timeframe_end         = None
         self.reference_time        = False
         self.reference_tx_seq      = None
         self.highest_seq           = -1
@@ -1280,7 +1281,7 @@ class TimeSequenceMod(Mod):
             (start, end) = self.opts.timeframe.split(':')
             (self.timeframe_start, self.timeframe_end) = \
                     (float(start), float(end))
-            sys.stderr.write("# displayed time frame: %.2fs to %.2fs\n" %
+            self.logger.info("displayed time frame: %.2fs to %.2fs" %
                     (self.timeframe_start, self.timeframe_end))
 
         if not self.opts.connections:
