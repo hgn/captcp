@@ -3974,20 +3974,20 @@ class ConnectionAnimationMod(Mod):
 class Captcp:
 
     modes = {
-            "geoip":           [ "Geoip", "Show country/location information about peers" ],
-            "payloadtimeport": [ "PayloadTimePortMod", "Show distribution of data over ports" ],
-            "template":        [ "TemplateMod", "Metamodule to generate template files for Gnuplot" ],
-            "statistic":       [ "StatisticMod", "Show statistic about all connections" ],
-            "connection":      [ "ConnectionAnalyzeMod", "Visualize all communicating peers" ],
-            "sequencegraph":   [ "SequenceGraphMod", "Graph a TCP sequencegraph (flow graph)" ],
-            "timesequence":    [ "TimeSequenceMod", "Plot a Time-Sequence graph" ],
-            "show":            [ "ShowMod", "Tcpdump/tshark like mode" ],
-            "throughput":      [ "ThroughputMod", "Graph the throughput over time graph" ],
-            "inflight":        [ "InFlightMod", "Visualize all packets in flight and not ACKed" ],
-            "spacing":         [ "SpacingMod", "Time between packets and acks" ],
-            "stacktrace":      [ "StackTraceMod", "Hook into Linux Kernel to trace cwnd, ssthresh, ..." ],
-            "sound":           [ "SoundMod", "Play sound based on payload/ack packets" ],
-            "animation":       [ "ConnectionAnimationMod", "Generate animation (javascript) of packet flow" ]
+       "geoip":           [ "Geoip", "Show country/location information about peers" ],
+       "payloadtimeport": [ "PayloadTimePortMod", "Show distribution of data over ports" ],
+       "template":        [ "TemplateMod", "Metamodule to generate template files for Gnuplot" ],
+       "statistic":       [ "StatisticMod", "Show statistic about all connections" ],
+       "connection":      [ "ConnectionAnalyzeMod", "Visualize all communicating peers" ],
+       "sequencegraph":   [ "SequenceGraphMod", "Graph a TCP sequencegraph (flow graph)" ],
+       "timesequence":    [ "TimeSequenceMod", "Plot a Time-Sequence graph" ],
+       "show":            [ "ShowMod", "Tcpdump/tshark like mode" ],
+       "throughput":      [ "ThroughputMod", "Graph the throughput over time graph" ],
+       "inflight":        [ "InFlightMod", "Visualize all packets in flight and not ACKed" ],
+       "spacing":         [ "SpacingMod", "Time between packets and acks" ],
+       "stacktrace": [ "StackTraceMod", "Hook into Linux Kernel to trace cwnd, ssthresh, ..." ],
+       "sound":           [ "SoundMod", "Play sound based on payload/ack packets" ],
+       "animation":       [ "ConnectionAnimationMod", "Generate animation (html) of packet flow" ]
             }
 
     def __init__(self):
