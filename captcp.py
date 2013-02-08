@@ -325,7 +325,6 @@ class U:
                     copytree(srcname, dstname, symlinks, ignore)
                 else:
                     copy2(srcname, dstname)
-                # XXX What about devices, sockets etc.?
             except (IOError, os.error) as why:
                 errors.append((srcname, dstname, str(why)))
             # catch the Error from the recursive copytree so that we can
@@ -405,8 +404,14 @@ class RainbowColor:
         del self.color_palette[200]
 
     def init_color_ansi(self):
-        self.color_palette = { 'yellow':'\033[0;33;40m', 'foo':'\033[93m',
-                'red':'\033[91m', 'green':'\033[92m', 'blue':'\033[94m', 'end':'\033[0m'}
+        self.color_palette = {
+                'yellow':'\033[0;33;40m',
+                'foo':'\033[93m',
+                'red':'\033[91m',
+                'green':'\033[92m',
+                'blue':'\033[94m',
+                'end':'\033[0m'
+                }
 
     def next(self):
         if self.color_palette_pos >= len(self.color_palette_flat):
@@ -3639,8 +3644,9 @@ class StatisticMod(Mod):
 
             line_length = left_width + right_width + 1
 
-            sys.stdout.write("\t%s   %s\n" %
-                    (self.left("%s %s" % (l1, r1), line_length), self.left("%s %s" % (l2, r2), line_length)))
+            sys.stdout.write("   %s   %s\n" %
+                    (self.left("%s %s" % (l1, r1), line_length),
+                     self.left("%s %s" % (l2, r2), line_length)))
 
 
     def format_human(self):
@@ -3700,7 +3706,7 @@ class StatisticMod(Mod):
                 self.color["yellow"], connection, self.color["end"]))
 
             # statistic
-            sys.stdout.write("\tPackets processed: %d (%.1f%%)\n" %
+            sys.stdout.write("   Packets processed: %d (%.1f%%)\n" %
                     (connection.statistic.packets_processed,
                         float(connection.statistic.packets_processed) /
                         float(self.cc.statistic.packets_processed) * 100.0))
@@ -3709,16 +3715,18 @@ class StatisticMod(Mod):
 
             if connection.sc1 and connection.sc2:
                 sys.stdout.write("%s" % (self.color["yellow"]))
-                sys.stdout.write("\tFlow %s.1:  %s" % (connection.connection_id, connection.sc1))
+                sys.stdout.write("   Flow %s.1  %s" % (connection.connection_id, connection.sc1))
                 sys.stdout.write("%s\n" % (self.color["end"]))
 
                 sys.stdout.write("%s" % (self.color["green"]))
-                sys.stdout.write("\tFlow %s.2:  %s" % (connection.connection_id, connection.sc2))
+                sys.stdout.write("   Flow %s.2  %s" % (connection.connection_id, connection.sc2))
                 sys.stdout.write("%s\n" % (self.color["end"]))
 
-                self.print_format_two_column(connection.connection_id, [connection.sc1, connection.sc2])
+                self.print_format_two_column(connection.connection_id,
+                                             [connection.sc1, connection.sc2])
             elif connection.sc1:
-                sys.stdout.write("\tFlow %s.1:  %s\n" % (connection.connection_id, connection.sc1))
+                sys.stdout.write("   Flow %s.1  %s\n" %
+                                 (connection.connection_id, connection.sc1))
                 self.print_one_column_sc_statistic(connection.connection_id, connection.sc1)
             else:
                 raise InternalException("sc1 should be the only one here")
@@ -3820,7 +3828,8 @@ class ConnectionAnimationMod(Mod):
 
 
     def create_html_environment(self):
-        path = "%s/data/connection-animation-data/" % (os.path.dirname(os.path.realpath(__file__)))
+        path = "%s/data/connection-animation-data/" % \
+               (os.path.dirname(os.path.realpath(__file__)))
         distutils.dir_util.copy_tree(path, self.opts.outputdir)
 
 
@@ -3889,8 +3898,10 @@ class ConnectionAnimationMod(Mod):
 
         if tpi.is_syn_flag() and tpi.is_ack_flag() and \
                 tpi.ack == self.rtt_data["syn-received"]["seq"] + 1:
-            self.rtt_data["twh-rtt"] = Utils.ts_tofloat(ts - self.rtt_data["syn-received"]["ts"]) * 1000.0
-            self.logger.debug("TWH - SYN/ACK received (%.3f ms later)" % (self.rtt_data["twh-rtt"]))
+            self.rtt_data["twh-rtt"] = Utils.ts_tofloat(ts - \
+                    self.rtt_data["syn-received"]["ts"]) * 1000.0
+            self.logger.debug("TWH - SYN/ACK received (%.3f ms later)" %
+                              (self.rtt_data["twh-rtt"]))
             self.rtt_data["twh-delay"] = self.rtt_data["twh-rtt"] / 2.0
             self.logger.debug("set delay to %.3f ms " % (self.rtt_data["twh-delay"]))
             # we add a small margin buffer of 20%
@@ -4056,7 +4067,8 @@ class Captcp:
 
         if submodule not in Captcp.modes:
             self.print_usage()
-            sys.stderr.write("Module \"%s\" not known, available modules are:\n" % (submodule))
+            sys.stderr.write("Module \"%s\" not known, available modules are:\n" %
+                             (submodule))
             self.print_modules()
             return None
 
@@ -4100,7 +4112,8 @@ class Captcp:
         ret = classinstance.process_final()
 
         time_diff = datetime.datetime.today() - self.captcp_starttime
-        time_diff_s = float(time_diff.seconds) + time_diff.microseconds / 1E6 + time_diff.days * 86400
+        time_diff_s = float(time_diff.seconds) + time_diff.microseconds / \
+                      1E6 + time_diff.days * 86400
         self.logger.info("processing duration: %.4f seconds" % (time_diff_s))
 
         return ret
