@@ -750,7 +750,6 @@ class Geoip:
         sys.stderr.write("# ip address: \"%s\"\n" % self.ip_address)
 
     def run(self):
-
         if not GeoIP:
             sys.stdout.write("GeoIP package not installed on system, exiting")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
@@ -1054,7 +1053,6 @@ class TemplateMod(Mod):
 
 
     def process_final(self):
-
         c = self.get_content_by_name(self.template_name)
         if not c:
             self.logger.error("not a valid template name %s" % (self.template_name))
@@ -1080,7 +1078,6 @@ class StackTraceMod(Mod):
 
 
     def create_gnuplot_environment(self):
-
         gnuplot_filename = "cwnd.gpi"
         makefile_filename = "Makefile"
 
@@ -1096,7 +1093,6 @@ class StackTraceMod(Mod):
 
 
     def check_options(self):
-
         if not self.opts.outputdir:
             self.logger.error("No output directory specified: --output-dir")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
@@ -1108,8 +1104,7 @@ class StackTraceMod(Mod):
 
 
     def create_data_files(self):
-
-        self.stap_raw_filepath      = "%s/%s" % (self.opts.outputdir, "stap-raw.data")
+        self.stap_raw_filepath = "%s/%s" % (self.opts.outputdir, "stap-raw.data")
         self.stap_raw_file = open(self.stap_raw_filepath, 'w')
 
 
@@ -1118,7 +1113,6 @@ class StackTraceMod(Mod):
 
 
     def parse_local_options(self):
-
         self.width = self.height = 0
 
         parser = optparse.OptionParser()
@@ -1151,7 +1145,6 @@ class StackTraceMod(Mod):
 
 
     def process_final(self):
-
         stap_script = "%s/data/stap-scripts/tcp-trace.stp" % \
                 (os.path.dirname(os.path.realpath(__file__)))
 
@@ -1477,7 +1470,6 @@ class TimeSequenceMod(Mod):
 
 
     def process_final(self):
-
         self.close_files()
         self.logger.warning("now execute (cd %s; make preview)" % (self.opts.outputdir))
 
@@ -1515,8 +1507,8 @@ class SequenceGraphMod(Mod):
 
         self.reference_time = False
 
-    def setup_cairo(self):
 
+    def setup_cairo(self):
         line_width = 1.6
 
         surface = cairo.PDFSurface(self.opts.filename, self.width, self.height)
@@ -1564,7 +1556,6 @@ class SequenceGraphMod(Mod):
 
 
     def draw_background_grid(self):
-
         grid_line_width = 0.1
 
         left  = self.margin_left_right
@@ -1586,9 +1577,7 @@ class SequenceGraphMod(Mod):
                 break
 
 
-
     def pre_process_final(self):
-
         if self.ids:
             time_start = time_end = None
             for idss in self.ids:
@@ -1613,9 +1602,7 @@ class SequenceGraphMod(Mod):
 
             self.process_time_start = time_start
             self.process_time_end   = time_end
-
         else:
-
             if self.timeframe_start and self.timeframe_end:
 
                 self.logger.debug("calculate page coordinated and scale factor")
@@ -1630,15 +1617,17 @@ class SequenceGraphMod(Mod):
                 self.process_time_end   = self.capture_time_end
 
                 time_diff = self.process_time_end - self.process_time_start
-                time_diff = float(time_diff.seconds) + time_diff.microseconds / 1E6 + time_diff.days * 86400
+                time_diff = float(time_diff.seconds) + \
+                        time_diff.microseconds / 1E6 + time_diff.days * 86400
                 time_diff += self.delay
-                self.scaling_factor = time_diff / (self.height - 2 * self.margin_top_bottom)
-
+                self.scaling_factor = time_diff / \
+                        (self.height - 2 * self.margin_top_bottom)
             else:
                 # this is the _normal_ case: the user didn't specified
                 # a connection id nor a timestart, timeend limit
                 time_diff = self.cc.capture_time_end - self.cc.capture_time_start
-                time_diff = float(time_diff.seconds) + time_diff.microseconds / 1E6 + time_diff.days * 86400
+                time_diff = float(time_diff.seconds) + \
+                        time_diff.microseconds / 1E6 + time_diff.days * 86400
                 time_diff += self.delay
                 self.scaling_factor = time_diff / (self.height - 2 * self.margin_top_bottom)
 
@@ -1658,7 +1647,6 @@ class SequenceGraphMod(Mod):
 
 
     def parse_local_options(self):
-
         self.width = self.height = 0
 
         parser = optparse.OptionParser()
@@ -1680,7 +1668,8 @@ class SequenceGraphMod(Mod):
                           help="specify the used bandwidth for your connection (default 100Mbps)")
 
         parser.add_option( "-f", "--filename", dest="filename", default="seq-graph.pdf",
-                type="string", help="specify the name of the generated PDF file (default: seq-graph.pdf)")
+                type="string",
+                help="specify the name of the generated PDF file (default: seq-graph.pdf)")
 
         parser.add_option( "-i", "--connection-id", dest="connections", default=None,
                 type="string", help="specify the number of relevant ID's")
@@ -1732,11 +1721,11 @@ class SequenceGraphMod(Mod):
 
         if self.opts.connections:
             self.ids = self.opts.connections.split(',')
-            self.logger.info("visualization limited to the following connections: %s" % (str(self.ids)))
+            self.logger.info("visualization limited to the following connections: %s" %
+                    (str(self.ids)))
 
 
     def local_generated_packet(self, packet):
-
         if type(packet) == dpkt.ip.IP:
             if Converter.dpkt_addr_to_string(packet.src) == self.opts.localaddr:
                 return True
@@ -1762,12 +1751,10 @@ class SequenceGraphMod(Mod):
 
     def draw_timestamp(self, sequence, ts, packet):
         time = "%.5f" % (ts)
-
         if sequence.local:
             x_offset = 5
         else:
             x_offset = self.width - self.margin_left_right + 5
-
         self.cr.set_font_size(6)
 
         # draw test
@@ -1812,7 +1799,6 @@ class SequenceGraphMod(Mod):
 
 
     def draw_labels(self, sequence, ts, packet):
-
         local_margin = 3
 
         gegenkathete = sequence.ye - sequence.ys
@@ -1857,7 +1843,6 @@ class SequenceGraphMod(Mod):
 
 
     def draw_sequence(self, sequence, ts, packet):
-
         self.draw_timestamp(sequence, ts, packet)
 
         if not self.reduced_labeling():
@@ -1871,45 +1856,58 @@ class SequenceGraphMod(Mod):
 
 
     def draw_arrows(self, sequence):
+        if sequence.xe-sequence.xs > 0 and sequence.ye-sequence.ys > 0:
+            interim_angle = math.pi / 2 - (math.atan((sequence.ye - sequence.ys) / \
+                    (sequence.xe-sequence.xs))) - 0.4
 
-        if ((sequence.xe-sequence.xs) > 0) and ((sequence.ye-sequence.ys) > 0):
-            interim_angle=math.pi/2-(math.atan((sequence.ye-sequence.ys)/(sequence.xe-sequence.xs)))-0.4
-            xsp = sequence.xe - (6*math.sin(interim_angle))
-            ysp = sequence.ye - (6*math.cos(interim_angle))
+            xsp = sequence.xe - (6 * math.sin(interim_angle))
+            ysp = sequence.ye - (6 * math.cos(interim_angle))
 
-            interim_angle=math.pi/2-(math.atan((sequence.xe-sequence.xs)/(sequence.ye-sequence.ys)))-0.4
-            xep = sequence.xe - (6*math.cos(interim_angle))
-            yep = sequence.ye - (6*math.sin(interim_angle))
+            interim_angle = math.pi / 2 - (math.atan((sequence.xe - sequence.xs) / \
+                    (sequence.ye - sequence.ys))) - 0.4
 
-        if ((sequence.xe-sequence.xs) > 0) and ((sequence.ye-sequence.ys) < 0):
-            interim_angle=math.pi/2-(math.atan((sequence.xe-sequence.xs)/(sequence.ys-sequence.ye)))-0.4
-            xsp = sequence.xe - (6*math.cos(interim_angle))
-            ysp = sequence.ye + (6*math.sin(interim_angle))
+            xep = sequence.xe - (6 * math.cos(interim_angle))
+            yep = sequence.ye - (6 * math.sin(interim_angle))
+
+        if sequence.xe - sequence.xs > 0 and sequence.ye - sequence.ys < 0:
+            interim_angle= math.pi / 2 - (math.atan((sequence.xe - sequence.xs) / \
+                    (sequence.ys - sequence.ye))) - 0.4
+
+            xsp = sequence.xe - (6 * math.cos(interim_angle))
+            ysp = sequence.ye + (6 * math.sin(interim_angle))
  
-            interim_angle=math.pi/2-(math.atan((sequence.ys-sequence.ye)/(sequence.ye-sequence.ys)))-0.4
-            xep = sequence.xe - (6*math.sin(interim_angle))
-            yep = sequence.ye + (6*math.cos(interim_angle))
+            interim_angle = math.pi / 2 - (math.atan((sequence.ys - sequence.ye) / \
+                    (sequence.ye - sequence.ys))) - 0.4
 
-        if ((sequence.xe-sequence.xs) < 0) and ((sequence.ye-sequence.ys) < 0):
-            interim_angle=math.pi/2-(math.atan((sequence.ys-sequence.ye)/(sequence.xs-sequence.xe)))-0.4
-            xsp = sequence.xe + (6*math.sin(interim_angle))
-            ysp = sequence.ye + (6*math.cos(interim_angle))
+            xep = sequence.xe - (6 * math.sin(interim_angle))
+            yep = sequence.ye + (6 * math.cos(interim_angle))
 
-            interim_angle=math.pi/2-(math.atan((sequence.xs-sequence.xe)/(sequence.ys-sequence.ye)))-0.4
-            xep = sequence.xe + (6*math.cos(interim_angle))
-            yep = sequence.ye + (6*math.sin(interim_angle))
+        if sequence.xe - sequence.xs < 0 and sequence.ye - sequence.ys < 0:
+            interim_angle = math.pi / 2 - (math.atan((sequence.ys-sequence.ye) / \
+                    (sequence.xs - sequence.xe))) - 0.4
+            xsp = sequence.xe + (6 * math.sin(interim_angle))
+            ysp = sequence.ye + (6 * math.cos(interim_angle))
 
-        if ((sequence.xe-sequence.xs) < 0) and ((sequence.ye-sequence.ys) > 0):
-            interim_angle=math.pi/2-(math.atan((sequence.ye-sequence.ys)/(sequence.xs-sequence.xe)))-0.4
-            xsp = sequence.xe + (6*math.sin(interim_angle))
-            ysp = sequence.ye - (6*math.cos(interim_angle))
+            interim_angle = math.pi / 2 - (math.atan((sequence.xs - sequence.xe) / \
+                    (sequence.ys-sequence.ye))) - 0.4
 
-            interim_angle=math.pi/2-(math.atan((sequence.xs-sequence.xe)/(sequence.ye-sequence.ys)))-0.4
-            xep = sequence.xe + (6*math.cos(interim_angle))
-            yep = sequence.ye - (6*math.sin(interim_angle))
+            xep = sequence.xe + (6 * math.cos(interim_angle))
+            yep = sequence.ye + (6 * math.sin(interim_angle))
+
+        if sequence.xe - sequence.xs < 0 and sequence.ye - sequence.ys > 0:
+            interim_angle = math.pi / 2 - (math.atan((sequence.ye - sequence.ys) / \
+                    (sequence.xs - sequence.xe))) - 0.4
+
+            xsp = sequence.xe + ( 6 *math.sin(interim_angle))
+            ysp = sequence.ye - ( 6 *math.cos(interim_angle))
+
+            interim_angle = math.pi / 2 - (math.atan((sequence.xs - sequence.xe) / \
+                    (sequence.ye-sequence.ys))) - 0.4
+
+            xep = sequence.xe + (6 * math.cos(interim_angle))
+            yep = sequence.ye - (6 * math.sin(interim_angle))
             
-        if (xsp and ysp):
-
+        if xsp and ysp:
             self.cr.set_source_rgb(0.0,0.0,0.0)
             self.cr.set_line_width(0.5)
             self.cr.move_to(sequence.xe, sequence.ye)
@@ -1972,13 +1970,15 @@ class SequenceGraphMod(Mod):
             s.xs = self.margin_left_right
             s.xe = self.width - self.margin_left_right
             s.ys = self.ts_tofloat(ts_diff) / self.scaling_factor
-            s.ye = (self.ts_tofloat(ts_diff) + (len(packet)/self.bandwidth) + self.delay) / self.scaling_factor
+            s.ye = (self.ts_tofloat(ts_diff) + \
+                    (len(packet)/self.bandwidth) + self.delay) / self.scaling_factor
             display_time = self.ts_tofloat(ts_diff)
         else:
             s.local = False
             s.xs = self.width - self.margin_left_right
             s.xe = self.margin_left_right
-            s.ys = (self.ts_tofloat(ts_diff) - (len(packet)/self.bandwidth) - self.delay) /self.scaling_factor
+            s.ys = (self.ts_tofloat(ts_diff) - \
+                    (len(packet)/self.bandwidth) - self.delay) /self.scaling_factor
             s.ye = self.ts_tofloat(ts_diff) / self.scaling_factor
             display_time = self.ts_tofloat(ts_diff) - (len(packet)/self.bandwidth) - self.delay
 
@@ -2052,7 +2052,6 @@ class SubConnection(TcpConn):
 
 
     def __cmp__(self, other):
-
         if other == None:
             return True
 
@@ -2236,7 +2235,6 @@ class ConnectionContainer:
 
 
     def connection_by_uid(self, uid):
-
         for i in self.container.keys():
             if self.container[i].connection_id == uid:
                 return self.container[i]
@@ -2327,7 +2325,6 @@ class ConnectionContainer:
 class ConnectionAnalyzeMod(Mod):
 
     def initialize(self):
-
         self.logger = logging.getLogger()
         parser = optparse.OptionParser()
         parser.usage = "captcp connection"
@@ -2455,7 +2452,8 @@ class ThroughputMod(Mod):
         parser.add_option( "-s", "--sample-length", dest="samplelength", default=1.0,
                 type="float", help="length in seconds (float) where data is accumulated (1.0)")
         parser.add_option( "-m", "--mode", dest="mode", default="goodput",
-                type="string", help="layer where the data len measurement is taken (default: goodput")
+                type="string",
+                help="layer where the data len measurement is taken (default: goodput")
         parser.add_option( "-u", "--unit", dest="unit", default="byte",
                 type="string", help="unit: byte, kbyte, mbyte")
         parser.add_option( "-i", "--init", dest="init",  default=False,
@@ -3004,7 +3002,6 @@ class ShowMod(Mod):
     # return None if the packet should be displayed
     #        with no color change
     def match(self, ts, packet, packet_len, pi):
-
         # default is un-machted
         match = False
 
@@ -3054,7 +3051,6 @@ class ShowMod(Mod):
         return seq + length
 
     def pre_process_packet(self, ts, packet):
-
         self.packet_no += 1
 
         sub_connection = self.cc.sub_connection_by_packet(packet)
@@ -3417,7 +3413,9 @@ class StatisticMod(Mod):
         parser.add_option( "-v", "--verbose", dest="loglevel", default=None,
                 type="string", help="set the loglevel (info, debug, warning, error)")
         parser.add_option( "-i", "--filter", dest="filter", default=None,
-                type="string", help="limit number of displayed connections \"sip:sport-dip:dport\", default \"*:*-*:*\"")
+                type="string",
+                help="limit number of displayed connections " + \
+                     "\"sip:sport-dip:dport\", default \"*:*-*:*\"")
         parser.add_option( "-m", "--format", dest="format", default=None,
                 type="string", help="skip summary and display only selected values")
 
@@ -3911,7 +3909,9 @@ class ConnectionAnimationMod(Mod):
 
         self.js_fd.write("\t//ts: %s\n" % (td))
         self.js_fd.write("\tregister_packet(%d, r2, r1, 'data', %d, %d);\n" %
-                         ((td - (self.rtt_data["twh-delay"] / self.acceleration)), len(packet) / 2, self.rtt_data["twh-delay"] / self.acceleration))
+                         ((td - (self.rtt_data["twh-delay"] / \
+                          self.acceleration)), len(packet) / 2, \
+                          self.rtt_data["twh-delay"] / self.acceleration))
 
 
 
@@ -4064,7 +4064,6 @@ class Captcp:
         classtring = self.parse_global_otions()
         if not classtring:
             return 1
-
 
         classinstance = globals()[classtring]()
         classinstance.register_captcp(self)
