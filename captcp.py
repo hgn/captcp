@@ -110,6 +110,10 @@ class ExitCodes:
     EXIT_CMD_LINE = 2
 
 
+class Info:
+    ETHERNET_HEADER_LEN = 14
+
+
 class SequenceContainer:
 
     class Container: pass
@@ -3263,7 +3267,7 @@ class SoundMod(Mod):
 
 
     def calc_duration(self, packet):
-        packet_len = (len(packet) + StatisticMod.ETHERNET_HEADER_LEN) * 8
+        packet_len = (len(packet) + Info.ETHERNET_HEADER_LEN) * 8
         duration = 1.0 / (float(self.opts.link_bandwidth) / packet_len)
         return duration
 
@@ -3379,8 +3383,6 @@ class SoundMod(Mod):
 
 
 class StatisticMod(Mod):
-
-    ETHERNET_HEADER_LEN = 14
 
     LABEL_DB_INDEX_DESCRIPTION = 0
     LABEL_DB_INDEX_UNIT        = 1
@@ -3518,7 +3520,7 @@ class StatisticMod(Mod):
     def account_general_tcp_data(self, sc, packet):
         sc.user_data["packets-packets"] += 1
 
-        sc.user_data["link-layer-byte"]        += len(packet) + StatisticMod.ETHERNET_HEADER_LEN
+        sc.user_data["link-layer-byte"]        += len(packet) + Info.ETHERNET_HEADER_LEN
         sc.user_data["network-layer-byte"]     += int(len(packet))
         sc.user_data["transport-layer-byte"]   += int(len(packet.data))
         sc.user_data["application-layer-byte"] += int(len(packet.data.data))
