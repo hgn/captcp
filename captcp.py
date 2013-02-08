@@ -1540,8 +1540,10 @@ class SequenceGraphMod(Mod):
 
 
         # right
-        self.cr.move_to(self.width - self.margin_left_right, self.margin_top_bottom)
-        self.cr.line_to (self.width - self.margin_left_right, self.height - self.margin_top_bottom)
+        self.cr.move_to(self.width - self.margin_left_right,
+                        self.margin_top_bottom)
+        self.cr.line_to(self.width - self.margin_left_right,
+                        self.height - self.margin_top_bottom)
         self.cr.set_line_width(line_width)
         self.cr.stroke()
 
@@ -1596,7 +1598,8 @@ class SequenceGraphMod(Mod):
                         time_end = conn.capture_time_end
 
             time_diff = time_end - time_start
-            time_diff = float(time_diff.seconds) + time_diff.microseconds / 1E6 + time_diff.days * 86400
+            time_diff = float(time_diff.seconds) + time_diff.microseconds / \
+                    1E6 + time_diff.days * 86400
             time_diff += self.delay
             self.scaling_factor = time_diff / (self.height - 2 * self.margin_top_bottom)
 
