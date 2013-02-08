@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #
 # Email: Hagen Paul Pfeifer <hagen@jauu.net>
-# URL: http://research.protocollabs.com
+# URL: http://research.protocollabs.com/captcp/
 
 from __future__ import print_function
 
