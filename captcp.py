@@ -1856,52 +1856,53 @@ class SequenceGraphMod(Mod):
 
 
     def draw_arrows(self, sequence):
+        pi_half = math.pi / 2.0
         if sequence.xe-sequence.xs > 0 and sequence.ye-sequence.ys > 0:
-            interim_angle = math.pi / 2 - (math.atan((sequence.ye - sequence.ys) / \
+            interim_angle = pi_half - (math.atan((sequence.ye - sequence.ys) / \
                     (sequence.xe-sequence.xs))) - 0.4
 
             xsp = sequence.xe - (6 * math.sin(interim_angle))
             ysp = sequence.ye - (6 * math.cos(interim_angle))
 
-            interim_angle = math.pi / 2 - (math.atan((sequence.xe - sequence.xs) / \
+            interim_angle = pi_half - (math.atan((sequence.xe - sequence.xs) / \
                     (sequence.ye - sequence.ys))) - 0.4
 
             xep = sequence.xe - (6 * math.cos(interim_angle))
             yep = sequence.ye - (6 * math.sin(interim_angle))
 
         if sequence.xe - sequence.xs > 0 and sequence.ye - sequence.ys < 0:
-            interim_angle= math.pi / 2 - (math.atan((sequence.xe - sequence.xs) / \
+            interim_angle= pi_half - (math.atan((sequence.xe - sequence.xs) / \
                     (sequence.ys - sequence.ye))) - 0.4
 
             xsp = sequence.xe - (6 * math.cos(interim_angle))
             ysp = sequence.ye + (6 * math.sin(interim_angle))
  
-            interim_angle = math.pi / 2 - (math.atan((sequence.ys - sequence.ye) / \
+            interim_angle = pi_half - (math.atan((sequence.ys - sequence.ye) / \
                     (sequence.ye - sequence.ys))) - 0.4
 
             xep = sequence.xe - (6 * math.sin(interim_angle))
             yep = sequence.ye + (6 * math.cos(interim_angle))
 
         if sequence.xe - sequence.xs < 0 and sequence.ye - sequence.ys < 0:
-            interim_angle = math.pi / 2 - (math.atan((sequence.ys-sequence.ye) / \
+            interim_angle = pi_half - (math.atan((sequence.ys-sequence.ye) / \
                     (sequence.xs - sequence.xe))) - 0.4
             xsp = sequence.xe + (6 * math.sin(interim_angle))
             ysp = sequence.ye + (6 * math.cos(interim_angle))
 
-            interim_angle = math.pi / 2 - (math.atan((sequence.xs - sequence.xe) / \
+            interim_angle = pi_half - (math.atan((sequence.xs - sequence.xe) / \
                     (sequence.ys-sequence.ye))) - 0.4
 
             xep = sequence.xe + (6 * math.cos(interim_angle))
             yep = sequence.ye + (6 * math.sin(interim_angle))
 
         if sequence.xe - sequence.xs < 0 and sequence.ye - sequence.ys > 0:
-            interim_angle = math.pi / 2 - (math.atan((sequence.ye - sequence.ys) / \
+            interim_angle = pi_half - (math.atan((sequence.ye - sequence.ys) / \
                     (sequence.xs - sequence.xe))) - 0.4
 
             xsp = sequence.xe + ( 6 *math.sin(interim_angle))
             ysp = sequence.ye - ( 6 *math.cos(interim_angle))
 
-            interim_angle = math.pi / 2 - (math.atan((sequence.xs - sequence.xe) / \
+            interim_angle = pi_half - (math.atan((sequence.xs - sequence.xe) / \
                     (sequence.ye-sequence.ys))) - 0.4
 
             xep = sequence.xe + (6 * math.cos(interim_angle))
