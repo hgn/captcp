@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # Email: Hagen Paul Pfeifer <hagen@jauu.net>
 # URL: http://research.protocollabs.com/captcp/
