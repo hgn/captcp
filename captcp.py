@@ -59,7 +59,7 @@ pp = pprint.PrettyPrinter(indent=4)
 
 __programm__ = "captcp"
 __author__   = "Hagen Paul Pfeifer"
-__version__  = "1.0"
+__version__  = "1.1"
 __license__  = "GPLv3"
 
 # custom exceptions
@@ -531,8 +531,8 @@ class PcapParser:
         self.callback = callback
 
     def packet_len_error(self, snaplen, packet_len):
-        self.logger.critical("Captured data was to short (packet: %d, snaplen: %d)"
-                            " - please recapture with snaplen 0: inf" %
+        self.logger.critical("Captured data was too short (packet: %d, snaplen: %d)"
+                            " - please recapture with snaplen of 0: infinity" %
                              (packet_len, snaplen))
 
 
@@ -3407,6 +3407,10 @@ class StatisticMod(Mod):
         "rexmt-packets-percent": [ "Retransmissions per packet", "percent", 0.0],
 
         "pure-ack-packets": [ "ACK flag set but no payload", "packets", 0],
+
+        "push-flag-set-packets": [ "PUSH flag set",    "packets", 0],
+        "ece-flag-set-packets":  [ "ECE (ECN) flag set", "packets", 0],
+        "cwr-flag-set-packets":  [ "CWR (ECN) flag set", "packets", 0],
     }
 
 
@@ -3420,7 +3424,7 @@ class StatisticMod(Mod):
     def parse_local_options(self):
         parser = optparse.OptionParser()
         parser.add_option( "-v", "--verbose", dest="loglevel", default=None,
-                type="string", help="set the loglevel (info, debug, warning, error)")
+                type="string", help="set the loglevel (debug, info, warning, error)")
         parser.add_option( "-i", "--filter", dest="filter", default=None,
                 type="string",
                 help="limit number of displayed connections " + \
@@ -3578,9 +3582,18 @@ class StatisticMod(Mod):
             sc.user_data["pure-ack-packets"] += 1
 
 
+    def account_evil_bits(self, sc, packet, pi):
+        if pi.is_psh_flag():
+                sc.user_data["push-flag-set-packets"] += 1
+        if pi.is_ece_flag():
+                sc.user_data["ece-flag-set-packets"] += 1
+        if pi.is_cwr_flag():
+                sc.user_data["cwr-flag-set-packets"] += 1
+
+
     def account_tcp_data(self, sc, ts, packet, pi):
         self.account_rexmt(sc, packet, pi)
-        self.account_pure_ack(sc, packet, pi)
+        self.account_evil_bits(sc, packet, pi)
 
 
     def pre_process_packet(self, ts, packet):
@@ -3633,6 +3646,10 @@ class StatisticMod(Mod):
                 "rexmt-packets-percent",
 
                 "pure-ack-packets",
+
+                "push-flag-set-packets",
+                "ece-flag-set-packets",
+                "cwr-flag-set-packets",
         ]
 
         for i in ordere_list:
