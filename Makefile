@@ -2,10 +2,19 @@ PREFIX=/usr
 
 ALL: install
 
+
 INSTALL = /usr/bin/install -c -m 0755
 INSTALLDATA = /usr/bin/install -c -m 0644
 
-install: captcp.py
+install-man-page: man/captcp.1
+	cat man/captcp.1 | gzip > man/captcp.1.gz
+	$(INSTALL) man/captcp.1.gz $(PREFIX)/share/man/man1/
+	rm -f man/captcp.1.gz
+
+uninstall-man-page:
+	rm -f $(PREFIX)/share/man/man1/captcp.1.gz
+
+install: captcp.py install-man-page
 	test -d $(PREFIX) || mkdir -p $(PREFIX)
 	test -d $(PREFIX)/bin || mkdir -p $(PREFIX)/bin
 	test -d $(PREFIX)/share || mkdir -p $(PREFIX)/share
@@ -39,8 +48,14 @@ install: captcp.py
 	rm -f $(PREFIX)/bin/captcp
 	ln -s $(PREFIX)/share/captcp/captcp.py $(PREFIX)/bin/captcp
 
-uninstall:
+uninstall: uninstall-man-page
 	rm -rf $(PREFIX)/share/captcp
 	rm -rf $(PREFIX)/bin/captcp
 
-.PHONY: install uninstall
+help:
+	@echo "What should I make? Valid targets are:"
+	@echo "  install   - install all files, including man pages"
+	@echo "  uninstall - cleanup everything" 
+
+
+.PHONY: install uninstall help
