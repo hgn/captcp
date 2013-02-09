@@ -1480,7 +1480,7 @@ class TimeSequenceMod(Mod):
 
 
 
-class SequenceGraphMod(Mod):
+class FlowGraphMod(Mod):
     
     class Sequence: pass
 
@@ -1658,7 +1658,7 @@ class SequenceGraphMod(Mod):
         self.width = self.height = 0
 
         parser = optparse.OptionParser()
-        parser.usage = "%prog sequencegraph [options] <pcapfile>"
+        parser.usage = "%prog flowgraph [options] <pcapfile>"
 
         parser.add_option( "-v", "--verbose", dest="loglevel", default=None,
                 type="string", help="set the loglevel (info, debug, warning, error)")
@@ -1754,7 +1754,7 @@ class SequenceGraphMod(Mod):
 
 
     def reduced_labeling(self):
-        return self.packets_to_draw > SequenceGraphMod.PACKET_LABELING_THRESH
+        return self.packets_to_draw > FlowGraphMod.PACKET_LABELING_THRESH
 
 
     def draw_timestamp(self, sequence, ts, packet):
@@ -1972,7 +1972,7 @@ class SequenceGraphMod(Mod):
             ts_diff = ts - self.cc.capture_time_start
 
 
-        s = SequenceGraphMod.Sequence
+        s = FlowGraphMod.Sequence
 
         if self.local_generated_packet(packet):
             s.local = True
@@ -3996,7 +3996,7 @@ class Captcp:
        "template":        [ "TemplateMod", "Metamodule to generate template files for Gnuplot" ],
        "statistic":       [ "StatisticMod", "Show statistic about all connections" ],
        "connection":      [ "ConnectionAnalyzeMod", "Visualize all communicating peers" ],
-       "sequencegraph":   [ "SequenceGraphMod", "Graph a TCP sequencegraph (flow graph)" ],
+       "flowgraph":       [ "FlowGraphMod", "Visualize packet flow over time" ],
        "timesequence":    [ "TimeSequenceMod", "Plot a Time-Sequence graph" ],
        "show":            [ "ShowMod", "Tcpdump/tshark like mode" ],
        "throughput":      [ "ThroughputMod", "Graph the throughput over time graph" ],
