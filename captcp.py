@@ -1203,7 +1203,8 @@ class StackTraceMod(Mod):
 
 class TimeSequenceMod(Mod):
 
-    COLOR_PUSH = "#0000ff"
+    COLOR_ACK_PUSH  = "#3333ff"
+    COLOR_DATA_PUSH = "#0000aa"
 
     class Sequence: pass
 
@@ -1215,11 +1216,11 @@ class TimeSequenceMod(Mod):
         self.timeframe_end         = None
         self.reference_time        = False
         self.reference_tx_seq      = None
-        self.highest_seq           = -1
-        self.wscale_receiver       = 1
         self.wscale_sender_support = False
         self.v_start               = None
         self.v_end                 = None
+        self.highest_seq           = -1
+        self.wscale_receiver       = 1
 
         self.parse_local_options()
 
@@ -1417,6 +1418,7 @@ class TimeSequenceMod(Mod):
         if not self.reference_tx_seq:
             self.reference_tx_seq = TcpPacketInfo(packet).seq;
 
+
     def pre_process_packet(self, ts, packet):
         if not self.check_packet(ts, packet):
             return
@@ -1425,10 +1427,13 @@ class TimeSequenceMod(Mod):
         if sub_connection.sub_connection_id == int(self.data_flow_id):
             self.pre_process_data_flow_packet(ts, packet)
 
+
     def pre_process_final(self):
-        self.logger.info("time to display: %lf" % (self.v_end))
         self.logger.info("displayed time frame: %.2fs to %.2fs" %
                     (self.v_start, self.v_end))
+
+        self.arrow_length = (self.v_end - self.v_start) * 0.025
+        self.logger.debug("arrow length in seconds: %lf" % (self.arrow_length))
 
 
     def calculate_offset_time(self, ts):
@@ -1449,6 +1454,13 @@ class TimeSequenceMod(Mod):
         # support the sender wscale?
         if pi.options['wsc']:
             self.wscale_sender_support = True
+
+        # visualize PUSH flag
+        if self.opts.extended and pi.is_psh_flag():
+            self.arrow_push_fd.write(
+                "set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"%s\" lw 2\n" %
+                (packet_time - self.arrow_length, sequence_number, packet_time,
+                 sequence_number, TimeSequenceMod.COLOR_DATA_PUSH))
 
         # differentiate between new data send
         # or already sent data (thus retransmissins)
@@ -1494,7 +1506,8 @@ class TimeSequenceMod(Mod):
         if self.opts.extended and pi.is_psh_flag():
             self.arrow_push_fd.write(
                 "set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"%s\" lw 2\n" %
-                (packet_time - 0.1, pi.ack, packet_time, pi.ack, TimeSequenceMod.COLOR_PUSH))
+                (packet_time - self.arrow_length, pi.ack, packet_time, pi.ack,
+                 TimeSequenceMod.COLOR_ACK_PUSH))
 
         # write advertised window
         self.receiver_awnd_fd.write("%lf %s\n" % (packet_time, self.calc_advertised_window(pi)))
