@@ -1240,33 +1240,33 @@ class TimeSequenceMod(Mod):
         self.data_arrow_cwr_filepath     = "%s/%s" % (self.opts.outputdir,
                                                       "data-arrow-cwr.data")
         
-        self.data_flow_file = open(self.data_flow_filepath, 'w')
-        self.ack_flow_file = open(self.ack_flow_filepath, 'w')
-        self.receiver_awnd_file = open(self.receiver_awnd_filepath, 'w')
+        self.data_flow_fd = open(self.data_flow_filepath, 'w')
+        self.ack_flow_fd = open(self.ack_flow_filepath, 'w')
+        self.receiver_awnd_fd = open(self.receiver_awnd_filepath, 'w')
 
-        self.arrow_data_file = open(self.data_arrow_filepath, 'w')
-        self.arrow_retr_file = open(self.data_arrow_retrans_filepath, 'w')
-        self.arrow_sack_file = open(self.data_arrow_sack_filepath, 'w')
+        self.arrow_data_fd = open(self.data_arrow_filepath, 'w')
+        self.arrow_retr_fd = open(self.data_arrow_retrans_filepath, 'w')
+        self.arrow_sack_fd = open(self.data_arrow_sack_filepath, 'w')
 
         if self.opts.extended:
-            self.arrow_push_file = open(self.data_arrow_push_filepath, 'w')
-            self.arrow_ece_file  = open(self.data_arrow_ece_filepath, 'w')
-            self.arrow_cwr_file  = open(self.data_arrow_cwr_filepath, 'w')
+            self.arrow_push_fd = open(self.data_arrow_push_filepath, 'w')
+            self.arrow_ece_fd  = open(self.data_arrow_ece_filepath, 'w')
+            self.arrow_cwr_fd  = open(self.data_arrow_cwr_filepath, 'w')
 
 
     def close_files(self):
-        self.data_flow_file.close()
-        self.ack_flow_file.close()
-        self.receiver_awnd_file.close()
+        self.data_flow_fd.close()
+        self.ack_flow_fd.close()
+        self.receiver_awnd_fd.close()
 
-        self.arrow_data_file.close()
-        self.arrow_retr_file.close()
-        self.arrow_sack_file.close()
+        self.arrow_data_fd.close()
+        self.arrow_retr_fd.close()
+        self.arrow_sack_fd.close()
 
         if self.opts.extended:
-            self.arrow_push_file.close()
-            self.arrow_ece_file.close()
-            self.arrow_cwr_file.close()
+            self.arrow_push_fd.close()
+            self.arrow_ece_fd.close()
+            self.arrow_cwr_fd.close()
 
 
     def create_gnuplot_environment(self):
@@ -1417,7 +1417,8 @@ class TimeSequenceMod(Mod):
 
     def calculate_offset_time(self, ts):
         time_diff = ts - self.reference_time
-        return float(time_diff.seconds) + time_diff.microseconds / 1E6 + time_diff.days * 86400
+        return float(time_diff.seconds) + time_diff.microseconds / \
+               1E6 + time_diff.days * 86400
 
 
     def process_data_flow_packet(self, ts, packet):
@@ -1425,8 +1426,9 @@ class TimeSequenceMod(Mod):
         pi = TcpPacketInfo(packet)
         sequence_number = int(pi.seq)
         if self.opts.zero:
-            sequence_number = SequenceContainer.uint32_sub(sequence_number, self.reference_tx_seq)
-        self.data_flow_file.write("%lf %u\n" % (packet_time, sequence_number))
+            sequence_number = SequenceContainer.uint32_sub(sequence_number,
+                                                           self.reference_tx_seq)
+        self.data_flow_fd.write("%lf %u\n" % (packet_time, sequence_number))
 
         # support the sender wscale?
         if pi.options['wsc']:
@@ -1435,13 +1437,15 @@ class TimeSequenceMod(Mod):
         # differentiate between new data send
         # or already sent data (thus retransmissins)
         if pi.seq > self.highest_seq:
-            self.arrow_data_file.write(
+            self.arrow_data_fd.write(
                     "set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"#008800\" lw 1\n" %
-                    (packet_time, sequence_number, packet_time, sequence_number + len(packet.data.data)))
+                    (packet_time, sequence_number, packet_time,
+                     sequence_number + len(packet.data.data)))
         else:
-            self.arrow_retr_file.write(
+            self.arrow_retr_fd.write(
                     "set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"red\" lw 1\n" %
-                    (packet_time, sequence_number, packet_time, sequence_number + len(packet.data.data)))
+                    (packet_time, sequence_number, packet_time,
+                     sequence_number + len(packet.data.data)))
 
         # only real data packets should be accounted, no plain ACKs
         if len(packet.data.data) > 0:
@@ -1468,10 +1472,10 @@ class TimeSequenceMod(Mod):
             pi.ack = SequenceContainer.uint32_sub(int(pi.ack), self.reference_tx_seq)
 
         # write ACK number
-        self.ack_flow_file.write("%lf %d\n" % (packet_time, pi.ack))
+        self.ack_flow_fd.write("%lf %d\n" % (packet_time, pi.ack))
 
         # write advertised window
-        self.receiver_awnd_file.write("%lf %s\n" % (packet_time, self.calc_advertised_window(pi)))
+        self.receiver_awnd_fd.write("%lf %s\n" % (packet_time, self.calc_advertised_window(pi)))
 
         if pi.options['sackblocks']:
             for i in range(len(pi.options['sackblocks'])):
@@ -1481,7 +1485,7 @@ class TimeSequenceMod(Mod):
                     sack_start = SequenceContainer.uint32_sub(sack_start, self.reference_tx_seq)
                     sack_end   = SequenceContainer.uint32_sub(sack_end, self.reference_tx_seq)
 
-                self.arrow_sack_file.write(
+                self.arrow_sack_fd.write(
                         "set arrow from %lf,%s.0 to %ls,%s.0 nohead front lc rgb \"#aaaaff\" lw 2\n" %
                         (packet_time, sack_start,
                          packet_time, sack_end))
