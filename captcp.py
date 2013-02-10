@@ -22,6 +22,7 @@ import select
 import re
 import shutil
 import distutils.dir_util
+import string
 
 # optional packages
 try:
@@ -1226,17 +1227,31 @@ class TimeSequenceMod(Mod):
         self.ack_flow_filepath       = "%s/%s" % (self.opts.outputdir, "ack.data")
         self.receiver_awnd_filepath  = "%s/%s" % (self.opts.outputdir, "win.data")
 
-        self.data_arrow_filepath          = "%s/%s" % (self.opts.outputdir, "data-arrow.data")
-        self.data_arrow_retrans_filepath  = "%s/%s" % (self.opts.outputdir, "data-arrow-retrans.data")
-        self.data_arrow_sack_filepath     = "%s/%s" % (self.opts.outputdir, "data-arrow-sack.data")
+        self.data_arrow_filepath          = "%s/%s" % (self.opts.outputdir,
+                                                       "data-arrow.data")
+        self.data_arrow_retrans_filepath  = "%s/%s" % (self.opts.outputdir,
+                                                       "data-arrow-retrans.data")
+        self.data_arrow_sack_filepath     = "%s/%s" % (self.opts.outputdir,
+                                                       "data-arrow-sack.data")
+        self.data_arrow_push_filepath     = "%s/%s" % (self.opts.outputdir,
+                                                       "data-arrow-push.data")
+        self.data_arrow_ece_filepath     = "%s/%s" % (self.opts.outputdir,
+                                                      "data-arrow-ece.data")
+        self.data_arrow_cwr_filepath     = "%s/%s" % (self.opts.outputdir,
+                                                      "data-arrow-cwr.data")
         
         self.data_flow_file = open(self.data_flow_filepath, 'w')
         self.ack_flow_file = open(self.ack_flow_filepath, 'w')
         self.receiver_awnd_file = open(self.receiver_awnd_filepath, 'w')
 
-        self.data_arrow_file = open(self.data_arrow_filepath, 'w')
+        self.data_arrow_file         = open(self.data_arrow_filepath, 'w')
         self.data_arrow_retrans_file = open(self.data_arrow_retrans_filepath, 'w')
-        self.data_arrow_sack_file = open(self.data_arrow_sack_filepath, 'w')
+        self.data_arrow_sack_file    = open(self.data_arrow_sack_filepath, 'w')
+
+        if self.opts.extended:
+            self.data_arrow_push_file = open(self.data_arrow_push_filepath, 'w')
+            self.data_arrow_ece_file  = open(self.data_arrow_ece_filepath, 'w')
+            self.data_arrow_cwr_file  = open(self.data_arrow_cwr_filepath, 'w')
 
 
     def close_files(self):
@@ -1248,14 +1263,29 @@ class TimeSequenceMod(Mod):
         self.data_arrow_retrans_file.close()
         self.data_arrow_sack_file.close()
 
+        if self.opts.extended:
+            self.data_arrow_push_file.close()
+            self.data_arrow_ece_file.close()
+            self.data_arrow_cwr_file.close()
+
 
     def create_gnuplot_environment(self):
         gnuplot_filename = "time-sequence.gpi"
         makefile_filename = "Makefile"
+        gpi_extended_fmt = "load \"data-arrow-push.data\"\n" + \
+                           "load \"data-arrow-ece.data\"\n"  + \
+                           "load \"data-arrow-cwr.data\"\n"
+
+        # Normal format or extended format
+        tmpl = string.Template(TemplateMod().get_content_by_name("time-sequence"))
+        if self.opts.extended:
+            gpi_cmd = tmpl.substitute(EXTENDED=gpi_extended_fmt)
+        else:
+            gpi_cmd = tmpl.substitute(EXTENDED="")
 
         filepath = "%s/%s" % (self.opts.outputdir, gnuplot_filename)
         fd = open(filepath, 'w')
-        fd.write("%s" % (TemplateMod().get_content_by_name("time-sequence")))
+        fd.write("%s" % (gpi_cmd))
         fd.close()
 
         filepath = "%s/%s" % (self.opts.outputdir, makefile_filename)
@@ -1330,6 +1360,9 @@ class TimeSequenceMod(Mod):
 
         parser.add_option( "-z", "--zero", dest="zero",  default=False,
                 action="store_true", help="start with TCP sequence number 0")
+
+        parser.add_option( "-e", "--extended", dest="extended",  default=False,
+                action="store_true", help="visualize PUSH and ECE/CWR(ECN) bits too")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
