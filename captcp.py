@@ -1218,6 +1218,8 @@ class TimeSequenceMod(Mod):
         self.highest_seq           = -1
         self.wscale_receiver       = 1
         self.wscale_sender_support = False
+        self.v_start               = None
+        self.v_end                 = None
 
         self.parse_local_options()
 
@@ -1315,8 +1317,6 @@ class TimeSequenceMod(Mod):
             (start, end) = self.opts.timeframe.split(':')
             (self.timeframe_start, self.timeframe_end) = \
                     (float(start), float(end))
-            self.logger.info("displayed time frame: %.2fs to %.2fs" %
-                    (self.timeframe_start, self.timeframe_end))
 
         if not self.opts.connections:
             self.logger.error("No data flow specified (where the data flows)")
@@ -1394,11 +1394,20 @@ class TimeSequenceMod(Mod):
         if not self.reference_time:
             self.reference_time = ts
 
-        if self.timeframe_start and float(self.calculate_offset_time(ts)) < self.timeframe_start:
+        packet_time = float(self.calculate_offset_time(ts))
+
+        if self.timeframe_start and packet_time < self.timeframe_start:
             return False
 
-        if self.timeframe_end and float(self.calculate_offset_time(ts)) > self.timeframe_end:
+        if not self.v_start:
+            self.v_start = packet_time
+
+        if self.timeframe_end and packet_time > self.timeframe_end:
             return False
+
+        if not self.v_end:
+            self.v_end = packet_time
+        self.v_end = max(packet_time, self.v_end)
 
         return True
 
@@ -1415,6 +1424,11 @@ class TimeSequenceMod(Mod):
         sub_connection = self.cc.sub_connection_by_packet(packet)
         if sub_connection.sub_connection_id == int(self.data_flow_id):
             self.pre_process_data_flow_packet(ts, packet)
+
+    def pre_process_final(self):
+        self.logger.info("time to display: %lf" % (self.v_end))
+        self.logger.info("displayed time frame: %.2fs to %.2fs" %
+                    (self.v_start, self.v_end))
 
 
     def calculate_offset_time(self, ts):
