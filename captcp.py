@@ -1209,8 +1209,6 @@ class TimeSequenceMod(Mod):
     class Sequence: pass
 
     def initialize(self):
-        self.logger = logging.getLogger()
-
         self.ids                   = None
         self.timeframe_start       = None
         self.timeframe_end         = None
@@ -1221,9 +1219,8 @@ class TimeSequenceMod(Mod):
         self.v_end                 = None
         self.highest_seq           = -1
         self.wscale_receiver       = 1
-
+        self.logger = logging.getLogger()
         self.parse_local_options()
-
         self.logger.warning("ADVICE: capture the data at sender side!")
 
 
@@ -1232,27 +1229,30 @@ class TimeSequenceMod(Mod):
         self.ack_flow_filepath       = "%s/%s" % (self.opts.outputdir, "ack.data")
         self.receiver_awnd_filepath  = "%s/%s" % (self.opts.outputdir, "win.data")
 
-        self.data_arrow_filepath          = "%s/%s" % (self.opts.outputdir,
+        self.data_arrow_filepath         = "%s/%s" % (self.opts.outputdir,
                                                        "data-arrow.data")
-        self.data_arrow_retrans_filepath  = "%s/%s" % (self.opts.outputdir,
+        self.data_arrow_retrans_filepath = "%s/%s" % (self.opts.outputdir,
                                                        "data-arrow-retrans.data")
-        self.data_arrow_sack_filepath     = "%s/%s" % (self.opts.outputdir,
+        self.data_arrow_sack_filepath    = "%s/%s" % (self.opts.outputdir,
                                                        "data-arrow-sack.data")
-        self.data_arrow_push_filepath     = "%s/%s" % (self.opts.outputdir,
+        self.data_arrow_push_filepath    = "%s/%s" % (self.opts.outputdir,
                                                        "data-arrow-push.data")
         self.data_arrow_ece_filepath     = "%s/%s" % (self.opts.outputdir,
                                                       "data-arrow-ece.data")
         self.data_arrow_cwr_filepath     = "%s/%s" % (self.opts.outputdir,
                                                       "data-arrow-cwr.data")
         
-        self.data_flow_fd = open(self.data_flow_filepath, 'w')
-        self.ack_flow_fd = open(self.ack_flow_filepath, 'w')
+        # line data files
+        self.data_flow_fd     = open(self.data_flow_filepath, 'w')
+        self.ack_flow_fd      = open(self.ack_flow_filepath, 'w')
         self.receiver_awnd_fd = open(self.receiver_awnd_filepath, 'w')
 
+        # required arrow data files
         self.arrow_data_fd = open(self.data_arrow_filepath, 'w')
         self.arrow_retr_fd = open(self.data_arrow_retrans_filepath, 'w')
         self.arrow_sack_fd = open(self.data_arrow_sack_filepath, 'w')
 
+        # optional (extended) arrow data files
         if self.opts.extended:
             self.arrow_push_fd = open(self.data_arrow_push_filepath, 'w')
             self.arrow_ece_fd  = open(self.data_arrow_ece_filepath, 'w')
