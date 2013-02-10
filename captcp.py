@@ -1203,6 +1203,8 @@ class StackTraceMod(Mod):
 
 class TimeSequenceMod(Mod):
 
+    COLOR_PUSH = "#0000ff"
+
     class Sequence: pass
 
     def initialize(self):
@@ -1473,6 +1475,12 @@ class TimeSequenceMod(Mod):
 
         # write ACK number
         self.ack_flow_fd.write("%lf %d\n" % (packet_time, pi.ack))
+
+        # visualize PUSH flag
+        if self.opts.extended and pi.is_psh_flag():
+            self.arrow_push_fd.write(
+                "set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"%s\" lw 2\n" %
+                (packet_time - 0.1, pi.ack, packet_time, pi.ack, TimeSequenceMod.COLOR_PUSH))
 
         # write advertised window
         self.receiver_awnd_fd.write("%lf %s\n" % (packet_time, self.calc_advertised_window(pi)))
