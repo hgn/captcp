@@ -1244,14 +1244,14 @@ class TimeSequenceMod(Mod):
         self.ack_flow_file = open(self.ack_flow_filepath, 'w')
         self.receiver_awnd_file = open(self.receiver_awnd_filepath, 'w')
 
-        self.data_arrow_file         = open(self.data_arrow_filepath, 'w')
-        self.data_arrow_retrans_file = open(self.data_arrow_retrans_filepath, 'w')
-        self.data_arrow_sack_file    = open(self.data_arrow_sack_filepath, 'w')
+        self.arrow_data_file = open(self.data_arrow_filepath, 'w')
+        self.arrow_retr_file = open(self.data_arrow_retrans_filepath, 'w')
+        self.arrow_sack_file = open(self.data_arrow_sack_filepath, 'w')
 
         if self.opts.extended:
-            self.data_arrow_push_file = open(self.data_arrow_push_filepath, 'w')
-            self.data_arrow_ece_file  = open(self.data_arrow_ece_filepath, 'w')
-            self.data_arrow_cwr_file  = open(self.data_arrow_cwr_filepath, 'w')
+            self.arrow_push_file = open(self.data_arrow_push_filepath, 'w')
+            self.arrow_ece_file  = open(self.data_arrow_ece_filepath, 'w')
+            self.arrow_cwr_file  = open(self.data_arrow_cwr_filepath, 'w')
 
 
     def close_files(self):
@@ -1259,14 +1259,14 @@ class TimeSequenceMod(Mod):
         self.ack_flow_file.close()
         self.receiver_awnd_file.close()
 
-        self.data_arrow_file.close()
-        self.data_arrow_retrans_file.close()
-        self.data_arrow_sack_file.close()
+        self.arrow_data_file.close()
+        self.arrow_retr_file.close()
+        self.arrow_sack_file.close()
 
         if self.opts.extended:
-            self.data_arrow_push_file.close()
-            self.data_arrow_ece_file.close()
-            self.data_arrow_cwr_file.close()
+            self.arrow_push_file.close()
+            self.arrow_ece_file.close()
+            self.arrow_cwr_file.close()
 
 
     def create_gnuplot_environment(self):
@@ -1435,11 +1435,11 @@ class TimeSequenceMod(Mod):
         # differentiate between new data send
         # or already sent data (thus retransmissins)
         if pi.seq > self.highest_seq:
-            self.data_arrow_file.write(
+            self.arrow_data_file.write(
                     "set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"#008800\" lw 1\n" %
                     (packet_time, sequence_number, packet_time, sequence_number + len(packet.data.data)))
         else:
-            self.data_arrow_retrans_file.write(
+            self.arrow_retr_file.write(
                     "set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"red\" lw 1\n" %
                     (packet_time, sequence_number, packet_time, sequence_number + len(packet.data.data)))
 
@@ -1481,7 +1481,7 @@ class TimeSequenceMod(Mod):
                     sack_start = SequenceContainer.uint32_sub(sack_start, self.reference_tx_seq)
                     sack_end   = SequenceContainer.uint32_sub(sack_end, self.reference_tx_seq)
 
-                self.data_arrow_sack_file.write(
+                self.arrow_sack_file.write(
                         "set arrow from %lf,%s.0 to %ls,%s.0 nohead front lc rgb \"#aaaaff\" lw 2\n" %
                         (packet_time, sack_start,
                          packet_time, sack_end))
