@@ -1519,11 +1519,22 @@ class TimeSequenceMod(Mod):
         self.ack_flow_fd.write("%lf %d\n" % (packet_time, pi.ack))
 
         # visualize PUSH flag
-        if self.opts.extended and pi.is_psh_flag():
-            self.arrow_push_fd.write(
-                "set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"%s\" lw 2\n" %
-                (packet_time - self.arrow_length, pi.ack, packet_time, pi.ack,
-                 TimeSequenceMod.COLOR_ACK_PUSH))
+        if self.opts.extended:
+            if pi.is_psh_flag():
+                self.arrow_push_fd.write(
+                    "set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"%s\" lw 2\n" %
+                    (packet_time - self.arrow_length, pi.ack, packet_time, pi.ack,
+                     TimeSequenceMod.COLOR_ACK_PUSH))
+            if pi.is_ece_flag():
+                self.arrow_ece_fd.write(
+                    "set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"%s\" lw 2\n" %
+                    (packet_time + self.arrow_length, pi.ack, packet_time, pi.ack,
+                     TimeSequenceMod.COLOR_ACK_ECE))
+            if pi.is_cwr_flag():
+                self.arrow_cwr_fd.write(
+                    "set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"%s\" lw 2\n" %
+                    (packet_time - self.arrow_length, pi.ack, packet_time, pi.ack,
+                     TimeSequenceMod.COLOR_ACK_CWR))
 
         # write advertised window
         self.receiver_awnd_fd.write("%lf %s\n" % (packet_time, self.calc_advertised_window(pi)))
