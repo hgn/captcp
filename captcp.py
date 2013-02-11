@@ -1203,8 +1203,13 @@ class StackTraceMod(Mod):
 
 class TimeSequenceMod(Mod):
 
+    # Gnuplot arrow colors
     COLOR_ACK_PUSH  = "#3333ff"
     COLOR_DATA_PUSH = "#0000aa"
+    COLOR_ACK_ECE   = "#00ff00"
+    COLOR_DATA_ECE  = "#00ff00"
+    COLOR_ACK_CWR   = "#00ff00"
+    COLOR_DATA_CWR  = "#00ff00"
 
     class Sequence: pass
 
