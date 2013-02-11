@@ -1208,8 +1208,8 @@ class TimeSequenceMod(Mod):
     COLOR_DATA_PUSH = "#0000aa"
     COLOR_ACK_ECE   = "#00ff00"
     COLOR_DATA_ECE  = "#00ff00"
-    COLOR_ACK_CWR   = "#00ff00"
-    COLOR_DATA_CWR  = "#00ff00"
+    COLOR_ACK_CWR   = "#006600"
+    COLOR_DATA_CWR  = "#006600"
 
     class Sequence: pass
 
@@ -1473,10 +1473,11 @@ class TimeSequenceMod(Mod):
                     (packet_time + self.arrow_length, sequence_number, packet_time,
                      sequence_number, TimeSequenceMod.COLOR_DATA_ECE))
             if pi.is_cwr_flag():
+                # CRW get a offset of "2 bytes" to show CWR and ECE
                 self.arrow_cwr_fd.write(
                     "set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"%s\" lw 2\n" %
-                    (packet_time + self.arrow_length, sequence_number, packet_time,
-                     sequence_number, TimeSequenceMod.COLOR_DATA_CWR))
+                    (packet_time + self.arrow_length, sequence_number + 2, packet_time,
+                     sequence_number + 2, TimeSequenceMod.COLOR_DATA_CWR))
 
         # differentiate between new data send
         # or already sent data (thus retransmissins)
@@ -1531,9 +1532,10 @@ class TimeSequenceMod(Mod):
                     (packet_time + self.arrow_length, pi.ack, packet_time, pi.ack,
                      TimeSequenceMod.COLOR_ACK_ECE))
             if pi.is_cwr_flag():
+                # CRW get a offset of "2 bytes" to show CWR and ECE
                 self.arrow_cwr_fd.write(
                     "set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"%s\" lw 2\n" %
-                    (packet_time - self.arrow_length, pi.ack, packet_time, pi.ack,
+                    (packet_time + self.arrow_length, pi.ack + 2, packet_time, pi.ack + 2,
                      TimeSequenceMod.COLOR_ACK_CWR))
 
         # write advertised window
