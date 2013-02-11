@@ -1461,11 +1461,22 @@ class TimeSequenceMod(Mod):
             self.wscale_sender_support = True
 
         # visualize PUSH flag
-        if self.opts.extended and pi.is_psh_flag():
-            self.arrow_push_fd.write(
-                "set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"%s\" lw 2\n" %
-                (packet_time - self.arrow_length, sequence_number, packet_time,
-                 sequence_number, TimeSequenceMod.COLOR_DATA_PUSH))
+        if self.opts.extended:
+            if pi.is_psh_flag():
+                self.arrow_push_fd.write(
+                    "set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"%s\" lw 2\n" %
+                    (packet_time - self.arrow_length, sequence_number, packet_time,
+                     sequence_number, TimeSequenceMod.COLOR_DATA_PUSH))
+            if pi.is_ece_flag():
+                self.arrow_ece_fd.write(
+                    "set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"%s\" lw 2\n" %
+                    (packet_time + self.arrow_length, sequence_number, packet_time,
+                     sequence_number, TimeSequenceMod.COLOR_DATA_ECE))
+            if pi.is_cwr_flag():
+                self.arrow_cwr_fd.write(
+                    "set arrow from %lf,%s.0 to %ls,%s.0 front lc rgb \"%s\" lw 2\n" %
+                    (packet_time + self.arrow_length, sequence_number, packet_time,
+                     sequence_number, TimeSequenceMod.COLOR_DATA_CWR))
 
         # differentiate between new data send
         # or already sent data (thus retransmissins)
