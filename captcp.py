@@ -3510,8 +3510,8 @@ class StatisticMod(Mod):
         "pure-ack-packets": [ "ACK flag set but no payload", "packets", 0],
 
         "push-flag-set-packets": [ "PUSH flag set",    "packets", 0],
-        "ece-flag-set-packets":  [ "ECE (ECN) flag set", "packets", 0],
-        "cwr-flag-set-packets":  [ "CWR (ECN) flag set", "packets", 0],
+        "ece-flag-set-packets":  [ "TCP-ECE (ECN) flag set", "packets", 0],
+        "cwr-flag-set-packets":  [ "TCP-CWR (ECN) flag set", "packets", 0],
     }
 
 
