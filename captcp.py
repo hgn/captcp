@@ -72,6 +72,9 @@ class NotImplementedException(InternalException): pass
 class SkipProcessStepException(Exception): pass
 class PacketNotSupportedException(Exception): pass
 
+# IP flag constants
+IP_TOS_ECT = dpkt.ip.IP_TOS_ECT
+IP_TOS_CE  = dpkt.ip.IP_TOS_CE
 
 # TCP flag constants
 TH_URG = dpkt.tcp.TH_URG
@@ -568,6 +571,40 @@ class PacketInfo:
         if type(packet.data) == UDP:
             return True
         return False
+
+
+class IpPacketInfo(PacketInfo):
+
+    def __init__(self, packet, module=None):
+        self.tcp = packet.data
+
+        if type(self.tcp) != TCP:
+            raise InternalException("Only TCP packets are allowed")
+
+        if module != None and not isinstance(module, Mod):
+            raise InternalException(
+                    "Argument module must be a subclass of module (not %s)" %
+                    (type(module)))
+
+        if type(packet) == dpkt.ip.IP:
+            self.sip = Converter.dpkt_addr_to_string(packet.src)
+            self.dip = Converter.dpkt_addr_to_string(packet.dst)
+            self.ipversion = "IP "
+        elif type(packet) == dpkt.ip6.IP6:
+            self.sip = socket.inet_ntop(socket.AF_INET6, packet.src)
+            self.dip = socket.inet_ntop(socket.AF_INET6, packet.dst)
+            self.ipversion = "IP6"
+        else:
+            raise InternalException("unknown protocol")
+ 
+        self.sport = int(self.tcp.sport)
+        self.dport = int(self.tcp.dport)
+
+        self.seq = int(self.tcp.seq)
+        self.ack = int(self.tcp.ack)
+        self.win = int(self.tcp.win)
+        self.urp = int(self.tcp.urp)
+        self.sum = int(self.tcp.sum)
 
 
 
