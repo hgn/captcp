@@ -2617,7 +2617,8 @@ class ThroughputMod(Mod):
         self.set_opts_logevel()
 
         if len(args) < 3:
-            self.logger.error("no pcap file argument given, exiting")
+            self.logger.critical("No pcap file argument given, exiting\n")
+            parser.print_help(sys.stderr)
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
         self.captcp.print_welcome()
