@@ -25,5 +25,5 @@ set style line 1 lc rgb '#00004d' lt 1 lw 3
 #set style line 1 lc rgb '#000' lt 1 pi 0 pt 6 lw 8 ps 4
 
 plot \
-  "inflight.data" using 1:2 title "" with linespoints ls 1
+  "inflight.data" using 1:2 title "" with lines ls 1
 
