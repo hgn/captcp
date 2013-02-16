@@ -2705,9 +2705,11 @@ class ThroughputMod(Mod):
             sys.stdout.write("# throughput (%s): %.2f %s/s (%s/s)\n" %
                     (self.opts.mode, float(self.total_data_len) / timediff, self.opts.unit,
                     U.best_match(float(self.total_data_len) / timediff)))
-            return
+        else:
+            self.close_data_files()
 
-        self.close_data_files()
+        self.logger.warning("now execute (cd %s; make preview)" % (self.opts.outputdir))
+
 
 
 
