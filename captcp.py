@@ -2660,6 +2660,8 @@ class ThroughputMod(Mod):
             data_len = len(packet.data)
         elif self.opts.mode == "network-layer":
             data_len = len(packet)
+        elif self.opts.mode == "link-layer":
+            data_len = len(packet) + Info.ETHERNET_HEADER_LEN
         else:
             raise NotImplementedException("mode \"%s\" not supported" %
                     (self.opts.mode))
