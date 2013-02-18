@@ -2702,19 +2702,18 @@ class ThroughputMod(Mod):
 
 
     def process_final(self):
-        if self.opts.stdio:
-            timediff =  Utils.ts_tofloat(self.end_time - self.start_time)
-            sys.stdout.write("# total data (%s): %d %s (%s)\n" %
-                    (self.opts.mode, self.total_data_len, self.opts.unit,
-                    U.best_match(self.total_data_len)))
-            sys.stdout.write("# throughput (%s): %.2f %s/s (%s/s)\n" %
-                    (self.opts.mode, float(self.total_data_len) / timediff, self.opts.unit,
-                    U.best_match(float(self.total_data_len) / timediff)))
-        else:
+        timediff =  Utils.ts_tofloat(self.end_time - self.start_time)
+        self.logger.warning("total data (%s): %d %s (%s)" %
+                (self.opts.mode, self.total_data_len, self.opts.unit,
+                U.best_match(self.total_data_len)))
+        self.logger.warning("throughput (%s): %.2f %s/s (%s/s)" %
+                (self.opts.mode, float(self.total_data_len) / timediff, self.opts.unit,
+                U.best_match(float(self.total_data_len) / timediff)))
+
+        if not self.opts.stdio:
             self.close_data_files()
 
         self.logger.warning("now execute (cd %s; make preview)" % (self.opts.outputdir))
-
 
 
 
