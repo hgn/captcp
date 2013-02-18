@@ -60,7 +60,7 @@ pp = pprint.PrettyPrinter(indent=4)
 
 __programm__ = "captcp"
 __author__   = "Hagen Paul Pfeifer"
-__version__  = "1.1"
+__version__  = "1.2"
 __license__  = "GPLv3"
 
 # custom exceptions
