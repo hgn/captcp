@@ -71,6 +71,7 @@ class SequenceContainerException(InternalException): pass
 class NotImplementedException(InternalException): pass
 class SkipProcessStepException(Exception): pass
 class PacketNotSupportedException(Exception): pass
+class UnitException(Exception): pass
 
 # IP flag constants
 IP_TOS_ECT = dpkt.ip.IP_TOS_ECT
@@ -283,7 +284,7 @@ class U:
         if unit == "GiBit" or unit == "gibibit":
             return byte * 8 / (1024 * 1024 * 1024)
 
-        raise ArgumentException("unit %s not known" % (unit))
+        raise UnitException("unit %s not known" % (unit))
 
 
     @staticmethod
@@ -2539,11 +2540,15 @@ class ThroughputMod(Mod):
         gnuplot_filename = "throughput.gpi"
         makefile_filename = "Makefile"
 
+        # throughput.gpi
+        tmpl = string.Template(TemplateMod().get_content_by_name("throughput"))
+        gpi_cmd = tmpl.substitute(UNIT=self.opts.unit)
         filepath = "%s/%s" % (self.opts.outputdir, gnuplot_filename)
         fd = open(filepath, 'w')
-        fd.write("%s" % (TemplateMod().get_content_by_name("throughput")))
+        fd.write("%s" % (gpi_cmd))
         fd.close()
 
+        # Makefile
         filepath = "%s/%s" % (self.opts.outputdir, makefile_filename)
         fd = open(filepath, 'w')
         fd.write("%s" % (TemplateMod().get_content_by_name("gnuplot")))
