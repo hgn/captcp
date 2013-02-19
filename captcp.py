@@ -2607,7 +2607,7 @@ class ThroughputMod(Mod):
                 type="string",
                 help="layer where the data len measurement is taken (default: goodput")
         parser.add_option( "-u", "--unit", dest="unit", default="byte",
-                type="string", help="unit: byte, kbyte, mbyte")
+                type="string", help="unit: bit, kilobit, megabit, gigabit, byte, kilobyte, ...")
         parser.add_option( "-i", "--init", dest="init",  default=False,
                 action="store_true", help="create Gnuplot template and Makefile in output-dir")
         parser.add_option("-t", "--stdio", dest="stdio",  default=False,
