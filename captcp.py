@@ -1324,12 +1324,18 @@ class TimeSequenceMod(Mod):
                            "load \"data-arrow-ece.data\"\n"  + \
                            "load \"data-arrow-cwr.data\"\n"
 
+        xrange_str = ""
+        yrange_str = ""
+        if self.timeframe_start and self.timeframe_end:
+            xrange_str = "set xrange [%s:%s]" % \
+                    (self.timeframe_start, self.timeframe_end)
+
         # Normal format or extended format
         tmpl = string.Template(TemplateMod().get_content_by_name("time-sequence"))
         if self.opts.extended:
-            gpi_cmd = tmpl.substitute(EXTENDED=gpi_extended_fmt)
+            gpi_cmd = tmpl.substitute(EXTENDED=gpi_extended_fmt, XRANGE=xrange_str, YRANGE="")
         else:
-            gpi_cmd = tmpl.substitute(EXTENDED="")
+            gpi_cmd = tmpl.substitute(EXTENDED="", XRANGE=xrange_str, YRANGE="")
 
         filepath = "%s/%s" % (self.opts.outputdir, gnuplot_filename)
         fd = open(filepath, 'w')
@@ -1347,9 +1353,6 @@ class TimeSequenceMod(Mod):
             self.logger.error("No output directory specified: --output-dir")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
-        if self.opts.init:
-            self.create_gnuplot_environment()
-
         if not os.path.exists(self.opts.outputdir):
             self.logger.error("Not a valid directory: \"%s\"" %
                     (self.opts.outputdir))
@@ -1361,6 +1364,9 @@ class TimeSequenceMod(Mod):
             (start, end) = self.opts.timeframe.split(':')
             (self.timeframe_start, self.timeframe_end) = \
                     (float(start), float(end))
+
+        if self.opts.init:
+            self.create_gnuplot_environment()
 
         if not self.opts.connections:
             self.logger.error("No data flow specified (where the data flows)")
@@ -1440,14 +1446,8 @@ class TimeSequenceMod(Mod):
 
         packet_time = float(self.calculate_offset_time(ts))
 
-        if self.timeframe_start and packet_time < self.timeframe_start:
-            return False
-
         if not self.v_start:
             self.v_start = packet_time
-
-        if self.timeframe_end and packet_time > self.timeframe_end:
-            return False
 
         if not self.v_end:
             self.v_end = packet_time
