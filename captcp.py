@@ -23,6 +23,7 @@ import re
 import shutil
 import distutils.dir_util
 import string
+import numpy as np
 
 # optional packages
 try:
@@ -477,8 +478,14 @@ class Converter:
 
 
     def dpkt_addr_to_string(addr):
-        iaddr = int(struct.unpack('I', addr)[0])
-        return Converter.num_to_dotted_quad(iaddr)
+	if len(addr) == 16:
+	    # IPv6
+	    # FIXME: inet_ntop is UNIX only according to the python doc
+	    return socket.inet_ntop(socket.AF_INET6, addr)
+	else:
+	    # IPv4
+            iaddr = int(struct.unpack('I', addr)[0])
+            return Converter.num_to_dotted_quad(iaddr)
 
     dpkt_addr_to_string  = staticmethod(dpkt_addr_to_string)
 
@@ -3558,6 +3565,11 @@ class StatisticMod(Mod):
         "push-flag-set-packets": [ "PUSH flag set",    "packets", 0],
         "ece-flag-set-packets":  [ "TCP-ECE (ECN) flag set", "packets", 0],
         "cwr-flag-set-packets":  [ "TCP-CWR (ECN) flag set", "packets", 0],
+
+        "tl-ps-min": [ "Transport Layer Packet Size (min)", "bytes", 0],
+        "tl-ps-max": [ "Transport Layer Packet Size (max)", "bytes", 0],
+        "tl-ps-median": [ "Transport Layer Packet Size (median)", "bytes", 0],
+        "tl-ps-avg": [ "Transport Layer Packet Size (avg)", "bytes", 0],
     }
 
 
@@ -3610,6 +3622,7 @@ class StatisticMod(Mod):
         # variables are marked with a leading
         # underscore.
         sc.user_data["_highest_data_seen"] = None
+        sc.user_data["_tl_pkt_sizes"] = list()
 
 
     def type_to_label(self, label):
@@ -3696,9 +3709,16 @@ class StatisticMod(Mod):
         res = U.percent(sc.user_data["rexmt-data-packets"], sc.user_data["packets-packets"])
         sc.user_data["rexmt-packets-percent"] = "%.2f" % (res)
 
+        if len(sc.user_data["_tl_pkt_sizes"]) > 0:
+            sc.user_data["tl-ps-min"] = "%d" % min(sc.user_data["_tl_pkt_sizes"])
+            sc.user_data["tl-ps-max"] = "%d" % max(sc.user_data["_tl_pkt_sizes"])
+            sc.user_data["tl-ps-avg"] = "%.2f" % np.mean(sc.user_data["_tl_pkt_sizes"])
+            sc.user_data["tl-ps-median"] = "%.2f" % np.median(sc.user_data["_tl_pkt_sizes"])
+
 
     def account_rexmt(self, sc, packet, pi):
         data_len = int(len(packet.data.data))
+        transport_len = int(len(packet.data))
 
         actual_data = pi.seq + data_len
 
@@ -3711,6 +3731,7 @@ class StatisticMod(Mod):
             # packet sequence number is highest sequence
             # number seen so far, no rexmt therefore
             sc.user_data["_highest_data_seen"] = actual_data
+            if transport_len > 0: sc.user_data["_tl_pkt_sizes"].append(transport_len)
             return
 
         if data_len == 0:
@@ -3797,6 +3818,11 @@ class StatisticMod(Mod):
                 "push-flag-set-packets",
                 "ece-flag-set-packets",
                 "cwr-flag-set-packets",
+
+                "tl-ps-min",
+                "tl-ps-max",
+                "tl-ps-avg",
+                "tl-ps-median",
         ]
 
         for i in ordere_list:
