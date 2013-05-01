@@ -3566,10 +3566,10 @@ class StatisticMod(Mod):
         "ece-flag-set-packets":  [ "TCP-ECE (ECN) flag set", "packets", 0],
         "cwr-flag-set-packets":  [ "TCP-CWR (ECN) flag set", "packets", 0],
 
-        "tl-ps-min": [ "Transport Layer Packet Size (min)", "bytes", 0],
-        "tl-ps-max": [ "Transport Layer Packet Size (max)", "bytes", 0],
-        "tl-ps-median": [ "Transport Layer Packet Size (median)", "bytes", 0],
-        "tl-ps-avg": [ "Transport Layer Packet Size (avg)", "bytes", 0],
+        "tl-ps-min": [ "TCP Payload Size (min)", "bytes", 0],
+        "tl-ps-max": [ "TCP Payload Size (max)", "bytes", 0],
+        "tl-ps-median": [ "TCP Payload Size (median)", "bytes", 0],
+        "tl-ps-avg": [ "TCP Payload Size (avg)", "bytes", 0],
     }
 
 
@@ -3733,7 +3733,7 @@ class StatisticMod(Mod):
             # packet sequence number is highest sequence
             # number seen so far, no rexmt therefore
             sc.user_data["_highest_data_seen"] = actual_data
-            if transport_len > 0: sc.user_data["_tl_pkt_sizes"].append(transport_len)
+            if data_len > 0: sc.user_data["_tl_pkt_sizes"].append(transport_len)
             return
 
         if data_len == 0:
