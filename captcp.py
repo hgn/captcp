@@ -3570,6 +3570,10 @@ class StatisticMod(Mod):
         "tl-ps-max": [ "TCP Payload Size (max)", "bytes", 0],
         "tl-ps-median": [ "TCP Payload Size (median)", "bytes", 0],
         "tl-ps-avg": [ "TCP Payload Size (avg)", "bytes", 0],
+
+        "tl-iats-min": [ "TCP packet inter-arrival times (min)", "microseconds", 0],
+        "tl-iats-max": [ "TCP packet inter-arrival times (max)", "microseconds", 0],
+        "tl-iats-avg": [ "TCP packet inter-arrival times (avg)", "microseconds", 0],
     }
 
 
@@ -3625,6 +3629,8 @@ class StatisticMod(Mod):
         # underscore.
         sc.user_data["_highest_data_seen"] = None
         sc.user_data["_tl_pkt_sizes"] = list()
+        sc.user_data["_tl_iats"] = list()
+        sc.user_data["_tl_ia_last"] = None
 
 
     def type_to_label(self, label):
@@ -3716,9 +3722,12 @@ class StatisticMod(Mod):
             sc.user_data["tl-ps-max"] = "%d" % max(sc.user_data["_tl_pkt_sizes"])
             sc.user_data["tl-ps-avg"] = "%.2f" % np.mean(sc.user_data["_tl_pkt_sizes"])
             sc.user_data["tl-ps-median"] = "%.2f" % np.median(sc.user_data["_tl_pkt_sizes"])
+        if len(sc.user_data["_tl_iats"]) > 0:
+            sc.user_data["tl-iats-min"] = "%d" % min(sc.user_data["_tl_iats"])
+            sc.user_data["tl-iats-max"] = "%d" % max(sc.user_data["_tl_iats"])
+            sc.user_data["tl-iats-avg"] = "%d" % np.mean(sc.user_data["_tl_iats"])
 
-
-    def account_rexmt(self, sc, packet, pi):
+    def account_rexmt(self, sc, packet, pi, ts):
         data_len = int(len(packet.data.data))
         transport_len = int(len(packet.data))
 
@@ -3733,7 +3742,12 @@ class StatisticMod(Mod):
             # packet sequence number is highest sequence
             # number seen so far, no rexmt therefore
             sc.user_data["_highest_data_seen"] = actual_data
-            if data_len > 0: sc.user_data["_tl_pkt_sizes"].append(transport_len)
+            if data_len > 0:
+                sc.user_data["_tl_pkt_sizes"].append(transport_len)
+                if sc.user_data["_tl_ia_last"] is not None:
+                    delta = ts - sc.user_data["_tl_ia_last"]
+                    sc.user_data["_tl_iats"].append((delta.seconds*1000000 + delta.microseconds)/1000)
+                sc.user_data["_tl_ia_last"] = ts
             return
 
         if data_len == 0:
@@ -3762,7 +3776,7 @@ class StatisticMod(Mod):
 
 
     def account_tcp_data(self, sc, ts, packet, pi):
-        self.account_rexmt(sc, packet, pi)
+        self.account_rexmt(sc, packet, pi, ts)
         self.account_evil_bits(sc, packet, pi)
 
 
@@ -3827,7 +3841,11 @@ class StatisticMod(Mod):
                 "tl-ps-min",
                 "tl-ps-max",
                 "tl-ps-avg",
-                "tl-ps-median"
+                "tl-ps-median",
+
+                "tl-iats-min",
+                "tl-iats-max",
+                "tl-iats-avg",
             ])
 
 
