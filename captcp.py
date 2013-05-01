@@ -478,12 +478,12 @@ class Converter:
 
 
     def dpkt_addr_to_string(addr):
-	if len(addr) == 16:
-	    # IPv6
-	    # FIXME: inet_ntop is UNIX only according to the python doc
-	    return socket.inet_ntop(socket.AF_INET6, addr)
-	else:
-	    # IPv4
+        if len(addr) == 16:
+            # IPv6
+            # FIXME: inet_ntop is UNIX only according to the python doc
+            return socket.inet_ntop(socket.AF_INET6, addr)
+        else:
+            # IPv4
             iaddr = int(struct.unpack('I', addr)[0])
             return Converter.num_to_dotted_quad(iaddr)
 
