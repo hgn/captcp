@@ -3590,6 +3590,8 @@ class StatisticMod(Mod):
                      "\"sip:sport-dip:dport\", default \"*:*-*:*\"")
         parser.add_option( "-m", "--format", dest="format", default=None,
                 type="string", help="skip summary and display only selected values")
+        parser.add_option("--extended", dest="extended", action="store_true",
+                          help="show extended statistics about packet sizes etc.")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
@@ -3818,12 +3820,16 @@ class StatisticMod(Mod):
                 "push-flag-set-packets",
                 "ece-flag-set-packets",
                 "cwr-flag-set-packets",
+        ]
 
+        if self.opts.extended:
+            ordere_list.extend([
                 "tl-ps-min",
                 "tl-ps-max",
                 "tl-ps-avg",
-                "tl-ps-median",
-        ]
+                "tl-ps-median"
+            ])
+
 
         for i in ordere_list:
             l1 = self.left(self.type_to_label(i) + ":", left_width)
