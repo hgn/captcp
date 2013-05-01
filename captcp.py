@@ -245,7 +245,7 @@ class U:
     """ Utility module, to collect usefull functionality
     needed by several other classes. We name it U to make it short
     and non bloated"""
-    
+
     @staticmethod
     def byte_to_unit(byte, unit):
 
@@ -604,7 +604,7 @@ class IpPacketInfo(PacketInfo):
             self.ipversion = "IP6"
         else:
             raise InternalException("unknown protocol")
- 
+
         self.sport = int(self.tcp.sport)
         self.dport = int(self.tcp.dport)
 
@@ -648,7 +648,7 @@ class TcpPacketInfo(PacketInfo):
             self.ipversion = "IP6"
         else:
             raise InternalException("unknown protocol")
- 
+
         self.sport = int(self.tcp.sport)
         self.dport = int(self.tcp.dport)
 
@@ -787,14 +787,14 @@ class Geoip:
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
-        
+
         if len(args) < 3:
             sys.stderr.write("no IP address argument given, exiting\n")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
- 
+
         if not self.opts.verbose:
             sys.stderr = open(os.devnull, 'w')
-        
+
         self.captcp.print_welcome()
 
         self.ip_address = args[2]
@@ -806,7 +806,7 @@ class Geoip:
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
         gi = GeoIP.new(GeoIP.GEOIP_MEMORY_CACHE)
-        
+
         sys.stdout.write("Country Code: " + gi.country_code_by_addr(self.ip_address) + "\n")
 
 
@@ -914,11 +914,11 @@ class PayloadTimePortMod(Mod):
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
-        
+
         if len(args) < 3:
             sys.stderr.write("no pcap file argument given, exiting\n")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
- 
+
         self.captcp.print_welcome()
         self.captcp.pcap_file_path = args[2]
         self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
@@ -963,12 +963,12 @@ class PayloadTimePortMod(Mod):
 
         self.data[self.next_sampling_boundary - self.time_offset][sport]["sum"] += len(packet)
         self.data[self.next_sampling_boundary - self.time_offset][sport]["cnt"] += 1
- 
+
 
     def print_data(self):
         for timesortedtupel in sorted(self.data.iteritems(), key = lambda (k,v): float(k)):
             time = timesortedtupel[0]
-            
+
             for port in range(PayloadTimePortMod.PORT_END + 1):
 
                 if port in timesortedtupel[1]:
@@ -1091,7 +1091,7 @@ class TemplateMod(Mod):
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
-        
+
         if len(args) < 3:
             self.logger.error("no template name given, please pick on of the following")
             self.print_available_templates()
@@ -1184,7 +1184,7 @@ class StackTraceMod(Mod):
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
-        
+
         self.captcp.print_welcome()
 
         self.check_options()
@@ -1291,7 +1291,7 @@ class TimeSequenceMod(Mod):
                                                       "data-arrow-ece.data")
         self.data_arrow_cwr_filepath     = "%s/%s" % (self.opts.outputdir,
                                                       "data-arrow-cwr.data")
-        
+
         # line data files
         self.data_flow_fd     = open(self.data_flow_filepath, 'w')
         self.ack_flow_fd      = open(self.ack_flow_filepath, 'w')
@@ -1425,7 +1425,7 @@ class TimeSequenceMod(Mod):
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
-        
+
         if len(args) < 3:
             self.logger.critical("No pcap file argument given, exiting\n")
             parser.print_help(sys.stderr)
@@ -1627,7 +1627,7 @@ class TimeSequenceMod(Mod):
 
 
 class FlowGraphMod(Mod):
-    
+
     class Sequence: pass
 
     # more then PACKET_THRESH_FEW packets and the axis labeling
@@ -1845,7 +1845,7 @@ class FlowGraphMod(Mod):
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
-        
+
         if len(args) < 3:
             parser.error("no pcap file argument given, exiting")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
@@ -1920,7 +1920,7 @@ class FlowGraphMod(Mod):
             if (y_offset - height - 1) < val and (y_offset + height + 1) > val:
                 # skip drawing
                 return
-            
+
         self.cr.move_to(x_offset, y_offset)
         self.cr.show_text(time)
         self.cr.stroke()
@@ -1982,7 +1982,7 @@ class FlowGraphMod(Mod):
             gk = math.atan(res) * (width / 2.0)
             if not sequence.local:
                 res = (math.pi * 2) - res
-            y_off = (mid) - (height / 2.0) + gk + local_margin 
+            y_off = (mid) - (height / 2.0) + gk + local_margin
 
 
         self.cr.move_to(x_off, y_off)
@@ -2002,7 +2002,7 @@ class FlowGraphMod(Mod):
         if not self.reduced_labeling():
             self.draw_labels(sequence, ts, packet)
 
-        
+
         self.cr.set_line_width(0.5)
         self.cr.move_to(sequence.xs, sequence.ys)
         self.cr.line_to(sequence.xe, sequence.ye)
@@ -2030,7 +2030,7 @@ class FlowGraphMod(Mod):
 
             xsp = sequence.xe - (6 * math.cos(interim_angle))
             ysp = sequence.ye + (6 * math.sin(interim_angle))
- 
+
             interim_angle = pi_half - (math.atan((sequence.ys - sequence.ye) / \
                     (sequence.ye - sequence.ys))) - 0.4
 
@@ -2061,7 +2061,7 @@ class FlowGraphMod(Mod):
 
             xep = sequence.xe + (6 * math.cos(interim_angle))
             yep = sequence.ye - (6 * math.sin(interim_angle))
-            
+
         if xsp and ysp:
             self.cr.set_source_rgb(0.0,0.0,0.0)
             self.cr.set_line_width(0.5)
@@ -2072,7 +2072,7 @@ class FlowGraphMod(Mod):
             self.cr.close_path()
             self.cr.fill()
 
-            
+
     def is_drawable_packet(self, ts, packet):
         if type(packet) != dpkt.ip.IP and type(packet) != dpkt.ip6.IP6:
             return False
@@ -2143,7 +2143,7 @@ class FlowGraphMod(Mod):
 
         self.cr.set_source_rgb(0.0, 0.0, 0.0)
         self.draw_sequence(s, display_time, packet)
-        self.draw_arrows(s) 
+        self.draw_arrows(s)
 
 
     def process_final(self):
@@ -2227,7 +2227,7 @@ class SubConnection(TcpConn):
                     self.dip,
                     self.dport)
 
-        
+
     def update(self, ts, packet):
         self.statistic.packets_processed += 1
 
@@ -2488,11 +2488,11 @@ class ConnectionAnalyzeMod(Mod):
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
-        
+
         if len(args) < 3:
             self.logger.error("no pcap file argument given, exiting")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
- 
+
         self.captcp.pcap_file_path = args[2]
 
         self.captcp.pcap_filter = None
@@ -2760,7 +2760,7 @@ class InFlightMod(Mod):
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
-        
+
         if len(args) < 3:
             self.logger.error("no pcap file argument given, exiting")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
@@ -2928,7 +2928,7 @@ class SpacingMod(Mod):
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
-        
+
         if len(args) < 3:
             self.logger.error("no pcap file argument given, exiting")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
@@ -3011,7 +3011,7 @@ class SpacingMod(Mod):
             self.tx_file.write("%.5f %.5f\n" % (time, delta))
         else:
             self.rx_file.write("%.5f %.5f\n" % (time, delta))
-            
+
 
 
     def stdio_out(self, time, delta, is_data_flow):
@@ -3058,7 +3058,7 @@ class SpacingMod(Mod):
         else:
             raise InternalException
 
-        
+
         tmp = 0.0
         if is_data_flow:
             for i in self.tx_time_samples:
@@ -3123,7 +3123,7 @@ class ShowMod(Mod):
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
-        
+
         if len(args) < 3:
             self.logger.error("no pcap file argument given, exiting")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
@@ -3376,7 +3376,7 @@ class SoundMod(Mod):
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
-        
+
         if len(args) < 3:
             self.logger.error("no pcap file argument given, exiting")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
@@ -3598,11 +3598,11 @@ class StatisticMod(Mod):
             self.opts.filter = self.opts.filter.split(",")
         else:
             self.opts.filter = list()
-        
+
         if len(args) < 3:
             self.logger.error("no pcap file argument given, exiting")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
- 
+
         self.captcp.print_welcome()
         self.captcp.pcap_file_path = args[2]
         self.logger.info("pcapfile: \"%s\"" % self.captcp.pcap_file_path)
@@ -3740,7 +3740,7 @@ class StatisticMod(Mod):
 
         # ok, rexmt happened
         sc.user_data["rexmt-data-packets"] += 1
-        
+
         # now account rexmt bytes, we add one to take care
         sc.user_data["rexmt-data-bytes"] += data_len
 
