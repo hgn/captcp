@@ -3906,6 +3906,7 @@ class StatisticMod(Mod):
                     (connection.statistic.packets_processed,
                         float(connection.statistic.packets_processed) /
                         float(self.cc.statistic.packets_processed) * 100.0))
+            sys.stdout.write("   Duration: %d seconds\n" % ((connection.capture_time_end - connection.capture_time_start).total_seconds()))
 
             sys.stdout.write("\n")
 
