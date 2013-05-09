@@ -3561,14 +3561,14 @@ class StatisticMod(Mod):
 
         "pure-ack-packets": [ "ACK flag set but no payload", "packets", 0],
 
-        "push-flag-set-packets": [ "PUSH flag set",    "packets", 0],
+        "push-flag-set-packets": [ "PUSH flag set",          "packets", 0],
         "ece-flag-set-packets":  [ "TCP-ECE (ECN) flag set", "packets", 0],
         "cwr-flag-set-packets":  [ "TCP-CWR (ECN) flag set", "packets", 0],
 
-        "tl-ps-min": [ "TCP Payload Size (min)", "bytes", 0],
-        "tl-ps-max": [ "TCP Payload Size (max)", "bytes", 0],
+        "tl-ps-min":    [ "TCP Payload Size (min)",    "bytes", 0],
+        "tl-ps-max":    [ "TCP Payload Size (max)",    "bytes", 0],
         "tl-ps-median": [ "TCP Payload Size (median)", "bytes", 0],
-        "tl-ps-avg": [ "TCP Payload Size (avg)", "bytes", 0],
+        "tl-ps-avg":    [ "TCP Payload Size (avg)",    "bytes", 0],
 
         "tl-iats-min": [ "TCP packet inter-arrival times (min)", "microseconds", 0],
         "tl-iats-max": [ "TCP packet inter-arrival times (max)", "microseconds", 0],
@@ -3721,10 +3721,11 @@ class StatisticMod(Mod):
         sc.user_data["rexmt-packets-percent"] = "%.2f" % (res)
 
         if len(sc.user_data["_tl_pkt_sizes"]) > 0:
-            sc.user_data["tl-ps-min"] = "%d" % min(sc.user_data["_tl_pkt_sizes"])
-            sc.user_data["tl-ps-max"] = "%d" % max(sc.user_data["_tl_pkt_sizes"])
-            sc.user_data["tl-ps-avg"] = "%.2f" % numpy.mean(sc.user_data["_tl_pkt_sizes"])
+            sc.user_data["tl-ps-min"]    = "%d" % min(sc.user_data["_tl_pkt_sizes"])
+            sc.user_data["tl-ps-max"]    = "%d" % max(sc.user_data["_tl_pkt_sizes"])
+            sc.user_data["tl-ps-avg"]    = "%.2f" % numpy.mean(sc.user_data["_tl_pkt_sizes"])
             sc.user_data["tl-ps-median"] = "%.2f" % numpy.median(sc.user_data["_tl_pkt_sizes"])
+
         if len(sc.user_data["_tl_iats"]) > 0:
             sc.user_data["tl-iats-min"] = "%d" % min(sc.user_data["_tl_iats"])
             sc.user_data["tl-iats-max"] = "%d" % max(sc.user_data["_tl_iats"])
