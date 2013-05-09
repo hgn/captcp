@@ -23,7 +23,6 @@ import re
 import shutil
 import distutils.dir_util
 import string
-import numpy as np
 
 # optional packages
 try:
@@ -3609,6 +3608,10 @@ class StatisticMod(Mod):
             self.logger.error("no pcap file argument given, exiting")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
+        if self.opts.extended and not numpy:
+            self.logger.error("Python numpy module not installed - but required for extended statistic")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
         self.captcp.print_welcome()
         self.captcp.pcap_file_path = args[2]
         self.logger.info("pcapfile: \"%s\"" % self.captcp.pcap_file_path)
@@ -3720,12 +3723,12 @@ class StatisticMod(Mod):
         if len(sc.user_data["_tl_pkt_sizes"]) > 0:
             sc.user_data["tl-ps-min"] = "%d" % min(sc.user_data["_tl_pkt_sizes"])
             sc.user_data["tl-ps-max"] = "%d" % max(sc.user_data["_tl_pkt_sizes"])
-            sc.user_data["tl-ps-avg"] = "%.2f" % np.mean(sc.user_data["_tl_pkt_sizes"])
-            sc.user_data["tl-ps-median"] = "%.2f" % np.median(sc.user_data["_tl_pkt_sizes"])
+            sc.user_data["tl-ps-avg"] = "%.2f" % numpy.mean(sc.user_data["_tl_pkt_sizes"])
+            sc.user_data["tl-ps-median"] = "%.2f" % numpy.median(sc.user_data["_tl_pkt_sizes"])
         if len(sc.user_data["_tl_iats"]) > 0:
             sc.user_data["tl-iats-min"] = "%d" % min(sc.user_data["_tl_iats"])
             sc.user_data["tl-iats-max"] = "%d" % max(sc.user_data["_tl_iats"])
-            sc.user_data["tl-iats-avg"] = "%d" % np.mean(sc.user_data["_tl_iats"])
+            sc.user_data["tl-iats-avg"] = "%d" % numpy.mean(sc.user_data["_tl_iats"])
 
     def account_rexmt(self, sc, packet, pi, ts):
         data_len = int(len(packet.data.data))
