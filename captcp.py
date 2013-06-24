@@ -521,6 +521,8 @@ class PcapParser:
                 dpkt.pcap.DLT_LOOP:      dpkt.loopback.Loopback,
                 dpkt.pcap.DLT_NULL:      dpkt.loopback.Loopback,
                 dpkt.pcap.DLT_EN10MB:    dpkt.ethernet.Ethernet,
+                dpkt.pcap.DLT_IEEE802:   dpkt.ethernet.Ethernet,
+                dpkt.pcap.DLT_PPP:       dpkt.ppp.PPP,
                 dpkt.pcap.DLT_LINUX_SLL: dpkt.sll.SLL
             }[self.pc.datalink()]
         except KeyError:
