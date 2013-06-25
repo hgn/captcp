@@ -2649,7 +2649,8 @@ class ThroughputMod(Mod):
             self.logger.info("show limited to the following connections: %s" % (str(self.ids)))
 
         if self.opts.samplelength != 1.0 and not self.opts.persecond:
-            self.logger.warning("WARNING: graph is scaled to %s per %.1f seconds" % (self.opts.unit, self.opts.samplelength))
+            self.logger.warning("WARNING: graph is scaled to %s per %.1f seconds" %
+                                (self.opts.unit, self.opts.samplelength))
             self.logger.warning("Use --per-second (-p) option if you want per-second average")
 
     def output_data(self, time, amount):
