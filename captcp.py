@@ -2688,9 +2688,6 @@ class ThroughputMod(Mod):
                 self.time_clipping_delta = Utils.ts_tofloat(self.start_time -
                                                             self.first_packet_seen)
 
-        self.data += data_len
-        self.total_data_len += data_len
-
         timediff = Utils.ts_tofloat(ts - self.start_time)
 
         if timediff >= self.last_sample + self.opts.samplelength:
@@ -2706,6 +2703,8 @@ class ThroughputMod(Mod):
             self.data  = 0
             self.last_sample += self.opts.samplelength
 
+        self.total_data_len += data_len
+        self.data += data_len
         self.end_time = ts
 
 
