@@ -2550,7 +2550,11 @@ class ThroughputMod(Mod):
 
         # throughput.gpi
         tmpl = string.Template(TemplateMod().get_content_by_name("throughput"))
-        gpi_cmd = tmpl.substitute(UNIT=self.opts.unit)
+        if self.opts.persecond:
+            gpi_cmd = tmpl.substitute(UNIT=self.opts.unit + "/s")
+        else:
+            gpi_cmd = tmpl.substitute(UNIT=self.opts.unit)
+
         filepath = "%s/%s" % (self.opts.outputdir, gnuplot_filename)
         fd = open(filepath, 'w')
         fd.write("%s" % (gpi_cmd))
@@ -2611,9 +2615,11 @@ class ThroughputMod(Mod):
                 type="string", help="specify the number of displayed ID's")
         parser.add_option( "-s", "--sample-length", dest="samplelength", default=1.0,
                 type="float", help="length in seconds (float) where data is accumulated (1.0)")
+        parser.add_option( "-p", "--per-second", dest="persecond", default=False,
+                action="store_true", help="data is normalized as per-second average")
         parser.add_option( "-m", "--mode", dest="mode", default="goodput",
                 type="string",
-                help="layer where the data len measurement is taken (default: goodput")
+                help="layer where the data len measurement is taken (default: goodput)")
         parser.add_option( "-u", "--unit", dest="unit", default="byte",
                 type="string", help="unit: bit, kilobit, megabit, gigabit, byte, kilobyte, ...")
         parser.add_option( "-i", "--init", dest="init",  default=False,
@@ -2642,6 +2648,9 @@ class ThroughputMod(Mod):
             self.ids = self.opts.connections.split(',')
             self.logger.info("show limited to the following connections: %s" % (str(self.ids)))
 
+        if self.opts.samplelength != 1.0 and not self.opts.persecond:
+            self.logger.warning("WARNING: graph is scaled to %s per %.1f seconds" % (self.opts.unit, self.opts.samplelength))
+            self.logger.warning("Use --per-second (-p) option if you want per-second average")
 
     def output_data(self, time, amount):
         if self.opts.stdio:
@@ -2697,7 +2706,11 @@ class ThroughputMod(Mod):
                 self.last_sample += self.opts.samplelength
                 self.output_data(self.last_sample + self.time_clipping_delta, 0)
 
-            amount = U.byte_to_unit(self.data, self.opts.unit)
+            if self.opts.persecond:
+                amount = U.byte_to_unit(self.data / self.opts.samplelength, self.opts.unit)
+            else:
+                amount = U.byte_to_unit(self.data, self.opts.unit)
+
             self.output_data(self.last_sample + self.opts.samplelength +
                              self.time_clipping_delta, amount)
             self.data  = 0
