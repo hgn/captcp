@@ -3612,7 +3612,7 @@ class StatisticMod(Mod):
                      "\"sip:sport-dip:dport\", default \"*:*-*:*\"")
         parser.add_option( "-m", "--format", dest="format", default=None,
                 type="string", help="skip summary and display only selected values")
-        parser.add_option("--extended", dest="extended", action="store_true",
+        parser.add_option("-e", "--extended", dest="extended", action="store_true",
                           help="show extended statistics about packet sizes etc.")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
