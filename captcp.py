@@ -3573,6 +3573,8 @@ class StatisticMod(Mod):
         "transport-layer-byte":   [ "Data transport layer",   "bytes  ", 0],
         "application-layer-byte": [ "Data application layer", "bytes  ", 0],
 
+        "duration-timedelta": [ "Timedelta from start to end", "seconds ", 0.0],
+
         "rexmt-data-bytes":      [ "Retransmissions",            "bytes  ",   0],
         "rexmt-data-packets":    [ "Retransmissions",            "packets",   0],
         "rexmt-bytes-percent":   [ "Retransmissions per byte",   "percent", 0.0],
@@ -3654,6 +3656,9 @@ class StatisticMod(Mod):
         sc.user_data["_tl_iats"] = list()
         sc.user_data["_tl_ia_last"] = None
 
+        sc.user_data["_flow_time_start"] = None
+        sc.user_data["_flow_time_end"]   = None
+
 
     def type_to_label(self, label):
         return self.LABEL_DB[label][StatisticMod.LABEL_DB_INDEX_DESCRIPTION]
@@ -3718,13 +3723,19 @@ class StatisticMod(Mod):
             raise PacketNotSupportedException()
 
 
-    def account_general_tcp_data(self, sc, packet):
+    def account_general_tcp_data(self, sc, ts, packet):
         sc.user_data["packets-packets"] += 1
 
         sc.user_data["link-layer-byte"]        += len(packet) + Info.ETHERNET_HEADER_LEN
         sc.user_data["network-layer-byte"]     += int(len(packet))
         sc.user_data["transport-layer-byte"]   += int(len(packet.data))
         sc.user_data["application-layer-byte"] += int(len(packet.data.data))
+
+        # capture start and end on a per flow basis
+        # This will be used for flow duration and flow throughput
+        if not sc.user_data["_flow_time_start"]:
+            sc.user_data["_flow_time_start"] = ts
+        sc.user_data["_flow_time_end"] = ts
 
         self.cc.statistic.packets_processed += 1
 
@@ -3750,12 +3761,17 @@ class StatisticMod(Mod):
             sc.user_data["tl-iats-max"] = "%d" % max(sc.user_data["_tl_iats"])
             sc.user_data["tl-iats-avg"] = "%d" % numpy.mean(sc.user_data["_tl_iats"])
 
+        if sc.user_data["_flow_time_start"] != sc.user_data["_flow_time_end"]:
+            sc.user_data["duration-timedelta"] = sc.user_data["_flow_time_end"] - sc.user_data["_flow_time_start"]
+            sc.user_data["duration-timedelta"] =  Utils.ts_tofloat(sc.user_data["duration-timedelta"])
+
+
     def account_rexmt(self, sc, packet, pi, ts):
         data_len = int(len(packet.data.data))
         transport_len = int(len(packet.data))
 
         actual_data = pi.seq + data_len
-
+ 
         if not sc.user_data["_highest_data_seen"]:
             # no rexmt possible, skip rexmt processing
             sc.user_data["_highest_data_seen"] = actual_data
@@ -3815,7 +3831,7 @@ class StatisticMod(Mod):
         # make sure the data structure is initialized
         self.check_new_subconnection(sc)
 
-        self.account_general_tcp_data(sc, packet)
+        self.account_general_tcp_data(sc, ts, packet)
 
         # .oO guaranteed TCP packet now
         pi = TcpPacketInfo(packet)
@@ -3841,6 +3857,7 @@ class StatisticMod(Mod):
 
         ordere_list = [
                 "packets-packets",
+                "duration-timedelta",
 
                 "link-layer-byte",
                 "network-layer-byte",
@@ -3947,7 +3964,7 @@ class StatisticMod(Mod):
                     (connection.statistic.packets_processed,
                         float(connection.statistic.packets_processed) /
                         float(self.cc.statistic.packets_processed) * 100.0))
-            sys.stdout.write("   Duration: %d seconds\n" % ((connection.capture_time_end - connection.capture_time_start).total_seconds()))
+            sys.stdout.write("   Duration: %.3f seconds\n" % (Utils.ts_tofloat(connection.capture_time_end - connection.capture_time_start)))
 
             sys.stdout.write("\n")
 
