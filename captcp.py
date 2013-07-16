@@ -3575,10 +3575,10 @@ class StatisticMod(Mod):
 
         "duration-timedelta": [ "Timedelta from start to end", "seconds ", 0.0],
 
-        "link-layer-throughput-bitsecond":        [ "Link layer throughput",        "bit/s  ", 0],
-        "network-layer-throughput-bitsecond":     [ "Network layer throughput",     "bit/s  ", 0],
-        "transport-layer-throughput-bitsecond":   [ "Transport layer throughput",   "bit/s  ", 0],
-        "application-layer-throughput-bitsecond": [ "Application layer throughput", "bit/s  ", 0],
+        "link-layer-throughput-bitsecond":        [ "Link layer throughput",        "bit/s  ", 0.0],
+        "network-layer-throughput-bitsecond":     [ "Network layer throughput",     "bit/s  ", 0.0],
+        "transport-layer-throughput-bitsecond":   [ "Transport layer throughput",   "bit/s  ", 0.0],
+        "application-layer-throughput-bitsecond": [ "Application layer throughput", "bit/s  ", 0.0],
 
         "rexmt-data-bytes":      [ "Retransmissions",            "bytes  ",   0],
         "rexmt-data-packets":    [ "Retransmissions",            "packets",   0],
@@ -3771,10 +3771,10 @@ class StatisticMod(Mod):
             sc.user_data["duration-timedelta"] =  Utils.ts_tofloat(sc.user_data["duration-timedelta"])
 
         if sc.user_data["duration-timedelta"] > 0.0:
-            sc.user_data["link-layer-throughput-bitsecond"]        = int((sc.user_data["link-layer-byte"] * 8) / sc.user_data["duration-timedelta"])
-            sc.user_data["network-layer-throughput-bitsecond"]     = int((sc.user_data["network-layer-byte"] * 8) / sc.user_data["duration-timedelta"])
-            sc.user_data["transport-layer-throughput-bitsecond"]   = int((sc.user_data["transport-layer-byte"] * 8) / sc.user_data["duration-timedelta"])
-            sc.user_data["application-layer-throughput-bitsecond"] = int((sc.user_data["application-layer-byte"] * 8) / sc.user_data["duration-timedelta"])
+            sc.user_data["link-layer-throughput-bitsecond"]        = "%.2f" % ((sc.user_data["link-layer-byte"] * 8) / sc.user_data["duration-timedelta"])
+            sc.user_data["network-layer-throughput-bitsecond"]     = "%.2f" % ((sc.user_data["network-layer-byte"] * 8) / sc.user_data["duration-timedelta"])
+            sc.user_data["transport-layer-throughput-bitsecond"]   = "%.2f" % ((sc.user_data["transport-layer-byte"] * 8) / sc.user_data["duration-timedelta"])
+            sc.user_data["application-layer-throughput-bitsecond"] = "%.2f" % ((sc.user_data["application-layer-byte"] * 8) / sc.user_data["duration-timedelta"])
 
 
     def account_rexmt(self, sc, packet, pi, ts):
