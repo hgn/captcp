@@ -3575,6 +3575,11 @@ class StatisticMod(Mod):
 
         "duration-timedelta": [ "Timedelta from start to end", "seconds ", 0.0],
 
+        "link-layer-throughput-bitsecond":        [ "Link layer throughput",        "bit/s  ", 0],
+        "network-layer-throughput-bitsecond":     [ "Network layer throughput",     "bit/s  ", 0],
+        "transport-layer-throughput-bitsecond":   [ "Transport layer throughput",   "bit/s  ", 0],
+        "application-layer-throughput-bitsecond": [ "Application layer throughput", "bit/s  ", 0],
+
         "rexmt-data-bytes":      [ "Retransmissions",            "bytes  ",   0],
         "rexmt-data-packets":    [ "Retransmissions",            "packets",   0],
         "rexmt-bytes-percent":   [ "Retransmissions per byte",   "percent", 0.0],
@@ -3765,6 +3770,12 @@ class StatisticMod(Mod):
             sc.user_data["duration-timedelta"] = sc.user_data["_flow_time_end"] - sc.user_data["_flow_time_start"]
             sc.user_data["duration-timedelta"] =  Utils.ts_tofloat(sc.user_data["duration-timedelta"])
 
+        if sc.user_data["duration-timedelta"] > 0.0:
+            sc.user_data["link-layer-throughput-bitsecond"]        = int((sc.user_data["link-layer-byte"] * 8) / sc.user_data["duration-timedelta"])
+            sc.user_data["network-layer-throughput-bitsecond"]     = int((sc.user_data["network-layer-byte"] * 8) / sc.user_data["duration-timedelta"])
+            sc.user_data["transport-layer-throughput-bitsecond"]   = int((sc.user_data["transport-layer-byte"] * 8) / sc.user_data["duration-timedelta"])
+            sc.user_data["application-layer-throughput-bitsecond"] = int((sc.user_data["application-layer-byte"] * 8) / sc.user_data["duration-timedelta"])
+
 
     def account_rexmt(self, sc, packet, pi, ts):
         data_len = int(len(packet.data.data))
@@ -3860,9 +3871,31 @@ class StatisticMod(Mod):
                 "duration-timedelta",
 
                 "link-layer-byte",
+                "link-layer-throughput-bitsecond",
+
+                "application-layer-byte",
+                "application-layer-throughput-bitsecond",
+
+                "rexmt-data-packets",
+                "rexmt-packets-percent",
+
+                "pure-ack-packets",
+        ]
+
+        if self.opts.extended:
+            ordere_list = [
+                "packets-packets",
+                "duration-timedelta",
+
+                "link-layer-byte",
                 "network-layer-byte",
                 "transport-layer-byte",
                 "application-layer-byte",
+
+                "link-layer-throughput-bitsecond",
+                "network-layer-throughput-bitsecond",
+                "transport-layer-throughput-bitsecond",
+                "application-layer-throughput-bitsecond",
 
                 "rexmt-data-bytes",
                 "rexmt-data-packets",
@@ -3874,10 +3907,7 @@ class StatisticMod(Mod):
                 "push-flag-set-packets",
                 "ece-flag-set-packets",
                 "cwr-flag-set-packets",
-        ]
 
-        if self.opts.extended:
-            ordere_list.extend([
                 "tl-ps-min",
                 "tl-ps-max",
                 "tl-ps-avg",
@@ -3886,7 +3916,7 @@ class StatisticMod(Mod):
                 "tl-iats-min",
                 "tl-iats-max",
                 "tl-iats-avg",
-            ])
+            ]
 
 
         for i in ordere_list:
