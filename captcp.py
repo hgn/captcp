@@ -1424,6 +1424,9 @@ class TimeSequenceMod(Mod):
         parser.add_option( "-e", "--extended", dest="extended",  default=False,
                 action="store_true", help="visualize PUSH and ECE/CWR(ECN) bits too")
 
+        parser.add_option( "-w", "--hide-window", dest="hide_window",  default=False,
+                action="store_true", help="do not visualize advertised window")
+
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
 
@@ -1584,8 +1587,9 @@ class TimeSequenceMod(Mod):
                     (packet_time + self.arrow_length, pi.ack + 2, packet_time, pi.ack + 2,
                      TimeSequenceMod.COLOR_ACK_CWR))
 
-        # write advertised window
-        self.receiver_awnd_fd.write("%lf %s\n" % (packet_time, self.calc_advertised_window(pi)))
+        # write advertised window if not explicit disabled
+        if not self.opts.hide_window:
+            self.receiver_awnd_fd.write("%lf %s\n" % (packet_time, self.calc_advertised_window(pi)))
 
         if pi.options['sackblocks']:
             for i in range(len(pi.options['sackblocks'])):
@@ -3994,7 +3998,7 @@ class StatisticMod(Mod):
                     (connection.statistic.packets_processed,
                         float(connection.statistic.packets_processed) /
                         float(self.cc.statistic.packets_processed) * 100.0))
-            sys.stdout.write("   Duration: %.3f seconds\n" % (Utils.ts_tofloat(connection.capture_time_end - connection.capture_time_start)))
+            sys.stdout.write("   Duration: %.2f seconds\n" % (Utils.ts_tofloat(connection.capture_time_end - connection.capture_time_start)))
 
             sys.stdout.write("\n")
 
