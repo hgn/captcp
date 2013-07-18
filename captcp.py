@@ -3836,6 +3836,7 @@ class StatisticMod(Mod):
     def account_tcp_data(self, sc, ts, packet, pi):
         self.account_rexmt(sc, packet, pi, ts)
         self.account_evil_bits(sc, packet, pi)
+        self.account_pure_ack(sc, packet, pi)
 
 
     def pre_process_packet(self, ts, packet):
