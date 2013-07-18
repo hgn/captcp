@@ -3577,7 +3577,7 @@ class StatisticMod(Mod):
         "transport-layer-byte":   [ "Data transport layer",   "bytes  ", 0],
         "application-layer-byte": [ "Data application layer", "bytes  ", 0],
 
-        "duration-timedelta": [ "Timedelta from start to end", "seconds ", 0.0],
+        "duration-timedelta": [ "Duration", "seconds ", 0.0],
 
         "link-layer-throughput-bitsecond":        [ "Link layer throughput",        "bit/s  ", 0.0],
         "network-layer-throughput-bitsecond":     [ "Network layer throughput",     "bit/s  ", 0.0],
