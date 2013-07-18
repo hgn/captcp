@@ -3779,6 +3779,10 @@ class StatisticMod(Mod):
             sc.user_data["network-layer-throughput-bitsecond"]     = "%.2f" % ((sc.user_data["network-layer-byte"] * 8) / sc.user_data["duration-timedelta"])
             sc.user_data["transport-layer-throughput-bitsecond"]   = "%.2f" % ((sc.user_data["transport-layer-byte"] * 8) / sc.user_data["duration-timedelta"])
             sc.user_data["application-layer-throughput-bitsecond"] = "%.2f" % ((sc.user_data["application-layer-byte"] * 8) / sc.user_data["duration-timedelta"])
+            # must be last operation!
+            # we convert duration-timedelta to string with floating point
+            # precision of .2
+            sc.user_data["duration-timedelta"] = "%.2f" % sc.user_data["duration-timedelta"]
 
 
     def account_rexmt(self, sc, packet, pi, ts):
