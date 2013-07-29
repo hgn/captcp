@@ -1331,6 +1331,7 @@ class TimeSequenceMod(Mod):
         gpi_extended_fmt = "load \"data-arrow-push.data\"\n" + \
                            "load \"data-arrow-ece.data\"\n"  + \
                            "load \"data-arrow-cwr.data\"\n"
+        gpi_hide_window = ", \\\n    \"win.data\" using 1:2 title \"AWND\" with lines ls 3\n"
 
         xrange_str = ""
         yrange_str = ""
@@ -1338,12 +1339,20 @@ class TimeSequenceMod(Mod):
             xrange_str = "set xrange [%s:%s]" % \
                     (self.timeframe_start, self.timeframe_end)
 
+        window_sub = gpi_hide_window
+        if self.opts.hide_window:
+            window_sub = ""
+
+        extended_sub = ""
+        if self.opts.extended:
+            extended_sub = gpi_extended_fmt
+
         # Normal format or extended format
         tmpl = string.Template(TemplateMod().get_content_by_name("time-sequence"))
-        if self.opts.extended:
-            gpi_cmd = tmpl.substitute(EXTENDED=gpi_extended_fmt, XRANGE=xrange_str, YRANGE="")
-        else:
-            gpi_cmd = tmpl.substitute(EXTENDED="", XRANGE=xrange_str, YRANGE="")
+        gpi_cmd = tmpl.substitute(EXTENDED=extended_sub,
+                                  HIDEWINDOW=window_sub,
+                                  XRANGE=xrange_str,
+                                  YRANGE="")
 
         filepath = "%s/%s" % (self.opts.outputdir, gnuplot_filename)
         fd = open(filepath, 'w')

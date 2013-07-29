@@ -13,6 +13,8 @@ set size 2
 #set size ratio 0.4
 
 set format y "%.0f"
+$XRANGE
+$YRANGE
 
 set ylabel "Sequence Number"
 set xlabel "Time [seconds]"
@@ -28,6 +30,5 @@ set style line 3 lc rgb '#cdaf95' lt 1 lw 3
 
 plot  \
     "seq.data" using 1:2 title "Seq" with linespoints ls 1, \
-    "ack.data" using 1:2 title "ACK" with linespoints ls 2, \
-    "win.data" using 1:2 title "AWND" with lines ls 3
+    "ack.data" using 1:2 title "ACK" with linespoints ls 2$HIDEWINDOW
 
