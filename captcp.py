@@ -1331,7 +1331,8 @@ class TimeSequenceMod(Mod):
         gpi_extended_fmt = "load \"data-arrow-push.data\"\n" + \
                            "load \"data-arrow-ece.data\"\n"  + \
                            "load \"data-arrow-cwr.data\"\n"
-        gpi_hide_window = ", \\\n    \"win.data\" using 1:2 title \"AWND\" with lines ls 3\n"
+        gpi_hide_window = ", \\\n    \"win.data\" using 1:2 " + \
+                          "title \"AWND\" with lines ls 3\n"
 
         xrange_str = ""
         yrange_str = ""
