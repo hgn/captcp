@@ -1336,7 +1336,7 @@ class TimeSequenceMod(Mod):
 
         xrange_str = ""
         yrange_str = ""
-        if self.timeframe_start and self.timeframe_end:
+        if (self.timeframe_start != None) and (self.timeframe_end != None):
             xrange_str = "set xrange [%s:%s]" % \
                     (self.timeframe_start, self.timeframe_end)
 
