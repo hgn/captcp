@@ -1377,11 +1377,11 @@ class TimeSequenceMod(Mod):
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
         if self.opts.timeframe:
-            self.logger.debug("split timeframe options: %s" %
-                    (self.opts.timeframe))
             (start, end) = self.opts.timeframe.split(':')
             (self.timeframe_start, self.timeframe_end) = \
                     (float(start), float(end))
+            self.logger.debug("split timeframe options: %f - %f" %
+                    (self.timeframe_start, self.timeframe_end))
 
         if self.opts.init:
             self.create_gnuplot_environment()
