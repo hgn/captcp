@@ -1351,7 +1351,6 @@ class TimeSequenceMod(Mod):
         title='set title "Time Sequence Graph"'
         if "no-title" in self.opts.gnuplotoptions:
             title = 'set notitle'
-
         if "title" in self.opts.gnuplotoptions:
             title = "set title \"%s\"" % (self.opts.gnuplotoptions["title"])
 
@@ -1363,6 +1362,10 @@ class TimeSequenceMod(Mod):
         if "x-logscale" in self.opts.gnuplotoptions:
             logscalex = "set logscale x"
 
+        size_ratio=""
+        if "size-ratio" in self.opts.gnuplotoptions:
+            size_ratio = "set size ratio %.2f" % (self.opts.gnuplotoptions["size-ratio"])
+
 
         # Normal format or extended format
         tmpl = string.Template(TemplateMod().get_content_by_name("time-sequence"))
@@ -1372,6 +1375,7 @@ class TimeSequenceMod(Mod):
                                   TITLE=title,
                                   LOGSCALEY=logscaley,
                                   LOGSCALEX=logscalex,
+                                  SIZE_RATIO=size_ratio,
                                   YRANGE="")
 
         filepath = "%s/%s" % (self.opts.outputdir, gnuplot_filename)
@@ -1451,6 +1455,17 @@ class TimeSequenceMod(Mod):
                                             "form: title=\"New Title\"")
                 self.opts.gnuplotoptions["title"] = title_token[1]
                 continue
+            if option.startswith("size-ratio="):
+                title_token = option.split('=')
+                if len(title_token) != 2:
+                    raise ArgumentException("Gnuplot size-ratio must be in "
+                                            "form: size-ration=0.4")
+                self.opts.gnuplotoptions["size-ratio"] = float(title_token[1])
+                if (not self.opts.gnuplotoptions["size-ratio"] > 0.0 and
+                    not self.opts.gnuplotoptions["size-ratio"] < 1.0):
+                    raise ArgumentException("Gnuplot size-ratio must be in "
+                                            "range 0.01 to 0.99")
+                continue
 
             # unknown options, raise error
             raise ArgumentException("Unknown gnuplot option: %s" % (option))
@@ -1496,7 +1511,7 @@ class TimeSequenceMod(Mod):
                 action="store_true", help="do not visualize advertised window")
 
         parser.add_option( "-g", "--gnuplot-options", dest="gnuplotoptions", default=None,
-                type="string", help="options for Gnuplot, comma separated list: notitle,title=\"Foo\",x-logarithmic,y-logarithmic")
+                type="string", help="options for Gnuplot, comma separated list: notitle, title=\"<newtitle>\", x-logarithmic, y-logarithmic, size-ratio=<float>")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()

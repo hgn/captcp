@@ -10,7 +10,7 @@ set key spacing 1.2
 set grid xtics ytics mytics
 
 set size 2
-#set size ratio 0.4
+$SIZE_RATIO
 
 $LOGSCALEY
 $LOGSCALEX
