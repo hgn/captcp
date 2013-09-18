@@ -60,7 +60,7 @@ pp = pprint.PrettyPrinter(indent=4)
 
 __programm__ = "captcp"
 __author__   = "Hagen Paul Pfeifer"
-__version__  = "1.4"
+__version__  = "1.5"
 __license__  = "GPLv3"
 
 # custom exceptions
@@ -1433,6 +1433,7 @@ class TimeSequenceMod(Mod):
     def prepare_gnuplot_options(self):
 
         if not self.opts.gnuplotoptions:
+            self.opts.gnuplotoptions = dict()
             return
 
         options = self.opts.gnuplotoptions.split(',')
