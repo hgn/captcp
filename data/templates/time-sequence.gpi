@@ -1,6 +1,6 @@
 set terminal postscript eps enhanced color "Times" 25
 set output "time-sequence.eps"
-set title "Time Sequence Graph"
+$TITLE
 
 set style line 99 linetype 1 linecolor rgb "#999999" lw 2
 set key right bottom
@@ -11,6 +11,9 @@ set grid xtics ytics mytics
 
 set size 2
 #set size ratio 0.4
+
+$LOGSCALEY
+$LOGSCALEX
 
 set format y "%.0f"
 $XRANGE

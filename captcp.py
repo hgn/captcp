@@ -1348,11 +1348,30 @@ class TimeSequenceMod(Mod):
         if self.opts.extended:
             extended_sub = gpi_extended_fmt
 
+        title='set title "Time Sequence Graph"'
+        if "no-title" in self.opts.gnuplotoptions:
+            title = 'set notitle'
+
+        if "title" in self.opts.gnuplotoptions:
+            title = "set title \"%s\"" % (self.opts.gnuplotoptions["title"])
+
+        logscaley=""
+        if "y-logscale" in self.opts.gnuplotoptions:
+            logscaley = "set logscale y"
+
+        logscalex=""
+        if "x-logscale" in self.opts.gnuplotoptions:
+            logscalex = "set logscale x"
+
+
         # Normal format or extended format
         tmpl = string.Template(TemplateMod().get_content_by_name("time-sequence"))
         gpi_cmd = tmpl.substitute(EXTENDED=extended_sub,
                                   HIDEWINDOW=window_sub,
                                   XRANGE=xrange_str,
+                                  TITLE=title,
+                                  LOGSCALEY=logscaley,
+                                  LOGSCALEX=logscalex,
                                   YRANGE="")
 
         filepath = "%s/%s" % (self.opts.outputdir, gnuplot_filename)
@@ -1407,6 +1426,45 @@ class TimeSequenceMod(Mod):
 
 
 
+    def prepare_gnuplot_options(self):
+
+        if not self.opts.gnuplotoptions:
+            return
+
+        options = self.opts.gnuplotoptions.split(',')
+        self.opts.gnuplotoptions = dict()
+
+        for option in options:
+            if option == "no-title" or option == "notitle":
+                self.opts.gnuplotoptions["no-title"] = True
+                continue
+            if option == "x-logscale":
+                self.opts.gnuplotoptions["x-logscale"] = True
+                continue
+            if option == "y-logscale":
+                self.opts.gnuplotoptions["y-logscale"] = True
+                continue
+            if option.startswith("title="):
+                title_token = option.split('=')
+                if len(title_token) != 2:
+                    raise ArgumentException("Gnuplot title must be in "
+                                            "form: title=\"New Title\"")
+                self.opts.gnuplotoptions["title"] = title_token[1]
+                continue
+
+            # unknown options, raise error
+            raise ArgumentException("Unknown gnuplot option: %s" % (option))
+
+        # sanity check
+        if ("no-title" in self.opts.gnuplotoptions and
+            "title" in self.opts.gnuplotoptions):
+            raise ArgumentException("Gnuplot title AND no-title options are not allowed")
+
+
+
+
+
+
     def parse_local_options(self):
         self.width = self.height = 0
 
@@ -1437,6 +1495,9 @@ class TimeSequenceMod(Mod):
         parser.add_option( "-w", "--hide-window", dest="hide_window",  default=False,
                 action="store_true", help="do not visualize advertised window")
 
+        parser.add_option( "-g", "--gnuplot-options", dest="gnuplotoptions", default=None,
+                type="string", help="options for Gnuplot, comma separated list: notitle,title=\"Foo\",x-logarithmic,y-logarithmic")
+
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
 
@@ -1446,6 +1507,7 @@ class TimeSequenceMod(Mod):
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
         self.captcp.print_welcome()
+        self.prepare_gnuplot_options()
         self.check_options()
         self.captcp.pcap_file_path = args[2]
         self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
