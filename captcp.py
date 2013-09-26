@@ -4611,87 +4611,33 @@ class SocketStatisticsMod(Mod):
                 d["retrans"] = { "retrans" : vals[0], "total_retrans" : vals[1] }
                 ext.pop(idx)
 
-        # rto:%g
-        for idx, entry in enumerate(ext):
-            if entry.startswith("rto:"):
-                d["rto"] = entry[len("rto:"):]
-                ext.pop(idx)
+        # now parse "singles" - key:value pairs with exactly
+        # one argument after the column
+        singles = [
+                "rto", "ato", "mss", "cwnd", "ssthresh", \
+                "unacked", "lost", "sacked", "facket",   \
+                "reordering", "rcv_rtt", "rcv_space"     \
+                   ]
 
-        # ato:%g
-        for idx, entry in enumerate(ext):
-            if entry.startswith("ato:"):
-                d["ato"] = entry[len("ato:"):]
-                ext.pop(idx)
+        for single in singles:
+            search_string = single + ":"
+            for idx, entry in enumerate(ext):
+                if entry.startswith(search_string):
+                    d[single] = entry[len(search_string):]
+                    ext.pop(idx)
 
-        # mss:%g
-        for idx, entry in enumerate(ext):
-            if entry.startswith("mss:"):
-                d["mss"] = entry[len("mss:"):]
-                ext.pop(idx)
-
-        # cwnd:%g
-        for idx, entry in enumerate(ext):
-            if entry.startswith("cwnd:"):
-                d["cwnd"] = entry[len("cwnd:"):]
-                ext.pop(idx)
-
-        # ssthresh:%g
-        for idx, entry in enumerate(ext):
-            if entry.startswith("ssthresh:"):
-                d["ssthresh"] = entry[len("ssthresh:"):]
-                ext.pop(idx)
-
-        # unacked:%u
-        for idx, entry in enumerate(ext):
-            if entry.startswith("unacked:"):
-                d["unacked"]= entry[len("unacked:"):]
-                ext.pop(idx)
-
-        # lost:%u
-        for idx, entry in enumerate(ext):
-            if entry.startswith("lost:"):
-                d["lost"] = entry[len("lost:"):]
-                ext.pop(idx)
-
-        # sacked:%u
-        for idx, entry in enumerate(ext):
-            if entry.startswith("sacked:"):
-                d["sacked"] = entry[len("sacked:"):]
-                ext.pop(idx)
-
-        # fackets:%u
-        for idx, entry in enumerate(ext):
-            if entry.startswith("fackets:"):
-                d["fackets"] = entry[len("fackets:"):]
-                ext.pop(idx)
-
-        # reordering:%u
-        for idx, entry in enumerate(ext):
-            if entry.startswith("reordering:"):
-                d["reordering"] = entry[len("reordering:"):]
-                ext.pop(idx)
-
-        # rcv_rtt:%g
-        for idx, entry in enumerate(ext):
-            if entry.startswith("rcv_rtt:"):
-                d["rcv_rtt"] = entry[len("rcv_rtt:"):]
-                ext.pop(idx)
-
-        for idx, entry in enumerate(ext):
-            if entry.startswith("rcv_space:"):
-                d["rcv_space"] = entry[len("rcv_space:"):]
-                ext.pop(idx)
-
-        # search for send %sbps
+        # search for "send %sbps"
         for idx, entry in enumerate(ext):
             if entry == "send":
                 d["send"] = ext[idx + 1]
                 ext.pop(idx + 1)
                 ext.pop(idx)
 
+        # any unhandled flags
         unhandled_flags = None
         if len(ext) > 0:
             d["unhandled_flags"] = ','.join(ext)
+            self.logger.debug("unhandled outout %s" % (d["unhandled_flags"]))
 
         return d
 
