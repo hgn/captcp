@@ -1512,8 +1512,8 @@ class TimeSequenceMod(Mod):
         parser.add_option( "-w", "--hide-window", dest="hide_window",  default=False,
                 action="store_true", help="do not visualize advertised window")
 
-        parser.add_option( "-g", "--gnuplot-options", dest="gnuplotoptions", default=None,
-                type="string", help="options for Gnuplot, comma separated list: notitle, title=\"<newtitle>\", x-logarithmic, y-logarithmic, size-ratio=<float>")
+        parser.add_option( "-g", "--gnuplot-options", dest="gnuplotoptions", default=none,
+                type="string", help="options for gnuplot, comma separated list: notitle, title=\"<newtitle>\", x-logarithmic, y-logarithmic, size-ratio=<float>")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
@@ -4393,8 +4393,54 @@ class SocketStatisticsMod(Mod):
             self.timeline.append((now, timeline_event))
             return timeline_event
 
-        def save(self):
-            pass
+
+
+    def create_gnuplot_environment(self, path):
+        gnuplot_filename = "ss-rtt.gpi"
+        makefile_filename = "Makefile"
+
+        xrange_str = ""
+        yrange_str = ""
+        if (self.timeframe_start != None) and (self.timeframe_end != None):
+            xrange_str = "set xrange [%s:%s]" % \
+                    (self.timeframe_start, self.timeframe_end)
+
+
+        title='set title "Time Sequence Graph"'
+        if "no-title" in self.opts.gnuplotoptions:
+            title = 'set notitle'
+        if "title" in self.opts.gnuplotoptions:
+            title = "set title \"%s\"" % (self.opts.gnuplotoptions["title"])
+
+        logscaley=""
+        if "y-logscale" in self.opts.gnuplotoptions:
+            logscaley = "set logscale y"
+
+        logscalex=""
+        if "x-logscale" in self.opts.gnuplotoptions:
+            logscalex = "set logscale x"
+
+        size_ratio=""
+        if "size-ratio" in self.opts.gnuplotoptions:
+            size_ratio = "set size ratio %.2f" % (self.opts.gnuplotoptions["size-ratio"])
+
+
+        # Normal format or extended format
+        tmpl = string.Template(TemplateMod().get_content_by_name("ss-rtt"))
+        gpi_cmd = tmpl.substitute(XRANGE=xrange_str,
+                                  TITLE=title,
+                                  SIZE_RATIO=size_ratio,
+                                  YRANGE="")
+
+        filepath = "%s/%s" % (path, gnuplot_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (gpi_cmd))
+        fd.close()
+
+        filepath = "%s/%s" % (path, makefile_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (TemplateMod().get_content_by_name("gnuplot")))
+        fd.close()
 
 
     def timedelta_to_milli(self, td):
@@ -4405,27 +4451,44 @@ class SocketStatisticsMod(Mod):
         path = os.path.join(self.opts.outputdir, name)
         if os.path.exists(path):
             if not self.opts.force:
-                sys.stderr.write("Directory already exists: %s - "
+                self.logger.error("Directory already exists: %s - "
                                  "remove or force, exiting\n" % (path))
                 sys.exit(ExitCodes.EXIT_ENVIRONMENT)
 
-            sys.stdout.write("clean directory %s now\n" % (path))
-            time.sleep(2)
+            self.logger.info("clean directory %s now\n" % (path))
             shutil.rmtree(path)
 
-        sys.stdout.write("create directory for connection %s\n" % (path))
+        self.logger.info("create directory for connection %s\n" % (path))
         os.makedirs(path)
         return path
 
 
-    def write_rtt(self, path, time_delta, value):
-        sys.stdout.write("%s %s\n" %(time_delta, value))
+    def check_rtt_env(self, full_path):
+        if os.path.exists(full_path):
+            return
+
+        os.makedirs(full_path)
+        self.create_gnuplot_environment(full_path)
+
+
+    def write_rtt(self, path, time_delta, rtt, rtt_var):
+        full_path = os.path.join(path, "rtt")
+        self.check_rtt_env(full_path)
+
+        rtt_data_path     = os.path.join(full_path, "rtt.data")
+        rtt_var_data_path = os.path.join(full_path, "rtt_var.data")
+
+        with open(rtt_data_path, "a") as fd:
+            fd.write("%s %s\n" %(time_delta, rtt))
+
+        with open(rtt_var_data_path, "a") as fd:
+            fd.write("%s %s\n" %(time_delta, rtt_var))
+
 
 
     def write_data_files(self, path, time_delta, data):
         if "rtt" in data:
-            self.write_rtt(path, time_delta, data["rtt"]["rtt"])
-            self.write_rtt(path, time_delta, data["rtt"]["rttvar"])
+            self.write_rtt(path, time_delta, data["rtt"]["rtt"], data["rtt"]["rttvar"])
 
 
     def write_db(self):
@@ -4677,25 +4740,54 @@ class SocketStatisticsMod(Mod):
 
 
     def initialize(self):
+        self.timeframe_start       = None
+        self.timeframe_end         = None
+
         self.logger = logging.getLogger()
         self.parse_local_options()
         self.db = dict()
         self.sleep_time = 1.0
 
 
-    def create_gnuplot_environment(self):
-        gnuplot_filename = "cwnd.gpi"
-        makefile_filename = "Makefile"
+    def prepare_gnuplot_options(self):
 
-        filepath = "%s/%s" % (self.opts.outputdir, gnuplot_filename)
-        fd = open(filepath, 'w')
-        fd.write("%s" % (Template.cwnd))
-        fd.close()
+        if not self.opts.gnuplotoptions:
+            self.opts.gnuplotoptions = dict()
+            return
 
-        filepath = "%s/%s" % (self.opts.outputdir, makefile_filename)
-        fd = open(filepath, 'w')
-        fd.write("%s" % (Template.gnuplot_makefile))
-        fd.close()
+        options = self.opts.gnuplotoptions.split(',')
+        self.opts.gnuplotoptions = dict()
+
+        for option in options:
+            if option == "no-title" or option == "notitle":
+                self.opts.gnuplotoptions["no-title"] = True
+                continue
+            if option.startswith("title="):
+                title_token = option.split('=')
+                if len(title_token) != 2:
+                    raise ArgumentException("Gnuplot title must be in "
+                                            "form: title=\"New Title\"")
+                self.opts.gnuplotoptions["title"] = title_token[1]
+                continue
+            if option.startswith("size-ratio="):
+                title_token = option.split('=')
+                if len(title_token) != 2:
+                    raise ArgumentException("Gnuplot size-ratio must be in "
+                                            "form: size-ration=0.4")
+                self.opts.gnuplotoptions["size-ratio"] = float(title_token[1])
+                if (not self.opts.gnuplotoptions["size-ratio"] > 0.0 and
+                    not self.opts.gnuplotoptions["size-ratio"] < 1.0):
+                    raise ArgumentException("Gnuplot size-ratio must be in "
+                                            "range 0.01 to 0.99")
+                continue
+
+            # unknown options, raise error
+            raise ArgumentException("Unknown gnuplot option: %s" % (option))
+
+        # sanity check
+        if ("no-title" in self.opts.gnuplotoptions and
+            "title" in self.opts.gnuplotoptions):
+            raise ArgumentException("Gnuplot title AND no-title options are not allowed")
 
 
     def check_options(self):
@@ -4725,11 +4817,16 @@ class SocketStatisticsMod(Mod):
         parser.add_option( "-f", "--force", dest="force",  default=False,
                 action="store_true", help="enforce directory overwrite")
 
+        parser.add_option( "-g", "--gnuplot-options", dest="gnuplotoptions", default=None,
+                type="string", help="options for gnuplot, comma separated list: notitle, "
+                "title=\"<newtitle>\", size-ratio=<float>")
+
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
 
         self.captcp.print_welcome()
+        self.prepare_gnuplot_options()
         self.check_options()
 
 
