@@ -110,9 +110,10 @@ UDP = dpkt.udp.UDP
 
 
 class ExitCodes:
-    EXIT_SUCCESS  = 0
-    EXIT_ERROR    = 1
-    EXIT_CMD_LINE = 2
+    EXIT_SUCCESS     = 0
+    EXIT_ERROR       = 1
+    EXIT_CMD_LINE    = 2
+    EXIT_ENVIRONMENT = 3
 
 
 class Info:
@@ -4370,6 +4371,384 @@ class ConnectionAnimationMod(Mod):
 
 
 
+
+class SocketStatisticsMod(Mod):
+
+
+    class TimelineEvent:
+        pass
+
+
+    class SsConnection:
+        def __init__(self):
+            self.timeline = list()
+
+        def start(self):
+            self.start = datetime.datetime.now()
+
+        def snapshot(self):
+            now = datetime.datetime.now()
+            timeline_event = SocketStatisticsMod.TimelineEvent()
+
+            self.timeline.append((now, timeline_event))
+            return timeline_event
+
+        def save(self):
+            pass
+
+
+    def timedelta_to_milli(self, td):
+        return td.microseconds / 1000.0 + (td.seconds + td.days * 86400) * 1000
+
+
+    def create_data_dir(self, name):
+        path = os.path.join(self.opts.outputdir, name)
+        if os.path.exists(path):
+            if not self.opts.force:
+                sys.stderr.write("Directory already exists: %s - "
+                                 "remove or force, exiting\n" % (path))
+                sys.exit(ExitCodes.EXIT_ENVIRONMENT)
+
+            sys.stdout.write("clean directory %s now\n" % (path))
+            time.sleep(2)
+            shutil.rmtree(path)
+
+        sys.stdout.write("create directory for connection %s\n" % (path))
+        os.makedirs(path)
+        return path
+
+
+    def write_rtt(self, path, time_delta, value):
+        sys.stdout.write("%s %s\n" %(time_delta, value))
+
+
+    def write_data_files(self, path, time_delta, data):
+        if "rtt" in data:
+            self.write_rtt(path, time_delta, data["rtt"]["rtt"])
+            self.write_rtt(path, time_delta, data["rtt"]["rttvar"])
+
+
+    def write_db(self):
+        for key, value in self.db.items():
+            path = self.create_data_dir(key)
+            for snapshot in value.timeline:
+                time  = snapshot[0]
+                event = snapshot[1]
+
+                time_delta = self.timedelta_to_milli(time - value.start)
+                self.write_data_files(path, time_delta, event.data)
+            
+
+    def execute_ss(self):
+        cmd = ["ss", "-i", "-m", "-e", "-t", "-n"]
+        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=None)
+        out, err = p.communicate()
+        return out
+
+
+    def connection_handle(self, local_addr, peer_addr):
+        key = "%s-%s" % (local_addr, peer_addr)
+        if key not in self.db:
+            self.db[key] = SocketStatisticsMod.SsConnection()
+            self.db[key].start()
+        return self.db[key]
+
+    
+    def parse_std_line(self, std):
+        retdata = dict()
+        timer_info = uid = None
+        std = std.split()
+
+        if len(std) not in (7, 8, 9):
+            sys.stderr.write("Corrupt line format: %d (%s)\n" % (len(std), std))
+            return None
+
+        if len(std) == 7:
+            # 'ESTAB', '10136', '0', '198.18.20.107:5001', '198.18.10.144:53291',
+            # 'ino:0', 'sk:ffff88003c8e8700']
+            retdata["state"]      = std[0]
+            retdata["recv_q"]     = std[1]
+            retdata["send_q"]     = std[2]
+            retdata["local_addr"] = std[3]
+            retdata["peer_addr"]  = std[4]
+            retdata["ino"]        = std[5]
+            retdata["sk"]         = std[6]
+
+        if len(std) == 8:
+            # ['ESTAB', '0', '0', '198.18.20.107:5001', '198.18.10.144:53282',
+            # 'uid:1000', 'ino:180214', 'sk:ffff880029e00700']
+            retdata["state"]      = std[0]
+            retdata["recv_q"]     = std[1]
+            retdata["send_q"]     = std[2]
+            retdata["local_addr"] = std[3]
+            retdata["peer_addr"]  = std[4]
+            retdata["uid"]        = std[5]
+            retdata["ino"]        = std[6]
+            retdata["sk"]         = std[7]
+
+        if len(std) == 9:
+            # ['ESTAB', '0', '0', '10.1.11.169:55427', '192.168.1.64:80', 
+            # 'timer:(keepalive,15sec,0)', 'uid:1000', 'ino:185811', 'sk:ffff88001894a300']
+            retdata["state"]      = std[0]
+            retdata["recv_q"]     = std[1]
+            retdata["send_q"]     = std[2]
+            retdata["local_addr"] = std[3]
+            retdata["peer_addr"]  = std[4]
+            retdata["timer"]      = std[5]
+            retdata["uid"]        = std[6]
+            retdata["ino"]        = std[7]
+            retdata["sk"]         = std[8]
+
+        return retdata
+
+
+    def parse_ext_line(self, ext):
+
+        d = dict()
+
+        # skmem:(r25216,rb172144,t0,tb23400,f3456,w0,o0,bl0) ts sack cubic wscale:7,7
+        # rto:1404 rtt:468/234 ato:40 mss:1448 cwnd:10 send 247.5Kbps rcv_rtt:34599.8 rcv_space:83984
+        ext = ext.split()
+
+        for idx, entry in enumerate(ext):
+            if entry.startswith("skmem:("):
+                tmp = entry[len("skmem:("):-1]
+                tmp = tmp.split(",")
+                d["skmem"] = dict()
+                d["skmem"]["SK_MEMINFO_BACKLOG"] = None
+                d["skmem"]["SK_MEMINFO_RMEM_ALLOC"]  = tmp[0]
+                d["skmem"]["SK_MEMINFO_RCVBUF"]      = tmp[1]
+                d["skmem"]["SK_MEMINFO_WMEM_ALLOC"]  = tmp[2]
+                d["skmem"]["SK_MEMINFO_SNDBUF"]      = tmp[3]
+                d["skmem"]["SK_MEMINFO_FWD_ALLOC"]   = tmp[4]
+                d["skmem"]["SK_MEMINFO_WMEM_QUEUED"] = tmp[5]
+                d["skmem"]["SK_MEMINFO_OPTMEM"]      = tmp[6]
+                if len(tmp) == 8:
+                    d["skmem"]["SK_MEMINFO_BACKLOG"] = tmp[7]
+                ext.pop(idx)
+
+        # wscale:%d,%d
+        for idx, entry in enumerate(ext):
+            if entry.startswith("wscale:"):
+                vals = entry[len("wscale:"):].split(",")
+                d["wscale"] = { "snd_wscale" : vals[0], "rcv_wscale" : vals[1] }
+                ext.pop(idx)
+
+        # rtt:%g/%g
+        for idx, entry in enumerate(ext):
+            if entry.startswith("rtt:"):
+                vals = entry[len("rtt:"):].split("/")
+                d["rtt"] = { "rtt" : vals[0], "rttvar" : vals[1] }
+                ext.pop(idx)
+
+        # retrans:%u/%u
+        for idx, entry in enumerate(ext):
+            if entry.startswith("retrans:"):
+                vals = entry[len("retrans:"):].split("/")
+                d["retrans"] = { "retrans" : vals[0], "total_retrans" : vals[1] }
+                ext.pop(idx)
+
+        # rto:%g
+        for idx, entry in enumerate(ext):
+            if entry.startswith("rto:"):
+                d["rto"] = entry[len("rto:"):]
+                ext.pop(idx)
+
+        # ato:%g
+        for idx, entry in enumerate(ext):
+            if entry.startswith("ato:"):
+                d["ato"] = entry[len("ato:"):]
+                ext.pop(idx)
+
+        # mss:%g
+        for idx, entry in enumerate(ext):
+            if entry.startswith("mss:"):
+                d["mss"] = entry[len("mss:"):]
+                ext.pop(idx)
+
+        # cwnd:%g
+        for idx, entry in enumerate(ext):
+            if entry.startswith("cwnd:"):
+                d["cwnd"] = entry[len("cwnd:"):]
+                ext.pop(idx)
+
+        # ssthresh:%g
+        for idx, entry in enumerate(ext):
+            if entry.startswith("ssthresh:"):
+                d["ssthresh"] = entry[len("ssthresh:"):]
+                ext.pop(idx)
+
+        # unacked:%u
+        for idx, entry in enumerate(ext):
+            if entry.startswith("unacked:"):
+                d["unacked"]= entry[len("unacked:"):]
+                ext.pop(idx)
+
+        # lost:%u
+        for idx, entry in enumerate(ext):
+            if entry.startswith("lost:"):
+                d["lost"] = entry[len("lost:"):]
+                ext.pop(idx)
+
+        # sacked:%u
+        for idx, entry in enumerate(ext):
+            if entry.startswith("sacked:"):
+                d["sacked"] = entry[len("sacked:"):]
+                ext.pop(idx)
+
+        # fackets:%u
+        for idx, entry in enumerate(ext):
+            if entry.startswith("fackets:"):
+                d["fackets"] = entry[len("fackets:"):]
+                ext.pop(idx)
+
+        # reordering:%u
+        for idx, entry in enumerate(ext):
+            if entry.startswith("reordering:"):
+                d["reordering"] = entry[len("reordering:"):]
+                ext.pop(idx)
+
+        # rcv_rtt:%g
+        for idx, entry in enumerate(ext):
+            if entry.startswith("rcv_rtt:"):
+                d["rcv_rtt"] = entry[len("rcv_rtt:"):]
+                ext.pop(idx)
+
+        for idx, entry in enumerate(ext):
+            if entry.startswith("rcv_space:"):
+                d["rcv_space"] = entry[len("rcv_space:"):]
+                ext.pop(idx)
+
+        # search for send %sbps
+        for idx, entry in enumerate(ext):
+            if entry == "send":
+                d["send"] = ext[idx + 1]
+                ext.pop(idx + 1)
+                ext.pop(idx)
+
+        unhandled_flags = None
+        if len(ext) > 0:
+            d["unhandled_flags"] = ','.join(ext)
+
+        return d
+
+
+    def account_connection(self, std, ext):
+        new_data = dict()
+
+        std_data = self.parse_std_line(std)
+        if not std_data: return
+
+        ext_data = self.parse_ext_line(ext)
+        if not ext_data: return
+
+        # merge std and extended data
+        new_data.update(std_data)
+        new_data.update(ext_data)
+
+        handle = self.connection_handle(std_data["local_addr"], std_data["peer_addr"])
+        snapshot = handle.snapshot()
+        snapshot.data = new_data
+
+
+    def process_data(self, ss_output):
+        # split into lines, remove tabs and empty 
+        lines = ss_output.split('\n')
+        lines = [line.strip() for line in lines]
+        lines = filter(None, lines)
+
+        # filter first line, starting with State
+        lines = filter(lambda x:not x.startswith("State"), lines)
+
+        no_lines = len(lines)
+
+        if no_lines == 0:
+            sys.stdout.write("No connections active\n")
+            return
+
+        if no_lines % 2 != 0:
+            sys.stdout.write("Currupted data set\n")
+            return
+
+        for i in range(0, no_lines, 2):
+            std = lines[i];
+            ext = lines[i + 1]
+            self.account_connection(std, ext)
+
+
+    def initialize(self):
+        self.logger = logging.getLogger()
+        self.parse_local_options()
+        self.db = dict()
+        self.sleep_time = 1.0
+
+
+    def create_gnuplot_environment(self):
+        gnuplot_filename = "cwnd.gpi"
+        makefile_filename = "Makefile"
+
+        filepath = "%s/%s" % (self.opts.outputdir, gnuplot_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (Template.cwnd))
+        fd.close()
+
+        filepath = "%s/%s" % (self.opts.outputdir, makefile_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (Template.gnuplot_makefile))
+        fd.close()
+
+
+    def check_options(self):
+        if not self.opts.outputdir:
+            self.logger.error("No output directory specified: --output-dir <directory>")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        if not os.path.exists(self.opts.outputdir):
+            self.logger.error("Not a valid directory: \"%s\"" %
+                    (self.opts.outputdir))
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+
+
+    def parse_local_options(self):
+        self.width = self.height = 0
+
+        parser = optparse.OptionParser()
+        parser.usage = "%prog socketstatistic [options]"
+
+        parser.add_option( "-v", "--loglevel", dest="loglevel", default=None,
+                type="string", help="set the loglevel (info, debug, warning, error)")
+
+        parser.add_option( "-o", "--output-dir", dest="outputdir", default=None,
+                type="string", help="specify the output directory")
+
+        parser.add_option( "-f", "--force", dest="force",  default=False,
+                action="store_true", help="enforce directory overwrite")
+
+
+        self.opts, args = parser.parse_args(sys.argv[0:])
+        self.set_opts_logevel()
+
+        self.captcp.print_welcome()
+        self.check_options()
+
+
+    def process_final(self):
+
+        try:
+            while True:
+                data = self.execute_ss()
+                self.process_data(data)
+                time.sleep(self.sleep_time)
+        except KeyboardInterrupt:
+            sys.stderr.write("SIGINT received, flush data files and exit\n")
+
+        self.write_db()
+
+        sys.stderr.write("# now execute \"make\" in %s\n" % (self.opts.outputdir))
+
+
+
 class Captcp:
 
     modes = {
@@ -4384,9 +4763,10 @@ class Captcp:
        "throughput":      [ "ThroughputMod", "Graph the throughput over time graph" ],
        "inflight":        [ "InFlightMod", "Visualize all packets in flight and not ACKed" ],
        "spacing":         [ "SpacingMod", "Time between packets and acks" ],
-       "stacktrace": [ "StackTraceMod", "Hook into Linux Kernel to trace cwnd, ssthresh, ..." ],
+       "stacktrace":      [ "StackTraceMod", "Hook into Linux Kernel to trace cwnd, ssthresh, ..." ],
        "sound":           [ "SoundMod", "Play sound based on payload/ack packets" ],
-       "animation":       [ "ConnectionAnimationMod", "Generate animation (html) of packet flow" ]
+       "animation":       [ "ConnectionAnimationMod", "Generate animation (html) of packet flow" ],
+       "socketstatistic": [ "SocketStatisticsMod", "Graph output (mem, rtt, ...) from ss(8) over time" ]
             }
 
     def __init__(self):
@@ -4419,6 +4799,7 @@ class Captcp:
     def print_welcome(self):
         major, minor, micro, releaselevel, serial = sys.version_info
         self.logger.critical("captcp 2010-2013 Hagen Paul Pfeifer (c)")
+        self.logger.critical("http://research.protocollabs.com/captcp/")
         self.logger.info("python: %s.%s.%s [releaselevel: %s, serial: %s]" %
                 (major, minor, micro, releaselevel, serial))
 
