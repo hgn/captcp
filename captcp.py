@@ -114,6 +114,7 @@ class ExitCodes:
     EXIT_ERROR       = 1
     EXIT_CMD_LINE    = 2
     EXIT_ENVIRONMENT = 3
+    EXIT_PLATFORM    = 4
 
 
 class Info:
@@ -4566,7 +4567,6 @@ class SocketStatisticsMod(Mod):
 
 
     def parse_ext_line(self, ext):
-
         d = dict()
 
         # skmem:(r25216,rb172144,t0,tb23400,f3456,w0,o0,bl0) ts sack cubic wscale:7,7
@@ -4686,6 +4686,10 @@ class SocketStatisticsMod(Mod):
 
 
     def initialize(self):
+        if not sys.platform.startswith('linux'):
+            sys.stderr.write("SocketStatistics only supported under Linux - sorry\n")
+            sys.exit(ExitCodes.EXIT_PLATFORM)
+
         self.timeframe_start       = None
         self.timeframe_end         = None
 
