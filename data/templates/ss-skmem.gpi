@@ -1,0 +1,41 @@
+set terminal postscript eps enhanced color "Times" 25
+set output "ss-skmem.eps"
+$TITLE
+
+set style line 99 linetype 1 linecolor rgb "#999999" lw 2
+set key right bottom
+set key box linestyle 99
+set key spacing 1.2
+
+set grid xtics ytics mytics
+
+set size 2
+$SIZE_RATIO
+
+
+set format y "%.0f"
+$XRANGE
+$YRANGE
+
+set ylabel "Memery [bytes]"
+set xlabel "Time [seconds]"
+
+set style line 1 lc rgb '#00004d' lt 1 lw 5
+set style line 2 lc rgb '#0C5814' lt 1 lw 5
+set style line 3 lc rgb '#FF073D' lt 1 lw 5
+set style line 4 lc rgb '#30593D' lt 1 lw 5
+set style line 5 lc rgb '#948205' lt 1 lw 5
+set style line 6 lc rgb '#196037' lt 1 lw 5
+set style line 7 lc rgb '#691842' lt 1 lw 5
+set style line 8 lc rgb '#841185' lt 1 lw 5
+
+plot  \
+    "backlog.data" using 1:2 title "backlog" with linespoints ls 1, \
+    "rmem-alloc.data" using 1:2 title "rmem-alloc" with linespoints ls 2, \
+    "rcvbuf.data" using 1:2 title "rcvbuf" with linespoints ls 3, \
+    "wmem-alloc.data" using 1:2 title "wmem-alloc" with linespoints ls 4, \
+    "sndbuf.data" using 1:2 title "sndbuf" with linespoints ls 5, \
+    "fwd-alloc.data" using 1:2 title "fwd-alloc" with linespoints ls 6, \
+    "wmem-queued.data" using 1:2 title "wmem-queued" with linespoints ls 7, \
+    "optmem.data" using 1:2 title "optmem" with linespoints ls 8
+

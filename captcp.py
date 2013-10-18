@@ -4555,16 +4555,101 @@ class SocketStatisticsMod(Mod):
                 fd.write("%s %s\n" %(time_delta, ssthresh))
 
 
+    def create_gnuplot_env_skmem(self, path):
+        gnuplot_filename = "ss-skmem.gpi"
+        makefile_filename = "Makefile"
+
+        xrange_str = ""
+        yrange_str = ""
+        if (self.timeframe_start != None) and (self.timeframe_end != None):
+            xrange_str = "set xrange [%s:%s]" % \
+                    (self.timeframe_start, self.timeframe_end)
+
+        title='set title "Socket Memory"'
+        if "no-title" in self.opts.gnuplotoptions:
+            title = 'set notitle'
+        if "title" in self.opts.gnuplotoptions:
+            title = "set title \"%s\"" % (self.opts.gnuplotoptions["title"])
+
+        logscaley=""
+        if "y-logscale" in self.opts.gnuplotoptions:
+            logscaley = "set logscale y"
+
+        logscalex=""
+        if "x-logscale" in self.opts.gnuplotoptions:
+            logscalex = "set logscale x"
+
+        size_ratio=""
+        if "size-ratio" in self.opts.gnuplotoptions:
+            size_ratio = "set size ratio %.2f" % (self.opts.gnuplotoptions["size-ratio"])
+
+        # Normal format or extended format
+        tmpl = string.Template(TemplateMod().get_content_by_name("ss-skmem"))
+        gpi_cmd = tmpl.substitute(XRANGE=xrange_str,
+                                  TITLE=title,
+                                  SIZE_RATIO=size_ratio,
+                                  YRANGE="")
+
+        filepath = "%s/%s" % (path, gnuplot_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (gpi_cmd))
+        fd.close()
+
+        filepath = "%s/%s" % (path, makefile_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (TemplateMod().get_content_by_name("gnuplot")))
+        fd.close()
+
+
+    def check_skmem_env(self, full_path):
+        if os.path.exists(full_path):
+            return
+        os.makedirs(full_path)
+        self.create_gnuplot_env_skmem(full_path)
+
+
+    def write_skmem(self, path, time_delta, skmem):
+        full_path = os.path.join(path, "skmem")
+        self.check_skmem_env(full_path)
+
+        backlog_data_path     = os.path.join(full_path, "backlog.data")
+        rmem_alloc_data_path  = os.path.join(full_path, "rmem-alloc.data")
+        rcvbuf_data_path      = os.path.join(full_path, "rcvbuf.data")
+        wmem_alloc_data_path  = os.path.join(full_path, "wmem-alloc.data")
+        sndbuf_data_path      = os.path.join(full_path, "sndbuf.data")
+        fwd_alloc_data_path   = os.path.join(full_path, "fwd-alloc.data")
+        wmem_queued_data_path = os.path.join(full_path, "wmem-queued.data")
+        optmem_data_path      = os.path.join(full_path, "optmem.data")
+
+        with open(backlog_data_path, "a") as fd:
+            fd.write("%s %s\n" %(time_delta, skmem["SK_MEMINFO_BACKLOG"]))
+        with open(rmem_alloc_data_path, "a") as fd:
+            fd.write("%s %s\n" %(time_delta, skmem["SK_MEMINFO_RMEM_ALLOC"]))
+        with open(rcvbuf_data_path, "a") as fd:
+            fd.write("%s %s\n" %(time_delta, skmem["SK_MEMINFO_RCVBUF"]))
+        with open(wmem_alloc_data_path, "a") as fd:
+            fd.write("%s %s\n" %(time_delta, skmem["SK_MEMINFO_WMEM_ALLOC"]))
+        with open(sndbuf_data_path, "a") as fd:
+            fd.write("%s %s\n" %(time_delta, skmem["SK_MEMINFO_SNDBUF"]))
+        with open(fwd_alloc_data_path, "a") as fd:
+            fd.write("%s %s\n" %(time_delta, skmem["SK_MEMINFO_FWD_ALLOC"]))
+        with open(wmem_queued_data_path, "a") as fd:
+            fd.write("%s %s\n" %(time_delta, skmem["SK_MEMINFO_WMEM_QUEUED"]))
+        with open(optmem_data_path, "a") as fd:
+            fd.write("%s %s\n" %(time_delta, skmem["SK_MEMINFO_OPTMEM"]))
+
 
     def write_data_files(self, path, time_delta, data):
         # convert msec time delta to seconds
-        time_delta_sec = "%.2d" % (float(time_delta) / 1000.0)
+        time_delta_sec = "%.1f" % (float(time_delta) / 1000.0)
         if "rtt" in data and "rto" in data:
             self.write_rtt(path, time_delta_sec, data["rtt"]["rtt"], data["rtt"]["rttvar"], data["rto"])
         if "cwnd" in data or "ssthresh" in data:
             cwnd      = None if not "cwnd" in data else data["cwnd"]
             ssthresh  = None if not "ssthresh" in data else data["ssthresh"]
             self.write_cwnd_ssthresh(path, time_delta_sec, cwnd, ssthresh)
+        if "skmem" in data:
+            self.write_skmem(path, time_delta_sec, data["skmem"])
 
 
     def write_db(self):
@@ -4643,6 +4728,58 @@ class SocketStatisticsMod(Mod):
         return retdata
 
 
+    def parse_skmem(self, data):
+        d = dict()
+
+        for entry in ["SK_MEMINFO_RCVBUF",
+                      "SK_MEMINFO_SNDBUF",
+                      "SK_MEMINFO_BACKLOG",
+                      "SK_MEMINFO_RMEM_ALLOC",
+                      "SK_MEMINFO_WMEM_ALLOC",
+                      "SK_MEMINFO_FWD_ALLOC",
+                      "SK_MEMINFO_WMEM_QUEUED",
+                      "SK_MEMINFO_OPTMEM"]:
+            d[entry] = 0
+
+        for date in data:
+            # we start with two letter prefix
+            if date.startswith("rb"):
+                d["SK_MEMINFO_RCVBUF"] = date[2:]
+                continue
+            if date.startswith("tb"):
+                d["SK_MEMINFO_SNDBUF"] = date[2:]
+                continue
+            if date.startswith("bl"):
+                d["SK_MEMINFO_BACKLOG"] = date[2:]
+
+            # one leter prefix
+            if date.startswith("r"):
+                d["SK_MEMINFO_RMEM_ALLOC"] = date[1:]
+                continue
+            if date.startswith("t"):
+                d["SK_MEMINFO_WMEM_ALLOC"] = date[1:]
+                continue
+            if date.startswith("f"):
+                d["SK_MEMINFO_FWD_ALLOC"] = date[1:]
+                continue
+            if date.startswith("w"):
+                d["SK_MEMINFO_WMEM_QUEUED"] = date[1:]
+                continue
+            if date.startswith("o"):
+                d["SK_MEMINFO_OPTMEM"] = date[1:]
+                continue
+
+            self.logger.warning("Unknown socket buffer value: %s" % (date))
+
+        if int(d["SK_MEMINFO_FWD_ALLOC"]) >= 4294966736:
+            self.logger.warning("SK_MEMINFO_FWD_ALLOC >= 4294966736 - reduce to 0")
+            d["SK_MEMINFO_FWD_ALLOC"] = 0
+
+        return d
+
+
+
+
     def parse_ext_line(self, ext):
         d = dict()
 
@@ -4651,20 +4788,14 @@ class SocketStatisticsMod(Mod):
         ext = ext.split()
 
         for idx, entry in enumerate(ext):
-            if entry.startswith("skmem:("):
-                tmp = entry[len("skmem:("):-1]
+            # mem:(r0,w0,f0,t0) or skmem:(r25216,rb172144,t0,tb23400,f3456,w0,o0,bl0)
+            if entry.startswith("mem:(") or entry.startswith("skmem:("):
+                if entry.startswith("skmem:("):
+                    tmp = entry[len("skmem:("):-1]
+                elif entry.startswith("mem:("):
+                    tmp = entry[len("mem:("):-1]
                 tmp = tmp.split(",")
-                d["skmem"] = dict()
-                d["skmem"]["SK_MEMINFO_BACKLOG"] = None
-                d["skmem"]["SK_MEMINFO_RMEM_ALLOC"]  = tmp[0]
-                d["skmem"]["SK_MEMINFO_RCVBUF"]      = tmp[1]
-                d["skmem"]["SK_MEMINFO_WMEM_ALLOC"]  = tmp[2]
-                d["skmem"]["SK_MEMINFO_SNDBUF"]      = tmp[3]
-                d["skmem"]["SK_MEMINFO_FWD_ALLOC"]   = tmp[4]
-                d["skmem"]["SK_MEMINFO_WMEM_QUEUED"] = tmp[5]
-                d["skmem"]["SK_MEMINFO_OPTMEM"]      = tmp[6]
-                if len(tmp) == 8:
-                    d["skmem"]["SK_MEMINFO_BACKLOG"] = tmp[7]
+                d["skmem"] = self.parse_skmem(tmp)
                 ext.pop(idx)
 
         # wscale:%d,%d
