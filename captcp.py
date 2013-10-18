@@ -4425,7 +4425,7 @@ class SocketStatisticsMod(Mod):
             xrange_str = "set xrange [%s:%s]" % \
                     (self.timeframe_start, self.timeframe_end)
 
-        title='set title "RTT"'
+        title='set title "TCP RTT and RTO"'
         if "no-title" in self.opts.gnuplotoptions:
             title = 'set notitle'
         if "title" in self.opts.gnuplotoptions:
@@ -4443,7 +4443,6 @@ class SocketStatisticsMod(Mod):
         if "size-ratio" in self.opts.gnuplotoptions:
             size_ratio = "set size ratio %.2f" % (self.opts.gnuplotoptions["size-ratio"])
 
-
         # Normal format or extended format
         tmpl = string.Template(TemplateMod().get_content_by_name("ss-rtt"))
         gpi_cmd = tmpl.substitute(XRANGE=xrange_str,
@@ -4460,7 +4459,6 @@ class SocketStatisticsMod(Mod):
         fd = open(filepath, 'w')
         fd.write("%s" % (TemplateMod().get_content_by_name("gnuplot")))
         fd.close()
-
 
 
     def check_rtt_env(self, full_path):
@@ -4488,12 +4486,85 @@ class SocketStatisticsMod(Mod):
             fd.write("%s %s\n" %(time_delta, rto))
 
 
+    def create_gnuplot_env_cwnd_ssthresh(self, path):
+        gnuplot_filename = "ss-cwnd-ssthresh.gpi"
+        makefile_filename = "Makefile"
+
+        xrange_str = ""
+        yrange_str = ""
+        if (self.timeframe_start != None) and (self.timeframe_end != None):
+            xrange_str = "set xrange [%s:%s]" % \
+                    (self.timeframe_start, self.timeframe_end)
+
+        title='set title "TCP Congestion Window and Slow Start Threshold"'
+        if "no-title" in self.opts.gnuplotoptions:
+            title = 'set notitle'
+        if "title" in self.opts.gnuplotoptions:
+            title = "set title \"%s\"" % (self.opts.gnuplotoptions["title"])
+
+        logscaley=""
+        if "y-logscale" in self.opts.gnuplotoptions:
+            logscaley = "set logscale y"
+
+        logscalex=""
+        if "x-logscale" in self.opts.gnuplotoptions:
+            logscalex = "set logscale x"
+
+        size_ratio=""
+        if "size-ratio" in self.opts.gnuplotoptions:
+            size_ratio = "set size ratio %.2f" % (self.opts.gnuplotoptions["size-ratio"])
+
+        # Normal format or extended format
+        tmpl = string.Template(TemplateMod().get_content_by_name("ss-cwnd-ssthresh"))
+        gpi_cmd = tmpl.substitute(XRANGE=xrange_str,
+                                  TITLE=title,
+                                  SIZE_RATIO=size_ratio,
+                                  YRANGE="")
+
+        filepath = "%s/%s" % (path, gnuplot_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (gpi_cmd))
+        fd.close()
+
+        filepath = "%s/%s" % (path, makefile_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (TemplateMod().get_content_by_name("gnuplot")))
+        fd.close()
+
+
+    def check_cwnd_ssthresh_env(self, full_path):
+        if os.path.exists(full_path):
+            return
+        os.makedirs(full_path)
+        self.create_gnuplot_env_cwnd_ssthresh(full_path)
+
+
+    def write_cwnd_ssthresh(self, path, time_delta, cwnd, ssthresh):
+        full_path = os.path.join(path, "cwnd-ssthresh")
+        self.check_cwnd_ssthresh_env(full_path)
+
+        cwnd_data_path     = os.path.join(full_path, "cwnd.data")
+        ssthresh_data_path = os.path.join(full_path, "ssthresh.data")
+
+        if cwnd:
+            with open(cwnd_data_path, "a") as fd:
+                fd.write("%s %s\n" %(time_delta, cwnd))
+
+        if ssthresh:
+            with open(ssthresh_data_path, "a") as fd:
+                fd.write("%s %s\n" %(time_delta, ssthresh))
+
+
 
     def write_data_files(self, path, time_delta, data):
         # convert msec time delta to seconds
         time_delta_sec = "%.2d" % (float(time_delta) / 1000.0)
         if "rtt" in data and "rto" in data:
             self.write_rtt(path, time_delta_sec, data["rtt"]["rtt"], data["rtt"]["rttvar"], data["rto"])
+        if "cwnd" in data or "ssthresh" in data:
+            cwnd      = None if not "cwnd" in data else data["cwnd"]
+            ssthresh  = None if not "ssthresh" in data else data["ssthresh"]
+            self.write_cwnd_ssthresh(path, time_delta_sec, cwnd, ssthresh)
 
 
     def write_db(self):

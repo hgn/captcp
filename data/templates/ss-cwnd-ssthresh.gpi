@@ -1,5 +1,5 @@
 set terminal postscript eps enhanced color "Times" 25
-set output "ss-rtt.eps"
+set output "ss-cwnd-ssthresh.eps"
 $TITLE
 
 set style line 99 linetype 1 linecolor rgb "#999999" lw 2
@@ -17,7 +17,7 @@ set format y "%.0f"
 $XRANGE
 $YRANGE
 
-set ylabel "RTT [milliceconds]"
+set ylabel "CWND/SSTRESH"
 set xlabel "Time [seconds]"
 
 set style line 1 lc rgb '#00004d' lt 1 lw 5
@@ -25,7 +25,6 @@ set style line 2 lc rgb '#0C5814' lt 1 lw 5
 set style line 3 lc rgb '#FF073D' lt 1 lw 5
 
 plot  \
-    "rtt.data" using 1:2 title "RTT" with linespoints ls 1, \
-    "rtt_var.data" using 1:2 title "RTT Var" with linespoints ls 2, \
-    "rto.data" using 1:2 title "RTO" with linespoints ls 3
+    "cwnd.data" using 1:2 title "CWND" with linespoints ls 1, \
+    "ssthresh.data" using 1:2 title "SSTHRESH" with linespoints ls 3
 
