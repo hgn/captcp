@@ -4395,7 +4395,6 @@ class SocketStatisticsMod(Mod):
             return timeline_event
 
 
-
     def create_gnuplot_environment(self, path):
         gnuplot_filename = "ss-rtt.gpi"
         makefile_filename = "Makefile"
@@ -4405,7 +4404,6 @@ class SocketStatisticsMod(Mod):
         if (self.timeframe_start != None) and (self.timeframe_end != None):
             xrange_str = "set xrange [%s:%s]" % \
                     (self.timeframe_start, self.timeframe_end)
-
 
         title='set title "Time Sequence Graph"'
         if "no-title" in self.opts.gnuplotoptions:
@@ -4783,18 +4781,19 @@ class SocketStatisticsMod(Mod):
 
     def process_final(self):
 
+        self.logger.warning("Start capturing socket data, interrupt process with CTRL-C")
         try:
             while True:
                 data = self.execute_ss()
                 self.process_data(data)
                 time.sleep(self.sleep_time)
         except KeyboardInterrupt:
-            sys.stderr.write("SIGINT received, flush data files and exit\n")
+            self.logger.warning("\r# SIGINT received, please wait to generate data (this may take a while)")
 
         self.write_db()
 
-        sys.stderr.write("# now execute \"make\" in %s\n" % (self.opts.outputdir))
-
+        self.logger.warning("Ready! Data generated")
+        self.logger.warning("See %s" % (self.opts.outputdir))
 
 
 class Captcp:
