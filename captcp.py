@@ -4812,14 +4812,15 @@ class Captcp:
        "socketstatistic": [ "SocketStatisticsMod", "Graph output (mem, rtt, ...) from ss(8) over time" ]
             }
 
+
     def __init__(self):
         self.captcp_starttime = datetime.datetime.today()
         self.setup_logging()
         self.pcap_filter = None
         self.pcap_file_path = False
 
-    def setup_logging(self):
 
+    def setup_logging(self):
         ch = logging.StreamHandler()
 
         formatter = logging.Formatter("# %(message)s")
@@ -4830,8 +4831,44 @@ class Captcp:
         self.logger.addHandler(ch)
 
 
+    def which(self, program):
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            full_path = os.path.join(path, program)
+            if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
+                return full_path
+        return None
+
+
+    def check_program(self, program):
+        status = "FAILED"
+        path = self.which(program["name"])
+        if path:
+            status = "OK"
+        else:
+            path = ""
+
+        required = "Required" if program["required"] else "Optional"
+        help     = "" if not program["help"] else program["help"]
+        sys.stdout.write("%-6s %-10s Need: %7s   Path: %-20s  Help: %s\n" % (status, program["name"], required, path, help))
+
+
+
     def check_environment(self):
-        pass
+        programs = [
+                # Required program section
+                { "name":"make",     "required":True, "os":None, "help":"Build environment" },
+                { "name":"epstopdf", "required":True, "os":None, "help":"Used to convert Gnuplot EPS output to PDF" },
+                { "name":"gnuplot",  "required":True, "os":None, "help":"Main plotting program" },
+
+                # Optional programs
+                { "name":"convert", "required":False, "os":None,    "help":"Used to convert PDF to PNG" },
+                { "name":"ss",      "required":False, "os":"linux", "help":"Required for socketstatistic module" }
+        ]
+
+        for program in programs:
+            self.check_program(program)
+        
 
     def print_version(self):
         sys.stdout.write("%s\n" % (__version__))
@@ -4883,6 +4920,11 @@ class Captcp:
             self.print_usage()
             sys.stderr.write("Available modules:\n")
             self.print_modules()
+            return None
+
+        # -c | --check as first argument is treated special
+        if self.args_contains(sys.argv[1:2], "-c", "--check"):
+            self.check_environment()
             return None
 
         submodule = sys.argv[1].lower()
