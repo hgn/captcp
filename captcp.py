@@ -4866,6 +4866,12 @@ class Captcp:
                 { "name":"ss",      "required":False, "os":"linux", "help":"Required for socketstatistic module" }
         ]
 
+        sys.stdout.write("Platform: %s\n" % (sys.platform))
+        major, minor, micro, releaselevel, serial = sys.version_info
+        sys.stdout.write("Python: %s.%s.%s [releaselevel: %s, serial: %s]\n\n" %
+                (major, minor, micro, releaselevel, serial))
+
+        sys.stdout.write("Check programs:\n")
         for program in programs:
             self.check_program(program)
         
