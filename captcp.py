@@ -4395,7 +4395,27 @@ class SocketStatisticsMod(Mod):
             return timeline_event
 
 
-    def create_gnuplot_environment(self, path):
+    def timedelta_to_milli(self, td):
+        return td.microseconds / 1000.0 + (td.seconds + td.days * 86400) * 1000
+
+
+    def create_data_dir(self, name):
+        path = os.path.join(self.opts.outputdir, name)
+        if os.path.exists(path):
+            if not self.opts.force:
+                self.logger.error("Directory already exists: %s - "
+                                  "remove or force to overwrite, ignore now" % (path))
+                return None
+
+            self.logger.info("clean directory %s now" % (path))
+            shutil.rmtree(path)
+
+        self.logger.info("create directory for connection %s" % (path))
+        os.makedirs(path)
+        return path
+
+
+    def create_gnuplot_env_rtt(self, path):
         gnuplot_filename = "ss-rtt.gpi"
         makefile_filename = "Makefile"
 
@@ -4405,7 +4425,7 @@ class SocketStatisticsMod(Mod):
             xrange_str = "set xrange [%s:%s]" % \
                     (self.timeframe_start, self.timeframe_end)
 
-        title='set title "Time Sequence Graph"'
+        title='set title "RTT"'
         if "no-title" in self.opts.gnuplotoptions:
             title = 'set notitle'
         if "title" in self.opts.gnuplotoptions:
@@ -4442,40 +4462,21 @@ class SocketStatisticsMod(Mod):
         fd.close()
 
 
-    def timedelta_to_milli(self, td):
-        return td.microseconds / 1000.0 + (td.seconds + td.days * 86400) * 1000
-
-
-    def create_data_dir(self, name):
-        path = os.path.join(self.opts.outputdir, name)
-        if os.path.exists(path):
-            if not self.opts.force:
-                self.logger.error("Directory already exists: %s - "
-                                  "remove or force to overwrite, ignore now" % (path))
-                return None
-
-            self.logger.info("clean directory %s now" % (path))
-            shutil.rmtree(path)
-
-        self.logger.info("create directory for connection %s" % (path))
-        os.makedirs(path)
-        return path
-
 
     def check_rtt_env(self, full_path):
         if os.path.exists(full_path):
             return
-
         os.makedirs(full_path)
-        self.create_gnuplot_environment(full_path)
+        self.create_gnuplot_env_rtt(full_path)
 
 
-    def write_rtt(self, path, time_delta, rtt, rtt_var):
+    def write_rtt(self, path, time_delta, rtt, rtt_var, rto):
         full_path = os.path.join(path, "rtt")
         self.check_rtt_env(full_path)
 
         rtt_data_path     = os.path.join(full_path, "rtt.data")
         rtt_var_data_path = os.path.join(full_path, "rtt_var.data")
+        rto_data_path     = os.path.join(full_path, "rto.data")
 
         with open(rtt_data_path, "a") as fd:
             fd.write("%s %s\n" %(time_delta, rtt))
@@ -4483,13 +4484,16 @@ class SocketStatisticsMod(Mod):
         with open(rtt_var_data_path, "a") as fd:
             fd.write("%s %s\n" %(time_delta, rtt_var))
 
+        with open(rto_data_path, "a") as fd:
+            fd.write("%s %s\n" %(time_delta, rto))
+
 
 
     def write_data_files(self, path, time_delta, data):
         # convert msec time delta to seconds
         time_delta_sec = "%.2d" % (float(time_delta) / 1000.0)
-        if "rtt" in data:
-            self.write_rtt(path, time_delta_sec, data["rtt"]["rtt"], data["rtt"]["rttvar"])
+        if "rtt" in data and "rto" in data:
+            self.write_rtt(path, time_delta_sec, data["rtt"]["rtt"], data["rtt"]["rttvar"], data["rto"])
 
 
     def write_db(self):

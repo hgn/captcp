@@ -26,5 +26,6 @@ set style line 3 lc rgb '#cdaf95' lt 1 lw 3
 
 plot  \
     "rtt.data" using 1:2 title "RTT" with linespoints ls 1, \
-    "rtt_var.data" using 1:2 title "RTT Var" with linespoints ls 2
+    "rtt_var.data" using 1:2 title "RTT Var" with linespoints ls 2, \
+    "rto.data" using 1:2 title "RTO" with linespoints ls 3
 
