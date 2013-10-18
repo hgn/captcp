@@ -1,5 +1,5 @@
 set terminal postscript eps enhanced color "Times" 25
-set output "rtt-var.eps"
+set output "ss-rtt.eps"
 $TITLE
 
 set style line 99 linetype 1 linecolor rgb "#999999" lw 2
