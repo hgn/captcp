@@ -1512,7 +1512,7 @@ class TimeSequenceMod(Mod):
         parser.add_option( "-w", "--hide-window", dest="hide_window",  default=False,
                 action="store_true", help="do not visualize advertised window")
 
-        parser.add_option( "-g", "--gnuplot-options", dest="gnuplotoptions", default=none,
+        parser.add_option( "-g", "--gnuplot-options", dest="gnuplotoptions", default=None,
                 type="string", help="options for gnuplot, comma separated list: notitle, title=\"<newtitle>\", x-logarithmic, y-logarithmic, size-ratio=<float>")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
@@ -4829,6 +4829,10 @@ class Captcp:
         self.logger.setLevel(logging.WARNING)
         self.logger.addHandler(ch)
 
+
+    def check_environment(self):
+        pass
+
     def print_version(self):
         sys.stdout.write("%s\n" % (__version__))
 
@@ -4852,6 +4856,13 @@ class Captcp:
             sys.stderr.write("   %-15s - %s\n" % (i, Captcp.modes[i][1]))
 
 
+    def args_contains(self, argv, *cmds):
+        for cmd in cmds:
+            for arg in argv:
+                if arg == cmd: return True
+        return False
+
+
     def parse_global_otions(self):
         if len(sys.argv) <= 1:
             self.print_usage()
@@ -4859,18 +4870,22 @@ class Captcp:
             self.print_modules()
             return None
 
-        submodule = sys.argv[1].lower()
-
-        if submodule == "--version":
+        # -v | --version can be place somewhere in the
+        # command line and will evalutated always: -v is
+        # a global option
+        if self.args_contains(sys.argv, "-v", "--version"):
             self.print_version()
             return None
 
-        if submodule == "-h" or submodule == "--help":
+        # -h | --help as first argument is treated special
+        # and has other meaning as a submodule
+        if self.args_contains(sys.argv[1:2], "-h", "--help"):
             self.print_usage()
             sys.stderr.write("Available modules:\n")
             self.print_modules()
             return None
 
+        submodule = sys.argv[1].lower()
         if submodule not in Captcp.modes:
             self.print_usage()
             sys.stderr.write("Module \"%s\" not known, available modules are:\n" %
