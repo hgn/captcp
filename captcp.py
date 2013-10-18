@@ -1512,7 +1512,7 @@ class TimeSequenceMod(Mod):
         parser.add_option( "-w", "--hide-window", dest="hide_window",  default=False,
                 action="store_true", help="do not visualize advertised window")
 
-        parser.add_option( "-g", "--gnuplot-options", dest="gnuplotoptions", default=none,
+        parser.add_option( "-g", "--gnuplot-options", dest="gnuplotoptions", default=None,
                 type="string", help="options for gnuplot, comma separated list: notitle, title=\"<newtitle>\", x-logarithmic, y-logarithmic, size-ratio=<float>")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
