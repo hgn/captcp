@@ -4451,13 +4451,13 @@ class SocketStatisticsMod(Mod):
         if os.path.exists(path):
             if not self.opts.force:
                 self.logger.error("Directory already exists: %s - "
-                                 "remove or force, exiting\n" % (path))
-                sys.exit(ExitCodes.EXIT_ENVIRONMENT)
+                                  "remove or force to overwrite, ignore now" % (path))
+                return None
 
-            self.logger.info("clean directory %s now\n" % (path))
+            self.logger.info("clean directory %s now" % (path))
             shutil.rmtree(path)
 
-        self.logger.info("create directory for connection %s\n" % (path))
+        self.logger.info("create directory for connection %s" % (path))
         os.makedirs(path)
         return path
 
@@ -4495,6 +4495,8 @@ class SocketStatisticsMod(Mod):
     def write_db(self):
         for key, value in self.db.items():
             path = self.create_data_dir(key)
+            if path == None:
+                continue
             for snapshot in value.timeline:
                 time  = snapshot[0]
                 event = snapshot[1]
