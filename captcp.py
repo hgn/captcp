@@ -4488,8 +4488,10 @@ class SocketStatisticsMod(Mod):
 
 
     def write_data_files(self, path, time_delta, data):
+        # convert msec time delta to seconds
+        time_delta_sec = "%.2d" % (float(time_delta) / 1000.0)
         if "rtt" in data:
-            self.write_rtt(path, time_delta, data["rtt"]["rtt"], data["rtt"]["rttvar"])
+            self.write_rtt(path, time_delta_sec, data["rtt"]["rtt"], data["rtt"]["rttvar"])
 
 
     def write_db(self):
@@ -4700,7 +4702,6 @@ class SocketStatisticsMod(Mod):
 
 
     def prepare_gnuplot_options(self):
-
         if not self.opts.gnuplotoptions:
             self.opts.gnuplotoptions = dict()
             return
