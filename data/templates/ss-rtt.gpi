@@ -21,8 +21,8 @@ set ylabel "RTT [milliceconds]"
 set xlabel "Time [seconds]"
 
 set style line 1 lc rgb '#00004d' lt 1 lw 3
-set style line 2 lc rgb '#0060ad' lt 1 lw 3
-set style line 3 lc rgb '#cdaf95' lt 1 lw 3
+set style line 2 lc rgb '#0C5814' lt 1 lw 3
+set style line 3 lc rgb '#FF073D' lt 1 lw 3
 
 plot  \
     "rtt.data" using 1:2 title "RTT" with linespoints ls 1, \
