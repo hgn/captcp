@@ -4845,7 +4845,7 @@ class SocketStatisticsMod(Mod):
         unhandled_flags = None
         if len(ext) > 0:
             d["unhandled_flags"] = ','.join(ext)
-            self.logger.debug("unhandled outout %s" % (d["unhandled_flags"]))
+            self.logger.debug("unhandled ss(8) data %s" % (d["unhandled_flags"]))
 
         return d
 
@@ -4904,7 +4904,7 @@ class SocketStatisticsMod(Mod):
         self.logger = logging.getLogger()
         self.parse_local_options()
         self.db = dict()
-        self.sleep_time = 1.0
+        self.sleep_time = 1.0 / self.opts.sampling_rate
 
 
     def prepare_gnuplot_options(self):
@@ -4971,6 +4971,9 @@ class SocketStatisticsMod(Mod):
         parser.add_option( "-o", "--output-dir", dest="outputdir", default=None,
                 type="string", help="specify the output directory")
 
+        parser.add_option( "-s", "--sampling-rate", dest="sampling_rate", default=1,
+                type="float", help="How often per second should I take a measurement (default: 1Hz)")
+
         parser.add_option( "-f", "--force", dest="force",  default=False,
                 action="store_true", help="enforce directory overwrite")
 
@@ -4989,6 +4992,7 @@ class SocketStatisticsMod(Mod):
 
     def process_final(self):
 
+        self.logger.warning("Sampling rate: %f Hz" % (self.opts.sampling_rate))
         self.logger.warning("Start capturing socket data, interrupt process with CTRL-C")
         try:
             while True:
@@ -5000,8 +5004,7 @@ class SocketStatisticsMod(Mod):
 
         self.write_db()
 
-        self.logger.warning("Ready! Data generated")
-        self.logger.warning("See %s" % (self.opts.outputdir))
+        self.logger.warning("Data generated in %s/" % (self.opts.outputdir))
 
 
 class Captcp:
