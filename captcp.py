@@ -4641,7 +4641,7 @@ class SocketStatisticsMod(Mod):
 
     def write_data_files(self, path, time_delta, data):
         # convert msec time delta to seconds
-        time_delta_sec = "%.1f" % (float(time_delta) / 1000.0)
+        time_delta_sec = "%.3f" % (float(time_delta) / 1000.0)
         if "rtt" in data and "rto" in data:
             self.write_rtt(path, time_delta_sec, data["rtt"]["rtt"], data["rtt"]["rttvar"], data["rto"])
         if "cwnd" in data or "ssthresh" in data:
