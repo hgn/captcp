@@ -4685,7 +4685,7 @@ class SocketStatisticsMod(Mod):
         timer_info = uid = None
         std = std.split()
 
-        if len(std) not in (7, 8, 9):
+        if len(std) not in (7, 8, 9, 10):
             sys.stderr.write("Corrupt line format: %d (%s)\n" % (len(std), std))
             return None
 
@@ -4712,7 +4712,7 @@ class SocketStatisticsMod(Mod):
             retdata["ino"]        = std[6]
             retdata["sk"]         = std[7]
 
-        if len(std) == 9:
+        if len(std) == 9 or len(std) == 10:
             # ['ESTAB', '0', '0', '10.1.11.169:55427', '192.168.1.64:80', 
             # 'timer:(keepalive,15sec,0)', 'uid:1000', 'ino:185811', 'sk:ffff88001894a300']
             retdata["state"]      = std[0]
