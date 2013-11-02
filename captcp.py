@@ -3049,7 +3049,7 @@ class SpacingMod(Mod):
         self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
 
         if not self.opts.connections:
-            self.logger.error("No data flow specified! Call \"captcp statistics\"")
+            self.logger.error("No data flow specified! Call \"captcp statistic\"")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
         (self.connection_id, self.data_flow_id) = self.opts.connections.split('.')
@@ -3497,7 +3497,7 @@ class SoundMod(Mod):
         self.logger.info("pcap file: %s" % (self.captcp.pcap_file_path))
 
         if not self.opts.connections:
-            self.logger.error("No data flow specified! Call \"captcp statistics for valid ID's\"")
+            self.logger.error("No data flow specified! Call \"captcp statistic for valid ID's\"")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
         (self.connection_id, self.data_flow_id) = self.opts.connections.split('.')
@@ -4257,7 +4257,7 @@ class ConnectionAnimationMod(Mod):
             self.create_html_environment()
 
         if not self.opts.connections:
-            self.logger.error("No data flow specified! Call \"captcp statistics for valid ID's\"")
+            self.logger.error("No data flow specified! Call \"captcp statistic for valid ID's\"")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
         (self.connection_id, self.local_flow_id) = self.opts.connections.split('.')
