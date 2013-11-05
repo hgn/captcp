@@ -60,7 +60,7 @@ pp = pprint.PrettyPrinter(indent=4)
 
 __programm__ = "captcp"
 __author__   = "Hagen Paul Pfeifer"
-__version__  = "1.5"
+__version__  = "1.6"
 __license__  = "GPLv3"
 
 # custom exceptions
@@ -114,6 +114,7 @@ class ExitCodes:
     EXIT_ERROR       = 1
     EXIT_CMD_LINE    = 2
     EXIT_ENVIRONMENT = 3
+    EXIT_PLATFORM    = 4
 
 
 class Info:
@@ -1512,7 +1513,7 @@ class TimeSequenceMod(Mod):
         parser.add_option( "-w", "--hide-window", dest="hide_window",  default=False,
                 action="store_true", help="do not visualize advertised window")
 
-        parser.add_option( "-g", "--gnuplot-options", dest="gnuplotoptions", default=none,
+        parser.add_option( "-g", "--gnuplot-options", dest="gnuplotoptions", default=None,
                 type="string", help="options for gnuplot, comma separated list: notitle, title=\"<newtitle>\", x-logarithmic, y-logarithmic, size-ratio=<float>")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
@@ -4394,8 +4395,27 @@ class SocketStatisticsMod(Mod):
             return timeline_event
 
 
+    def timedelta_to_milli(self, td):
+        return td.microseconds / 1000.0 + (td.seconds + td.days * 86400) * 1000
 
-    def create_gnuplot_environment(self, path):
+
+    def create_data_dir(self, name):
+        path = os.path.join(self.opts.outputdir, name)
+        if os.path.exists(path):
+            if not self.opts.force:
+                self.logger.error("Directory already exists: %s - "
+                                  "remove or force to overwrite, ignore now" % (path))
+                return None
+
+            self.logger.info("clean directory %s now" % (path))
+            shutil.rmtree(path)
+
+        self.logger.info("create directory for connection %s" % (path))
+        os.makedirs(path)
+        return path
+
+
+    def create_gnuplot_env_rtt(self, path):
         gnuplot_filename = "ss-rtt.gpi"
         makefile_filename = "Makefile"
 
@@ -4405,8 +4425,7 @@ class SocketStatisticsMod(Mod):
             xrange_str = "set xrange [%s:%s]" % \
                     (self.timeframe_start, self.timeframe_end)
 
-
-        title='set title "Time Sequence Graph"'
+        title='set title "TCP RTT and RTO"'
         if "no-title" in self.opts.gnuplotoptions:
             title = 'set notitle'
         if "title" in self.opts.gnuplotoptions:
@@ -4423,7 +4442,6 @@ class SocketStatisticsMod(Mod):
         size_ratio=""
         if "size-ratio" in self.opts.gnuplotoptions:
             size_ratio = "set size ratio %.2f" % (self.opts.gnuplotoptions["size-ratio"])
-
 
         # Normal format or extended format
         tmpl = string.Template(TemplateMod().get_content_by_name("ss-rtt"))
@@ -4443,40 +4461,20 @@ class SocketStatisticsMod(Mod):
         fd.close()
 
 
-    def timedelta_to_milli(self, td):
-        return td.microseconds / 1000.0 + (td.seconds + td.days * 86400) * 1000
-
-
-    def create_data_dir(self, name):
-        path = os.path.join(self.opts.outputdir, name)
-        if os.path.exists(path):
-            if not self.opts.force:
-                self.logger.error("Directory already exists: %s - "
-                                 "remove or force, exiting\n" % (path))
-                sys.exit(ExitCodes.EXIT_ENVIRONMENT)
-
-            self.logger.info("clean directory %s now\n" % (path))
-            shutil.rmtree(path)
-
-        self.logger.info("create directory for connection %s\n" % (path))
-        os.makedirs(path)
-        return path
-
-
     def check_rtt_env(self, full_path):
         if os.path.exists(full_path):
             return
-
         os.makedirs(full_path)
-        self.create_gnuplot_environment(full_path)
+        self.create_gnuplot_env_rtt(full_path)
 
 
-    def write_rtt(self, path, time_delta, rtt, rtt_var):
+    def write_rtt(self, path, time_delta, rtt, rtt_var, rto):
         full_path = os.path.join(path, "rtt")
         self.check_rtt_env(full_path)
 
         rtt_data_path     = os.path.join(full_path, "rtt.data")
         rtt_var_data_path = os.path.join(full_path, "rtt_var.data")
+        rto_data_path     = os.path.join(full_path, "rto.data")
 
         with open(rtt_data_path, "a") as fd:
             fd.write("%s %s\n" %(time_delta, rtt))
@@ -4484,16 +4482,181 @@ class SocketStatisticsMod(Mod):
         with open(rtt_var_data_path, "a") as fd:
             fd.write("%s %s\n" %(time_delta, rtt_var))
 
+        with open(rto_data_path, "a") as fd:
+            fd.write("%s %s\n" %(time_delta, rto))
+
+
+    def create_gnuplot_env_cwnd_ssthresh(self, path):
+        gnuplot_filename = "ss-cwnd-ssthresh.gpi"
+        makefile_filename = "Makefile"
+
+        xrange_str = ""
+        yrange_str = ""
+        if (self.timeframe_start != None) and (self.timeframe_end != None):
+            xrange_str = "set xrange [%s:%s]" % \
+                    (self.timeframe_start, self.timeframe_end)
+
+        title='set title "TCP Congestion Window and Slow Start Threshold"'
+        if "no-title" in self.opts.gnuplotoptions:
+            title = 'set notitle'
+        if "title" in self.opts.gnuplotoptions:
+            title = "set title \"%s\"" % (self.opts.gnuplotoptions["title"])
+
+        logscaley=""
+        if "y-logscale" in self.opts.gnuplotoptions:
+            logscaley = "set logscale y"
+
+        logscalex=""
+        if "x-logscale" in self.opts.gnuplotoptions:
+            logscalex = "set logscale x"
+
+        size_ratio=""
+        if "size-ratio" in self.opts.gnuplotoptions:
+            size_ratio = "set size ratio %.2f" % (self.opts.gnuplotoptions["size-ratio"])
+
+        # Normal format or extended format
+        tmpl = string.Template(TemplateMod().get_content_by_name("ss-cwnd-ssthresh"))
+        gpi_cmd = tmpl.substitute(XRANGE=xrange_str,
+                                  TITLE=title,
+                                  SIZE_RATIO=size_ratio,
+                                  YRANGE="")
+
+        filepath = "%s/%s" % (path, gnuplot_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (gpi_cmd))
+        fd.close()
+
+        filepath = "%s/%s" % (path, makefile_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (TemplateMod().get_content_by_name("gnuplot")))
+        fd.close()
+
+
+    def check_cwnd_ssthresh_env(self, full_path):
+        if os.path.exists(full_path):
+            return
+        os.makedirs(full_path)
+        self.create_gnuplot_env_cwnd_ssthresh(full_path)
+
+
+    def write_cwnd_ssthresh(self, path, time_delta, cwnd, ssthresh):
+        full_path = os.path.join(path, "cwnd-ssthresh")
+        self.check_cwnd_ssthresh_env(full_path)
+
+        cwnd_data_path     = os.path.join(full_path, "cwnd.data")
+        ssthresh_data_path = os.path.join(full_path, "ssthresh.data")
+
+        if cwnd:
+            with open(cwnd_data_path, "a") as fd:
+                fd.write("%s %s\n" %(time_delta, cwnd))
+
+        if ssthresh:
+            with open(ssthresh_data_path, "a") as fd:
+                fd.write("%s %s\n" %(time_delta, ssthresh))
+
+
+    def create_gnuplot_env_skmem(self, path):
+        gnuplot_filename = "ss-skmem.gpi"
+        makefile_filename = "Makefile"
+
+        xrange_str = ""
+        yrange_str = ""
+        if (self.timeframe_start != None) and (self.timeframe_end != None):
+            xrange_str = "set xrange [%s:%s]" % \
+                    (self.timeframe_start, self.timeframe_end)
+
+        title='set title "Socket Memory"'
+        if "no-title" in self.opts.gnuplotoptions:
+            title = 'set notitle'
+        if "title" in self.opts.gnuplotoptions:
+            title = "set title \"%s\"" % (self.opts.gnuplotoptions["title"])
+
+        logscaley=""
+        if "y-logscale" in self.opts.gnuplotoptions:
+            logscaley = "set logscale y"
+
+        logscalex=""
+        if "x-logscale" in self.opts.gnuplotoptions:
+            logscalex = "set logscale x"
+
+        size_ratio=""
+        if "size-ratio" in self.opts.gnuplotoptions:
+            size_ratio = "set size ratio %.2f" % (self.opts.gnuplotoptions["size-ratio"])
+
+        # Normal format or extended format
+        tmpl = string.Template(TemplateMod().get_content_by_name("ss-skmem"))
+        gpi_cmd = tmpl.substitute(XRANGE=xrange_str,
+                                  TITLE=title,
+                                  SIZE_RATIO=size_ratio,
+                                  YRANGE="")
+
+        filepath = "%s/%s" % (path, gnuplot_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (gpi_cmd))
+        fd.close()
+
+        filepath = "%s/%s" % (path, makefile_filename)
+        fd = open(filepath, 'w')
+        fd.write("%s" % (TemplateMod().get_content_by_name("gnuplot")))
+        fd.close()
+
+
+    def check_skmem_env(self, full_path):
+        if os.path.exists(full_path):
+            return
+        os.makedirs(full_path)
+        self.create_gnuplot_env_skmem(full_path)
+
+
+    def write_skmem(self, path, time_delta, skmem):
+        full_path = os.path.join(path, "skmem")
+        self.check_skmem_env(full_path)
+
+        backlog_data_path     = os.path.join(full_path, "backlog.data")
+        rmem_alloc_data_path  = os.path.join(full_path, "rmem-alloc.data")
+        rcvbuf_data_path      = os.path.join(full_path, "rcvbuf.data")
+        wmem_alloc_data_path  = os.path.join(full_path, "wmem-alloc.data")
+        sndbuf_data_path      = os.path.join(full_path, "sndbuf.data")
+        fwd_alloc_data_path   = os.path.join(full_path, "fwd-alloc.data")
+        wmem_queued_data_path = os.path.join(full_path, "wmem-queued.data")
+        optmem_data_path      = os.path.join(full_path, "optmem.data")
+
+        with open(backlog_data_path, "a") as fd:
+            fd.write("%s %s\n" %(time_delta, skmem["SK_MEMINFO_BACKLOG"]))
+        with open(rmem_alloc_data_path, "a") as fd:
+            fd.write("%s %s\n" %(time_delta, skmem["SK_MEMINFO_RMEM_ALLOC"]))
+        with open(rcvbuf_data_path, "a") as fd:
+            fd.write("%s %s\n" %(time_delta, skmem["SK_MEMINFO_RCVBUF"]))
+        with open(wmem_alloc_data_path, "a") as fd:
+            fd.write("%s %s\n" %(time_delta, skmem["SK_MEMINFO_WMEM_ALLOC"]))
+        with open(sndbuf_data_path, "a") as fd:
+            fd.write("%s %s\n" %(time_delta, skmem["SK_MEMINFO_SNDBUF"]))
+        with open(fwd_alloc_data_path, "a") as fd:
+            fd.write("%s %s\n" %(time_delta, skmem["SK_MEMINFO_FWD_ALLOC"]))
+        with open(wmem_queued_data_path, "a") as fd:
+            fd.write("%s %s\n" %(time_delta, skmem["SK_MEMINFO_WMEM_QUEUED"]))
+        with open(optmem_data_path, "a") as fd:
+            fd.write("%s %s\n" %(time_delta, skmem["SK_MEMINFO_OPTMEM"]))
 
 
     def write_data_files(self, path, time_delta, data):
-        if "rtt" in data:
-            self.write_rtt(path, time_delta, data["rtt"]["rtt"], data["rtt"]["rttvar"])
+        # convert msec time delta to seconds
+        time_delta_sec = "%.3f" % (float(time_delta) / 1000.0)
+        if "rtt" in data and "rto" in data:
+            self.write_rtt(path, time_delta_sec, data["rtt"]["rtt"], data["rtt"]["rttvar"], data["rto"])
+        if "cwnd" in data or "ssthresh" in data:
+            cwnd      = None if not "cwnd" in data else data["cwnd"]
+            ssthresh  = None if not "ssthresh" in data else data["ssthresh"]
+            self.write_cwnd_ssthresh(path, time_delta_sec, cwnd, ssthresh)
+        if "skmem" in data:
+            self.write_skmem(path, time_delta_sec, data["skmem"])
 
 
     def write_db(self):
         for key, value in self.db.items():
             path = self.create_data_dir(key)
+            if path == None:
+                continue
             for snapshot in value.timeline:
                 time  = snapshot[0]
                 event = snapshot[1]
@@ -4522,7 +4685,7 @@ class SocketStatisticsMod(Mod):
         timer_info = uid = None
         std = std.split()
 
-        if len(std) not in (7, 8, 9):
+        if len(std) not in (7, 8, 9, 10):
             sys.stderr.write("Corrupt line format: %d (%s)\n" % (len(std), std))
             return None
 
@@ -4549,7 +4712,7 @@ class SocketStatisticsMod(Mod):
             retdata["ino"]        = std[6]
             retdata["sk"]         = std[7]
 
-        if len(std) == 9:
+        if len(std) == 9 or len(std) == 10:
             # ['ESTAB', '0', '0', '10.1.11.169:55427', '192.168.1.64:80', 
             # 'timer:(keepalive,15sec,0)', 'uid:1000', 'ino:185811', 'sk:ffff88001894a300']
             retdata["state"]      = std[0]
@@ -4565,8 +4728,59 @@ class SocketStatisticsMod(Mod):
         return retdata
 
 
-    def parse_ext_line(self, ext):
+    def parse_skmem(self, data):
+        d = dict()
 
+        for entry in ["SK_MEMINFO_RCVBUF",
+                      "SK_MEMINFO_SNDBUF",
+                      "SK_MEMINFO_BACKLOG",
+                      "SK_MEMINFO_RMEM_ALLOC",
+                      "SK_MEMINFO_WMEM_ALLOC",
+                      "SK_MEMINFO_FWD_ALLOC",
+                      "SK_MEMINFO_WMEM_QUEUED",
+                      "SK_MEMINFO_OPTMEM"]:
+            d[entry] = 0
+
+        for date in data:
+            # we start with two letter prefix
+            if date.startswith("rb"):
+                d["SK_MEMINFO_RCVBUF"] = date[2:]
+                continue
+            if date.startswith("tb"):
+                d["SK_MEMINFO_SNDBUF"] = date[2:]
+                continue
+            if date.startswith("bl"):
+                d["SK_MEMINFO_BACKLOG"] = date[2:]
+
+            # one leter prefix
+            if date.startswith("r"):
+                d["SK_MEMINFO_RMEM_ALLOC"] = date[1:]
+                continue
+            if date.startswith("t"):
+                d["SK_MEMINFO_WMEM_ALLOC"] = date[1:]
+                continue
+            if date.startswith("f"):
+                d["SK_MEMINFO_FWD_ALLOC"] = date[1:]
+                continue
+            if date.startswith("w"):
+                d["SK_MEMINFO_WMEM_QUEUED"] = date[1:]
+                continue
+            if date.startswith("o"):
+                d["SK_MEMINFO_OPTMEM"] = date[1:]
+                continue
+
+            self.logger.warning("Unknown socket buffer value: %s" % (date))
+
+        if int(d["SK_MEMINFO_FWD_ALLOC"]) >= 4294966736:
+            self.logger.warning("SK_MEMINFO_FWD_ALLOC >= 4294966736 - reduce to 0")
+            d["SK_MEMINFO_FWD_ALLOC"] = 0
+
+        return d
+
+
+
+
+    def parse_ext_line(self, ext):
         d = dict()
 
         # skmem:(r25216,rb172144,t0,tb23400,f3456,w0,o0,bl0) ts sack cubic wscale:7,7
@@ -4574,20 +4788,14 @@ class SocketStatisticsMod(Mod):
         ext = ext.split()
 
         for idx, entry in enumerate(ext):
-            if entry.startswith("skmem:("):
-                tmp = entry[len("skmem:("):-1]
+            # mem:(r0,w0,f0,t0) or skmem:(r25216,rb172144,t0,tb23400,f3456,w0,o0,bl0)
+            if entry.startswith("mem:(") or entry.startswith("skmem:("):
+                if entry.startswith("skmem:("):
+                    tmp = entry[len("skmem:("):-1]
+                elif entry.startswith("mem:("):
+                    tmp = entry[len("mem:("):-1]
                 tmp = tmp.split(",")
-                d["skmem"] = dict()
-                d["skmem"]["SK_MEMINFO_BACKLOG"] = None
-                d["skmem"]["SK_MEMINFO_RMEM_ALLOC"]  = tmp[0]
-                d["skmem"]["SK_MEMINFO_RCVBUF"]      = tmp[1]
-                d["skmem"]["SK_MEMINFO_WMEM_ALLOC"]  = tmp[2]
-                d["skmem"]["SK_MEMINFO_SNDBUF"]      = tmp[3]
-                d["skmem"]["SK_MEMINFO_FWD_ALLOC"]   = tmp[4]
-                d["skmem"]["SK_MEMINFO_WMEM_QUEUED"] = tmp[5]
-                d["skmem"]["SK_MEMINFO_OPTMEM"]      = tmp[6]
-                if len(tmp) == 8:
-                    d["skmem"]["SK_MEMINFO_BACKLOG"] = tmp[7]
+                d["skmem"] = self.parse_skmem(tmp)
                 ext.pop(idx)
 
         # wscale:%d,%d
@@ -4637,7 +4845,7 @@ class SocketStatisticsMod(Mod):
         unhandled_flags = None
         if len(ext) > 0:
             d["unhandled_flags"] = ','.join(ext)
-            self.logger.debug("unhandled outout %s" % (d["unhandled_flags"]))
+            self.logger.debug("unhandled ss(8) data %s" % (d["unhandled_flags"]))
 
         return d
 
@@ -4686,17 +4894,20 @@ class SocketStatisticsMod(Mod):
 
 
     def initialize(self):
+        if not sys.platform.startswith('linux'):
+            sys.stderr.write("SocketStatistics only supported under Linux - sorry\n")
+            sys.exit(ExitCodes.EXIT_PLATFORM)
+
         self.timeframe_start       = None
         self.timeframe_end         = None
 
         self.logger = logging.getLogger()
         self.parse_local_options()
         self.db = dict()
-        self.sleep_time = 1.0
+        self.sleep_time = 1.0 / self.opts.sampling_rate
 
 
     def prepare_gnuplot_options(self):
-
         if not self.opts.gnuplotoptions:
             self.opts.gnuplotoptions = dict()
             return
@@ -4760,6 +4971,9 @@ class SocketStatisticsMod(Mod):
         parser.add_option( "-o", "--output-dir", dest="outputdir", default=None,
                 type="string", help="specify the output directory")
 
+        parser.add_option( "-s", "--sampling-rate", dest="sampling_rate", default=1,
+                type="float", help="How often per second should I take a measurement (default: 1Hz)")
+
         parser.add_option( "-f", "--force", dest="force",  default=False,
                 action="store_true", help="enforce directory overwrite")
 
@@ -4778,18 +4992,19 @@ class SocketStatisticsMod(Mod):
 
     def process_final(self):
 
+        self.logger.warning("Sampling rate: %f Hz" % (self.opts.sampling_rate))
+        self.logger.warning("Start capturing socket data, interrupt process with CTRL-C")
         try:
             while True:
                 data = self.execute_ss()
                 self.process_data(data)
                 time.sleep(self.sleep_time)
         except KeyboardInterrupt:
-            sys.stderr.write("SIGINT received, flush data files and exit\n")
+            self.logger.warning("\r# SIGINT received, please wait to generate data (this may take a while)")
 
         self.write_db()
 
-        sys.stderr.write("# now execute \"make\" in %s\n" % (self.opts.outputdir))
-
+        self.logger.warning("Data generated in %s/" % (self.opts.outputdir))
 
 
 class Captcp:
@@ -4812,14 +5027,15 @@ class Captcp:
        "socketstatistic": [ "SocketStatisticsMod", "Graph output (mem, rtt, ...) from ss(8) over time" ]
             }
 
+
     def __init__(self):
         self.captcp_starttime = datetime.datetime.today()
         self.setup_logging()
         self.pcap_filter = None
         self.pcap_file_path = False
 
-    def setup_logging(self):
 
+    def setup_logging(self):
         ch = logging.StreamHandler()
 
         formatter = logging.Formatter("# %(message)s")
@@ -4828,6 +5044,52 @@ class Captcp:
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.WARNING)
         self.logger.addHandler(ch)
+
+
+    def which(self, program):
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            full_path = os.path.join(path, program)
+            if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
+                return full_path
+        return None
+
+
+    def check_program(self, program):
+        status = "FAILED"
+        path = self.which(program["name"])
+        if path:
+            status = "OK"
+        else:
+            path = ""
+
+        required = "Required" if program["required"] else "Optional"
+        help     = "" if not program["help"] else program["help"]
+        sys.stdout.write("%-6s %-10s Need: %7s   Path: %-20s  Help: %s\n" % (status, program["name"], required, path, help))
+
+
+
+    def check_environment(self):
+        programs = [
+                # Required program section
+                { "name":"make",     "required":True, "os":None, "help":"Build environment" },
+                { "name":"epstopdf", "required":True, "os":None, "help":"Used to convert Gnuplot EPS output to PDF" },
+                { "name":"gnuplot",  "required":True, "os":None, "help":"Main plotting program" },
+
+                # Optional programs
+                { "name":"convert", "required":False, "os":None,    "help":"Used to convert PDF to PNG" },
+                { "name":"ss",      "required":False, "os":"linux", "help":"Required for socketstatistic module" }
+        ]
+
+        sys.stdout.write("Platform: %s\n" % (sys.platform))
+        major, minor, micro, releaselevel, serial = sys.version_info
+        sys.stdout.write("Python: %s.%s.%s [releaselevel: %s, serial: %s]\n\n" %
+                (major, minor, micro, releaselevel, serial))
+
+        sys.stdout.write("Check programs:\n")
+        for program in programs:
+            self.check_program(program)
+        
 
     def print_version(self):
         sys.stdout.write("%s\n" % (__version__))
@@ -4852,6 +5114,13 @@ class Captcp:
             sys.stderr.write("   %-15s - %s\n" % (i, Captcp.modes[i][1]))
 
 
+    def args_contains(self, argv, *cmds):
+        for cmd in cmds:
+            for arg in argv:
+                if arg == cmd: return True
+        return False
+
+
     def parse_global_otions(self):
         if len(sys.argv) <= 1:
             self.print_usage()
@@ -4859,18 +5128,27 @@ class Captcp:
             self.print_modules()
             return None
 
-        submodule = sys.argv[1].lower()
-
-        if submodule == "--version":
+        # -v | --version can be place somewhere in the
+        # command line and will evalutated always: -v is
+        # a global option
+        if self.args_contains(sys.argv, "-v", "--version"):
             self.print_version()
             return None
 
-        if submodule == "-h" or submodule == "--help":
+        # -h | --help as first argument is treated special
+        # and has other meaning as a submodule
+        if self.args_contains(sys.argv[1:2], "-h", "--help"):
             self.print_usage()
             sys.stderr.write("Available modules:\n")
             self.print_modules()
             return None
 
+        # -c | --check as first argument is treated special
+        if self.args_contains(sys.argv[1:2], "-c", "--check"):
+            self.check_environment()
+            return None
+
+        submodule = sys.argv[1].lower()
         if submodule not in Captcp.modes:
             self.print_usage()
             sys.stderr.write("Module \"%s\" not known, available modules are:\n" %
