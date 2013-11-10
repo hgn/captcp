@@ -775,45 +775,6 @@ class TcpPacketInfo(PacketInfo):
 
 
 
-class Geoip:
-
-    def __init__(self, captcp):
-        self.captcp = captcp
-        self.parse_local_options()
-
-
-    def parse_local_options(self):
-        parser = optparse.OptionParser()
-        parser.usage = "geoip"
-        parser.add_option( "-v", "--verbose", dest="verbose", default=False,
-                action="store_true", help="show verbose")
-
-        self.opts, args = parser.parse_args(sys.argv[0:])
-        self.set_opts_logevel()
-
-        if len(args) < 3:
-            sys.stderr.write("no IP address argument given, exiting\n")
-            sys.exit(ExitCodes.EXIT_CMD_LINE)
-
-        if not self.opts.verbose:
-            sys.stderr = open(os.devnull, 'w')
-
-        self.captcp.print_welcome()
-
-        self.ip_address = args[2]
-        sys.stderr.write("# ip address: \"%s\"\n" % self.ip_address)
-
-    def run(self):
-        if not GeoIP:
-            sys.stdout.write("GeoIP package not installed on system, exiting")
-            sys.exit(ExitCodes.EXIT_CMD_LINE)
-
-        gi = GeoIP.new(GeoIP.GEOIP_MEMORY_CACHE)
-
-        sys.stdout.write("Country Code: " + gi.country_code_by_addr(self.ip_address) + "\n")
-
-
-
 class CaptureLevel:
 
     LINK_LAYER      = 0
@@ -886,6 +847,39 @@ class Mod:
         else:
             raise ArgumentException("loglevel \"%s\" not supported" % self.opts.loglevel)
 
+class Geoip(Mod):
+
+    def initialize(self):
+        self.logger = logging.getLogger()
+        self.parse_local_options()
+
+
+    def parse_local_options(self):
+        parser = optparse.OptionParser()
+        parser.usage = "geoip"
+        parser.add_option( "-v", "--loglevel", dest="loglevel", default=None,
+                type="string", help="show verbose")
+
+        self.opts, args = parser.parse_args(sys.argv[0:])
+        self.set_opts_logevel()
+
+        if len(args) < 3:
+            self.logger.error("no IP address argument given, exiting")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        self.captcp.print_welcome()
+
+        self.ip_address = args[2]
+        self.logger.info("# ip address: \"%s\"" % self.ip_address)
+
+    def process_final(self):
+        if not GeoIP:
+            self.logger.info("GeoIP package not installed on system, exiting")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        gi = GeoIP.new(GeoIP.GEOIP_MEMORY_CACHE)
+
+        sys.stdout.write("Country Code: " + gi.country_code_by_addr(self.ip_address) + "\n")
 
 
 class PayloadTimePortMod(Mod):
