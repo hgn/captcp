@@ -2578,8 +2578,8 @@ class ConnectionAnalyzeMod(Mod):
         self.logger = logging.getLogger()
         parser = optparse.OptionParser()
         parser.usage = "captcp connection"
-        parser.add_option( "-v", "--verbose", dest="verbose",
-                default=False, action="store_true", help="show verbose")
+        parser.add_option( "-v", "--loglevel", dest="loglevel", default=None,
+                type="string", help="set the loglevel (info, debug, warning, error)")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
