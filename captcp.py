@@ -5133,10 +5133,10 @@ class Captcp:
             self.print_modules()
             return None
 
-        # -v | --version can be place somewhere in the
-        # command line and will evalutated always: -v is
+        # --version can be placed somewhere in the
+        # command line and will evalutated always: it is
         # a global option
-        if self.args_contains(sys.argv, "-v", "--version"):
+        if self.args_contains(sys.argv, "--version"):
             self.print_version()
             return None
 
