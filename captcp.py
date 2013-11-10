@@ -1070,7 +1070,7 @@ class TemplateMod(Mod):
             elif i.type == TemplateMod.TYPE_GNUPLOT:
                 gpi.append(i)
             else:
-                raise InternalException("programmed error")
+                continue
 
         sys.stdout.write("\nmakefile templates:\n")
         for i in mak:
@@ -1101,8 +1101,10 @@ class TemplateMod(Mod):
         self.set_opts_logevel()
 
         if len(args) < 3:
-            self.logger.error("no template name given, please pick on of the following")
-            self.print_available_templates()
+            if self.opts.list:
+                self.print_available_templates()
+            else:
+                self.logger.error("no template name given, please pick on of the following")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
         self.captcp.print_welcome()
