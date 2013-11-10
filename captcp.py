@@ -4765,6 +4765,7 @@ class SocketStatisticsMod(Mod):
                 continue
             if date.startswith("bl"):
                 d["SK_MEMINFO_BACKLOG"] = date[2:]
+                continue
 
             # one leter prefix
             if date.startswith("r"):
