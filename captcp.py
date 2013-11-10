@@ -4284,14 +4284,15 @@ class ConnectionAnimationMod(Mod):
 
 
     def calc_rtt(self, ts, packet, tpi):
-        if tpi.is_syn_flag() and not tpi.is_ack_flag():
+        if not tpi.is_syn_flag():
+            return
+
+        if not tpi.is_ack_flag():
             self.logger.debug("TWH - SYN received")
             self.rtt_data["syn-received"] = dict()
             self.rtt_data["syn-received"]["ts"] = ts
             self.rtt_data["syn-received"]["seq"] = tpi.seq
-
-        if tpi.is_syn_flag() and tpi.is_ack_flag() and \
-                tpi.ack == self.rtt_data["syn-received"]["seq"] + 1:
+        elif tpi.is_ack_flag() and tpi.ack == self.rtt_data["syn-received"]["seq"] + 1:
             self.rtt_data["twh-rtt"] = Utils.ts_tofloat(ts - \
                     self.rtt_data["syn-received"]["ts"]) * 1000.0
             self.logger.debug("TWH - SYN/ACK received (%.3f ms later)" %
@@ -4305,6 +4306,10 @@ class ConnectionAnimationMod(Mod):
 
     def process_local_side(self, ts, packet, tpi):
         """ we animate the packet send from us to the peer """
+        if not self.rtt_data.has_key("twh-delay"):
+            self.logger.error("The chosen flow does not contain SYN packets")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
         td = Utils.ts_tofloat(ts - self.reference_time) * 1000.0 / self.acceleration
 
         self.js_fd.write("\t//ts: %s\n" % (td))
@@ -4314,6 +4319,9 @@ class ConnectionAnimationMod(Mod):
 
     def process_remote_side(self, ts, packet, tpi):
         """ we animate the packet send from remote to us """
+        if not self.rtt_data.has_key("twh-delay"):
+            self.logger.error("The chosen flow does not contain SYN packets")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
         td = Utils.ts_tofloat(ts - self.reference_time) * 1000.0 / self.acceleration
 
         self.js_fd.write("\t//ts: %s\n" % (td))
