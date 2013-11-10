@@ -2702,7 +2702,7 @@ class ThroughputMod(Mod):
     def parse_local_options(self):
         self.ids = False
         parser = optparse.OptionParser()
-        parser.usage = "show [options] <pcapfile> [pcapfilter]"
+        parser.usage = "throughput [options] <pcapfile> [pcapfilter]"
 
         parser.add_option( "-v", "--verbose", dest="loglevel", default=None,
                 type="string", help="set the loglevel (info, debug, warning, error)")
@@ -2857,7 +2857,7 @@ class InFlightMod(Mod):
     def parse_local_options(self):
         self.ids = False
         parser = optparse.OptionParser()
-        parser.usage = "show [options] <pcapfile>"
+        parser.usage = "inflight [options] <pcapfile>"
         parser.add_option( "-v", "--verbose", dest="loglevel", default=None,
                 type="string", help="set the loglevel (info, debug, warning, error)")
         parser.add_option( "-f", "--data-flow", dest="connections", default=None,
@@ -3023,7 +3023,7 @@ class SpacingMod(Mod):
     def parse_local_options(self):
         self.ids = False
         parser = optparse.OptionParser()
-        parser.usage = "show [options] <pcapfile>"
+        parser.usage = "spacing [options] <pcapfile>"
         parser.add_option( "-v", "--verbose", dest="loglevel", default=None,
                 type="string", help="set the loglevel (info, debug, warning, error)")
         parser.add_option( "-f", "--data-flow", dest="connections", default=None,
