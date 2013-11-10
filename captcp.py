@@ -928,8 +928,13 @@ class PayloadTimePortMod(Mod):
 
 
     def process_packet(self, ts, packet):
-        ip = packet
-        tcp = packet.data
+        try:
+            ip = packet
+            tcp = packet.data
+        except AttributeError:
+            self.logger.warning("Packet at %s could not be parsed, skipping" % ts)
+            return
+
 
         if type(tcp) != TCP:
             return
