@@ -4261,7 +4261,12 @@ class ConnectionAnimationMod(Mod):
             self.logger.error("No data flow specified! Call \"captcp statistic for valid ID's\"")
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
-        (self.connection_id, self.local_flow_id) = self.opts.connections.split('.')
+        try:
+            (self.connection_id, self.local_flow_id) = self.opts.connections.split('.')
+        except ValueError:
+            self.logger.error("You specified a connection not a flow")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
         if int(self.local_flow_id) == 1:
             self.remote_flow_id = 2
         elif int(self.local_flow_id) == 2:
