@@ -21,7 +21,7 @@ install: captcp.py
 					mkdir -p $(DESTDIR)$(PREFIX)/share/captcp/data/connection-animation-data/images
 
 	$(INSTALL) -m 0755 captcp.py $(DESTDIR)$(PREFIX)/share/captcp
-	$(INSTALLDATA) data/stap-scripts/* $(DESTDIR)$(PREFIX)/share/captcp/data/stap-scripts
+	$(INSTALL) data/stap-scripts/* $(DESTDIR)$(PREFIX)/share/captcp/data/stap-scripts
 	$(INSTALLDATA) data/templates/* $(DESTDIR)$(PREFIX)/share/captcp/data/templates
 	$(INSTALLDATA) data/connection-animation-data/captcp-anim.js \
 					$(DESTDIR)$(PREFIX)/share/captcp/data/connection-animation-data/
