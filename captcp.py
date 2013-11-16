@@ -804,6 +804,7 @@ class Mod:
         self.captcp = None
         self.cc = ConnectionContainer()
         self.capture_level = CaptureLevel.NETWORK_LAYER
+        self.logger = logging.getLogger()
 
     def internal_pre_process_packet(self, ts, packet):
         """ this is a hidden preprocessing function, called for every packet"""
@@ -864,9 +865,7 @@ class Mod:
 class Geoip(Mod):
 
     def initialize(self):
-        self.logger = logging.getLogger()
         self.parse_local_options()
-
 
     def parse_local_options(self):
         parser = optparse.OptionParser()
@@ -903,7 +902,6 @@ class PayloadTimePortMod(Mod):
     DEFAULT_VAL = 0.0
 
     def initialize(self):
-        self.logger = logging.getLogger()
         self.parse_local_options()
 
         self.data = dict()
@@ -1013,7 +1011,6 @@ class TemplateMod(Mod):
 
 
     def __init__(self):
-        self.logger = logging.getLogger()
         self.init_db()
 
 
@@ -1136,9 +1133,6 @@ class StackTraceMod(Mod):
     DEFAULT_FILTER = '*.*.*.*:*-*.*.*.*:5001'
 
     def initialize(self):
-
-        self.logger = logging.getLogger()
-
         self.parse_local_options()
 
         sys.stderr.write("# 1. Make sure you have a working systemtap environment\n")
@@ -1287,7 +1281,6 @@ class TimeSequenceMod(Mod):
         self.v_end                 = None
         self.highest_seq           = -1
         self.wscale_receiver       = 1
-        self.logger = logging.getLogger()
         self.parse_local_options()
         self.logger.warning("ADVICE: capture the data at sender side!")
 
@@ -1751,7 +1744,6 @@ class FlowGraphMod(Mod):
         if cairo == None:
             raise ImportError("Python Cairo module not available, exiting")
 
-        self.logger = logging.getLogger()
         self.parse_local_options()
         self.setup_cairo()
 
@@ -2590,7 +2582,6 @@ class ConnectionContainer:
 class ConnectionAnalyzeMod(Mod):
 
     def initialize(self):
-        self.logger = logging.getLogger()
         parser = optparse.OptionParser()
         parser.usage = "captcp connection"
         parser.add_option( "-v", "--loglevel", dest="loglevel", default=None,
@@ -2698,7 +2689,6 @@ class ThroughputMod(Mod):
 
 
     def initialize(self):
-        self.logger = logging.getLogger()
         self.parse_local_options()
         self.end_time = self.start_time = False
         self.total_data_len = 0
@@ -2855,7 +2845,6 @@ class ThroughputMod(Mod):
 class InFlightMod(Mod):
 
     def initialize(self):
-        self.logger = logging.getLogger()
         self.parse_local_options()
         self.packet_sequence = list()
         self.packet_prev = False
@@ -3011,8 +3000,6 @@ class InFlightMod(Mod):
 class SpacingMod(Mod):
 
     def initialize(self):
-        self.logger = logging.getLogger()
-
         self.parse_local_options()
 
         self.packet_sequence = list()
@@ -3220,8 +3207,6 @@ class ShowMod(Mod):
 
 
     def initialize(self):
-
-        self.logger = logging.getLogger()
         self.parse_local_options()
         self.color_iter = self.color.__iter__()
         self.packet_no = 0
@@ -3461,7 +3446,6 @@ class SoundMod(Mod):
 
 
     def initialize(self):
-        self.logger = logging.getLogger()
         self.parse_local_options()
         self.capture_time_start = None
         self.last_packet_plus_transmission = None
@@ -3713,7 +3697,6 @@ class StatisticMod(Mod):
 
     def initialize(self):
         self.color = RainbowColor(mode=RainbowColor.ANSI)
-        self.logger = logging.getLogger()
         self.parse_local_options()
         self.capture_level = CaptureLevel.NETWORK_LAYER
 
@@ -4208,7 +4191,6 @@ class ConnectionAnimationMod(Mod):
     REMOTE = 2
 
     def initialize(self):
-        self.logger = logging.getLogger()
         self.parse_local_options()
         self.write_js_header()
 
@@ -4930,7 +4912,6 @@ class SocketStatisticsMod(Mod):
         self.timeframe_start       = None
         self.timeframe_end         = None
 
-        self.logger = logging.getLogger()
         self.parse_local_options()
         self.db = dict()
         self.sleep_time = 1.0 / self.opts.sampling_rate
