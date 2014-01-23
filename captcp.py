@@ -5171,6 +5171,15 @@ class Captcp:
         return classname
 
 
+    def check_pcap_filepath_sanity(self):
+        statinfo = os.stat(self.pcap_file_path)
+        if statinfo.st_size == 0:
+            self.logger.error("PCAP file contains no data: %s - exiting" %
+                              (self.pcap_file_path))
+            return False
+        return True
+
+
     def run(self):
         classtring = self.parse_global_otions()
         if not classtring:
@@ -5185,6 +5194,8 @@ class Captcp:
         # We check here and if pcap_file_path is not true
         # then we assume a non-pcap module
         if self.pcap_file_path:
+            if not self.check_pcap_filepath_sanity():
+                return 1
             # parse the whole pcap file first
             pcap_parser = PcapParser(self.pcap_file_path, self.pcap_filter)
             pcap_parser.register_callback(classinstance.internal_pre_process_packet)
