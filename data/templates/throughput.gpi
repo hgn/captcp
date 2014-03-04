@@ -1,6 +1,6 @@
 set terminal postscript eps enhanced color "Times" 30
 set output "throughput.eps"
-set title "Throughput Graph"
+$TITLE
 
 set style line 99 linetype 1 linecolor rgb "#999999" lw 2
 set key right bottom

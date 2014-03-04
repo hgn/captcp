@@ -2649,12 +2649,19 @@ class ThroughputMod(Mod):
         gnuplot_filename = "throughput.gpi"
         makefile_filename = "Makefile"
 
+        if "no-title" in self.opts.gnuplotoptions:
+            title = 'set notitle'
+        if "title" in self.opts.gnuplotoptions:
+            title = "set title \"%s\"" % (self.opts.gnuplotoptions["title"])
+        if self.opts.persecond:
+            unit = self.opts.unit + "/s"
+        else:
+            unit = self.opts.unit
+
         # throughput.gpi
         tmpl = string.Template(TemplateMod().get_content_by_name("throughput"))
-        if self.opts.persecond:
-            gpi_cmd = tmpl.substitute(UNIT=self.opts.unit + "/s")
-        else:
-            gpi_cmd = tmpl.substitute(UNIT=self.opts.unit)
+        gpi_cmd = tmpl.substitute(TITLE=title,
+                                  UNIT=unit)
 
         filepath = "%s/%s" % (self.opts.outputdir, gnuplot_filename)
         fd = open(filepath, 'w')
@@ -2703,6 +2710,33 @@ class ThroughputMod(Mod):
                 self.create_gnuplot_environment()
             self.create_data_files()
 
+    def prepare_gnuplot_options(self):
+        if not self.opts.gnuplotoptions:
+            self.opts.gnuplotoptions = dict()
+            return
+
+        options = self.opts.gnuplotoptions.split(',')
+        self.opts.gnuplotoptions = dict()
+
+        for option in options:
+            if option == "no-title" or option == "notitle":
+                self.opts.gnuplotoptions["no-title"] = True
+                continue
+            if option.startswith("title="):
+                title_token = option.split('=')
+                if len(title_token) != 2:
+                    raise ArgumentException("Gnuplot title must be in "
+                                            "form: title=\"New Title\"")
+                self.opts.gnuplotoptions["title"] = title_token[1]
+                continue
+
+            # unknown options, raise error
+            raise ArgumentException("Unknown gnuplot option: %s" % (option))
+
+        # sanity check
+        if ("no-title" in self.opts.gnuplotoptions and
+            "title" in self.opts.gnuplotoptions):
+            raise ArgumentException("Gnuplot title AND no-title options are not allowed")
 
     def parse_local_options(self):
         self.ids = False
@@ -2731,8 +2765,11 @@ class ThroughputMod(Mod):
         parser.add_option("-r", "--reference-time", dest="reference_time",
                         action="store_true", default=False, help="don't shift time axis start to "
                         "start of flow, use global capture time start")
+        parser.add_option( "-g", "--gnuplot-options", dest="gnuplotoptions", default=None,
+                type="string", help="options for gnuplot, comma separated list: notitle, title=\"<newtitle>\"")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
+        self.prepare_gnuplot_options()
         self.set_opts_logevel()
 
         if len(args) < 3:
