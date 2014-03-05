@@ -2649,6 +2649,7 @@ class ThroughputMod(Mod):
         gnuplot_filename = "throughput.gpi"
         makefile_filename = "Makefile"
 
+        title = "set title \"Throughput Graph\""
         if "no-title" in self.opts.gnuplotoptions:
             title = 'set notitle'
         if "title" in self.opts.gnuplotoptions:
