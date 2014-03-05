@@ -2860,6 +2860,16 @@ class ThroughputMod(Mod):
 
 
     def process_final(self):
+        # check if we processes any packet at all
+        if not self.end_time or not self.start_time:
+            self.logger.error("No data in tracefile found!")
+            self.logger.error("Use tcpdump and view capture file"
+                              ". E.g. not all Ethernet types are supported")
+            if not self.opts.stdio:
+                self.close_data_files()
+            return
+
+        # fine, packets where captured
         timediff =  Utils.ts_tofloat(self.end_time - self.start_time)
         self.logger.warning("total data (%s): %d %s (%s)" %
                 (self.opts.mode, 
