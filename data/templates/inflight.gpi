@@ -16,7 +16,7 @@ set format y "%.0f"
 set size 2
 set size ratio 0.4
 
-set ylabel "Packets"
+$YLABEL
 set xlabel "Time [seconds]"
 
 set style line 1 lc rgb '#00004d' lt 1 lw 3

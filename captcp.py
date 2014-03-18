@@ -2954,9 +2954,17 @@ class InFlightMod(Mod):
         gnuplot_filename = "inflight.gpi"
         makefile_filename = "Makefile"
 
+        if self.opts.mode == "bytes":
+            ylabel = 'set ylabel "Bytes"'
+        else:
+            ylabel = 'set ylabel "Packets"'
+
+        tmpl = string.Template(TemplateMod().get_content_by_name("inflight"))
+        tmpl = tmpl.substitute(YLABEL=ylabel)
+
         filepath = "%s/%s" % (self.opts.outputdir, gnuplot_filename)
         fd = open(filepath, 'w')
-        fd.write("%s" % (TemplateMod().get_content_by_name("inflight")))
+        fd.write("%s" % (tmpl))
         fd.close()
 
         filepath = "%s/%s" % (self.opts.outputdir, makefile_filename)
