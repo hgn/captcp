@@ -2954,9 +2954,17 @@ class InFlightMod(Mod):
         gnuplot_filename = "inflight.gpi"
         makefile_filename = "Makefile"
 
+        if self.opts.mode == "bytes":
+            ylabel = 'set ylabel "Bytes"'
+        else:
+            ylabel = 'set ylabel "Packets"'
+
+        tmpl = string.Template(TemplateMod().get_content_by_name("inflight"))
+        tmpl = tmpl.substitute(YLABEL=ylabel)
+
         filepath = "%s/%s" % (self.opts.outputdir, gnuplot_filename)
         fd = open(filepath, 'w')
-        fd.write("%s" % (TemplateMod().get_content_by_name("inflight")))
+        fd.write("%s" % (tmpl))
         fd.close()
 
         filepath = "%s/%s" % (self.opts.outputdir, makefile_filename)
@@ -3002,16 +3010,26 @@ class InFlightMod(Mod):
     def gnuplot_out(self, time, is_data):
         #if self.packet_prev:
         #    self.file.write("%.5f %d\n" % (time - 0.00001, self.packet_prev))
-        self.file.write("%.5f %d\n" % (time, len(self.packet_sequence)))
+        if self.opts.mode == "bytes":
+            sequence_size = sum(int(len(packet[2])) for packet in self.packet_sequence)
+            self.file.write("%.5f %d\n" % (time, sequence_size))
+        else:
+            self.file.write("%.5f %d\n" % (time, len(self.packet_sequence)))
         #self.packet_prev = len(self.packet_sequence)
 
 
     def stdio_out(self, time, is_data):
         if is_data: kind = "TX"
         else: kind = "RX"
-        sys.stdout.write("%.5f %s %d\t%s\n" %
-                (time, kind, len(self.packet_sequence), '#' * len(self.packet_sequence)))
-        self.inflight_max = max(self.inflight_max, len(self.packet_sequence))
+        if self.opts.mode == "bytes":
+            sequence_size = sum(int(len(packet[2])) for packet in self.packet_sequence)
+            sys.stdout.write("%.5f %s %d\t%s\n" %
+                    (time, kind, sequence_size, '#' * len(self.packet_sequence)))
+            self.inflight_max = max(self.inflight_max, sequence_size)
+        else:
+            sys.stdout.write("%.5f %s %d\t%s\n" %
+                    (time, kind, len(self.packet_sequence), '#' * len(self.packet_sequence)))
+            self.inflight_max = max(self.inflight_max, len(self.packet_sequence))
 
 
     def pre_process_packet(self, ts, packet):
