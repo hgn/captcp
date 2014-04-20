@@ -568,7 +568,7 @@ class PcapParser:
     def run(self):
         try:
             for ts, pkt in self.pc:
-                if self.pc.snaplen <= len(pkt):
+                if self.pc.snaplen < len(pkt):
                     self.packet_len_error(self.pc.snaplen, len(pkt))
                     sys.exit(1)
                 packet = self.decode(pkt)
