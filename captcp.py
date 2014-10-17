@@ -5258,7 +5258,7 @@ class Captcp:
         if not classtring:
             return 1
 
-        ret = check_python_version()
+        ret = self.check_python_version()
         if not ret:
             return 1
 
