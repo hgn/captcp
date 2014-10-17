@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 #
 # Email: Hagen Paul Pfeifer <hagen@jauu.net>
 # URL: http://research.protocollabs.com/captcp/
@@ -5245,10 +5245,21 @@ class Captcp:
             return False
         return True
 
+    def check_python_version():
+        major, minor, micro, releaselevel, serial = sys.version_info
+        if major > 2:
+            sys.logger.error("Python version to new! Python 2.x required")
+            return False
+        return True
+
 
     def run(self):
         classtring = self.parse_global_otions()
         if not classtring:
+            return 1
+
+        ret = check_python_version()
+        if not ret:
             return 1
 
         classinstance = globals()[classtring]()
