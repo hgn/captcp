@@ -5245,7 +5245,7 @@ class Captcp:
             return False
         return True
 
-    def check_python_version():
+    def check_python_version(self):
         major, minor, micro, releaselevel, serial = sys.version_info
         if major > 2:
             sys.logger.error("Python version to new! Python 2.x required")
