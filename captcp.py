@@ -4013,16 +4013,12 @@ class StatisticMod(Mod):
         self.account_tcp_data(sc, ts, packet, pi)
 
 
-    def print_one_column_sc_statistic(self, cid, sc):
-        raise NotImplementedException("one flow connection not supported yet")
-
-
-    def print_format_two_column(self, cid, statistic):
-        sc1 = statistic[0]
-        sc2 = statistic[1]
-
+    def print_sc_statistics(self, cid, statistic):
         left_width  = self.calc_max_label_length()
-        right_width = max(self.calc_max_data_length(sc1), self.calc_max_data_length(sc2))
+        right_width = max([self.calc_max_data_length(sc) for sc in statistic])
+        
+        line_length = left_width + right_width + 4
+
 
         # flow specific header per column
         # l1 = self.left("%d.1" % (cid), left_width)
@@ -4084,18 +4080,14 @@ class StatisticMod(Mod):
 
 
         for i in ordere_list:
-            l1 = self.left(self.type_to_label(i) + ":", left_width)
-            r1 = self.right(str(sc1.user_data[i]) + " " + self.LABEL_DB[i][1], right_width)
+            lbl = self.left(self.type_to_label(i) + ":", left_width)
+            r = [self.right(str(sc.user_data[i]) + " " + self.LABEL_DB[i][1], right_width)
+                    for sc in statistic]
 
-            l2 = self.left(self.type_to_label(i) + ":", left_width)
-            r2 = self.right(str(sc2.user_data[i])+ " " + self.LABEL_DB[i][1], right_width)
+            for s in r:
+                sys.stdout.write(self.left("   %s %s" % (lbl, s), line_length))
 
-            line_length = left_width + right_width + 1
-
-            sys.stdout.write("   %s   %s\n" %
-                    (self.left("%s %s" % (l1, r1), line_length),
-                     self.left("%s %s" % (l2, r2), line_length)))
-
+            sys.stdout.write("\n")
 
     def format_human(self):
         one_percent = float(self.cc.statistic.packets_processed) / 100
@@ -4171,12 +4163,12 @@ class StatisticMod(Mod):
                 sys.stdout.write("   Flow %s.2  %s" % (connection.connection_id, connection.sc2))
                 sys.stdout.write("%s\n" % (self.color["end"]))
 
-                self.print_format_two_column(connection.connection_id,
-                                             [connection.sc1, connection.sc2])
+                self.print_sc_statistics(connection.connection_id,
+                                         [connection.sc1, connection.sc2])
             elif connection.sc1:
                 sys.stdout.write("   Flow %s.1  %s\n" %
                                  (connection.connection_id, connection.sc1))
-                self.print_one_column_sc_statistic(connection.connection_id, connection.sc1)
+                self.print_sc_statistics(connection.connection_id, [connection.sc1])
             else:
                 raise InternalException("sc1 should be the only one here")
 
