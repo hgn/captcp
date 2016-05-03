@@ -2272,10 +2272,13 @@ class TcpConn:
 
         l = [ord(a) ^ ord(b) for a,b in zip(self.sipnum, self.dipnum)]
 
+        sport = long(self.sport)
+        dport = long(self.dport)
+        portpair = "%04x%04x" % (min(sport, dport), max(sport, dport))
         self.uid = "%s:%s:%s" % (
                 str(self.ipversion),
                 str(l),
-                str(long(self.sport) + long(self.dport)))
+                portpair)
 
         self.iuid = ((self.sipnum) + \
                 (self.dipnum) + ((self.sport) + \
