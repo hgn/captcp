@@ -17,7 +17,7 @@ set format y "%.0f"
 $XRANGE
 $YRANGE
 
-set ylabel "RTT [milliceconds]"
+set ylabel "RTT [milliseconds]"
 set xlabel "Time [seconds]"
 
 set style line 1 lc rgb '#00004d' lt 1 lw 5
