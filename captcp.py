@@ -5327,6 +5327,7 @@ class Captcp:
        "throughput":      [ "ThroughputMod", "Graph the throughput over time graph" ],
        "inflight":        [ "InFlightMod", "Visualize all packets in flight and not ACKed" ],
        "spacing":         [ "SpacingMod", "Time between packets and acks" ],
+       "spacing-data-ack":[ "SpacingDataAckMod", "Time between acks and their first corresponding data packets"],
        "stacktrace":      [ "StackTraceMod", "Hook into Linux Kernel to trace cwnd, ssthresh, ..." ],
        "sound":           [ "SoundMod", "Play sound based on payload/ack packets" ],
        "animation":       [ "ConnectionAnimationMod", "Generate animation (html) of packet flow" ],
