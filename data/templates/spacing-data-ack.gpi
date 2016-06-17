@@ -1,6 +1,6 @@
 set terminal postscript eps enhanced color "Times" 30
-set output "spacing.eps"
-set title "Spacing Graph"
+set output "spacing-data-ack.eps"
+set title "Spacing-Data-Ack Graph"
 
 set style line 99 linetype 1 linecolor rgb "#999999" lw 2
 set key right bottom
@@ -9,7 +9,7 @@ set key spacing 1.2
 
 set grid xtics ytics mytics
 
-#set xrange [1:60]
+set yrange [0:]
 
 set size 2
 set size ratio 0.4
@@ -18,12 +18,10 @@ set ylabel "Packet Spacing [seconds]"
 set xlabel "Time [seconds]"
 
 set style line 1 lc rgb '#00004d' lt 1 lw 3
-set style line 2 lc rgb '#aa004d' lt 1 lw 3
 
 # grayscale
 #set style line 1 lc rgb '#000' lt 1 pi 0 pt 6 lw 8 ps 4
 
 plot \
-  "tx.data" using 1:2 title "  TX" with linespoints ls 1, \
-	"rx.data" using 1:2 title "  RX" with linespoints ls 2
+  "spacing-data-ack.data" using 1:2 title "  TX" with linespoints ls 1
 

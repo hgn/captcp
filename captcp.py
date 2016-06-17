@@ -3080,9 +3080,6 @@ class SpacingDataAckMod(Mod):
         self.prev_tx_time = False
         self.prev_rx_time = False
 
-        self.tx_time_samples = list()
-        self.rx_time_samples = list()
-
         self.capture_time_start = False
 
         if not self.opts.stdio:
@@ -3094,7 +3091,8 @@ class SpacingDataAckMod(Mod):
     def parse_local_options(self):
         self.ids = False
         parser = optparse.OptionParser()
-        parser.usage = "spacing [options] <pcapfile>"
+        parser.usage = "spacing [options] <pcapfile>\n\n" \
+                       "use sender-side capture files with this module"
         parser.add_option("-v", "--verbose", dest="loglevel", default=None,
                           type="string",
                           help="set the loglevel (info, debug, warning, error)")
@@ -3113,9 +3111,9 @@ class SpacingDataAckMod(Mod):
                           help="create Gnuplot template and Makefile in output-dir")
         parser.add_option("-o", "--output-dir", dest="outputdir", default=None,
                           type="string", help="specify the output directory")
-        parser.add_option("-a", "--samples", dest="sample_no", default=10,
+        parser.add_option("-a", "--samples", dest="sample_no", default=1,
                           type="int",
-                          help="number of packet sampled (default: 10)")
+                          help="number of packet sampled (default: 1)")
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
@@ -3142,17 +3140,19 @@ class SpacingDataAckMod(Mod):
         else:
             raise ArgumentException("sub flow must be 1 or 2")
 
+        sys.stderr.write("# use sender-side capture files with the "
+                         "spacing-data-ack module!\n")
         sys.stderr.write("# connection: %s (data flow: %s, ACK flow: %s)\n" %
                          (self.connection_id, self.data_flow_id,
                           self.ack_flow_id))
 
     def create_gnuplot_environment(self):
-        gnuplot_filename = "spacing.gpi"
+        gnuplot_filename = "spacing-data-ack.gpi"
         makefile_filename = "Makefile"
 
         filepath = "%s/%s" % (self.opts.outputdir, gnuplot_filename)
         fd = open(filepath, 'w')
-        fd.write("%s" % (TemplateMod().get_content_by_name("spacing")))
+        fd.write("%s" % (TemplateMod().get_content_by_name("spacing-data-ack")))
         fd.close()
 
         filepath = "%s/%s" % (self.opts.outputdir, makefile_filename)
@@ -3171,15 +3171,11 @@ class SpacingDataAckMod(Mod):
             sys.exit(ExitCodes.EXIT_CMD_LINE)
 
     def create_data_files(self):
-        self.tx_filepath = "%s/%s" % (self.opts.outputdir, "tx.data")
+        self.tx_filepath = "%s/%s" % (self.opts.outputdir, "spacing-data-ack.data")
         self.tx_file = open(self.tx_filepath, 'w')
-
-        self.rx_filepath = "%s/%s" % (self.opts.outputdir, "rx.data")
-        self.rx_file = open(self.rx_filepath, 'w')
 
     def close_data_files(self):
         self.tx_file.close()
-        self.rx_file.close()
 
     def process_data_flow(self, ts, packet):
         pi = TcpPacketInfo(packet)
@@ -3193,21 +3189,8 @@ class SpacingDataAckMod(Mod):
             if pi.ack >= i[0]:
                 self.packet_sequence.remove(i)
 
-    def gnuplot_out(self, time, delta, is_data_flow):
-        if is_data_flow:
-            self.tx_file.write("%.5f %.5f\n" % (time, delta))
-        else:
-            self.rx_file.write("%.5f %.5f\n" % (time, delta))
-
-    def stdio_out(self, time, delta, is_data_flow):
-        print_spacing = False
-        if print_spacing:
-            if is_data_flow:
-                pre = "TX"
-            else:
-                pre = "RX"
-
-            sys.stdout.write("%s %.5f %.5f\n" % (pre, time, delta))
+    def gnuplot_out(self, time, delta):
+        self.tx_file.write("%.6f %.6f\n" % (time, delta))
 
     def pre_process_packet(self, ts, packet):
         sub_connection = self.cc.sub_connection_by_packet(packet)
@@ -3215,88 +3198,99 @@ class SpacingDataAckMod(Mod):
         if not self.capture_time_start: self.capture_time_start = ts
         time = Utils.ts_tofloat(ts - self.capture_time_start)
         pi = TcpPacketInfo(packet)
-        delta = 0.0
-        is_data_flow = None
 
         if sub_connection.sub_connection_id == int(self.data_flow_id):
-            if not self.prev_tx_time:
-                self.prev_tx_time = time
-                return
-            self.data_packet_list.append([time, pi.seq])
-
-            delta = time - self.prev_tx_time
-            self.prev_tx_time = time
-            is_data_flow = True
-            self.tx_time_samples.append(delta)
-            if len(self.tx_time_samples) < self.opts.sample_no:
-                return
+            self.data_packet_list.append([time, pi.seq, len(packet.data.data)])
         elif sub_connection.sub_connection_id == int(self.ack_flow_id):
-            if not self.prev_rx_time:
-                self.prev_rx_time = time
-                return
             self.ack_packet_list.append([time, pi.ack])
-
-            delta = time - self.prev_rx_time
-            self.prev_rx_time = time
-            is_data_flow = False
-            self.rx_time_samples.append(delta)
-            if len(self.rx_time_samples) < self.opts.sample_no:
-                return
         else:
             raise InternalException
 
-        tmp = 0.0
-        if is_data_flow:
-            for i in self.tx_time_samples:
-                tmp += i
-            tmp /= len(self.tx_time_samples)
+    def format_number_output(self, value, value_to_format_to):
+        start_symbol = " "
+        no_str = str()
+        output_offset_str = str()
+        if value_to_format_to <= 9:
+            no_str = "%01d" % value
+            output_offset_str = " "
+        elif 9 < value_to_format_to <= 99:
+            no_str = "%02d" % value
+            output_offset_str = "  "
+        elif 99 < value_to_format_to <= 999:
+            no_str = "%03d" % value
+            output_offset_str = "   "
+        elif 999 < value_to_format_to <= 9999:
+            no_str = "%04d" % value
+            output_offset_str = "    "
         else:
-            for i in self.rx_time_samples:
-                tmp += i
-            tmp /= len(self.rx_time_samples)
-
-        if self.opts.stdio:
-            self.stdio_out(time, tmp, is_data_flow)
-        else:
-            self.gnuplot_out(time, tmp, is_data_flow)
-
-        if is_data_flow:
-            self.tx_time_samples = list()
-        else:
-            self.rx_time_samples = list()
+            no_str = "%d" % value
+            output_offset_str = "     "
+        return start_symbol + no_str, output_offset_str
 
     def process_final(self):
+        sorted_data_packet_list = sorted(self.data_packet_list)
+        sorted_ack_packet_list = sorted(self.ack_packet_list)
+        seq_done_list = list()
         spacing_list = list()
-        for ack_packet in self.ack_packet_list:
-            time_data = float()
-            time_ack = ack_packet[0]
-            ack_seq = ack_packet[1]
-            match_found = False
-            for data_packet in self.data_packet_list:
-                if data_packet[1] + 1448 == ack_seq:
-                    if not match_found:
-                        match_found = True
-                        time_data = data_packet[0]
-                        self.data_packet_list.remove(data_packet)
-                    if data_packet[0] < time_data:
-                        time_data = data_packet[0]
-                        self.data_packet_list.remove(data_packet)
+        packet_no = 1
+        dumpfile_parsing_error = False
+        for data_packet in sorted_data_packet_list:
+            len_data = data_packet[2]
+            seq_data = data_packet[1]
+            if len_data > 0 and seq_data not in seq_done_list:
+                time_data = data_packet[0]
+                seq_data = data_packet[1]
+                seq_done_list.append(seq_data)
+                # now look for the first packet where ack >= seq + len
+                time_ack = float()
+                for ack_packet in sorted_ack_packet_list:
+                    time_ack_packet = ack_packet[0]
+                    ack_packet = ack_packet[1]
+                    # ack acks data
+                    if ack_packet >= seq_data + len_data:
+                        time_ack = time_ack_packet
+                        break
+                # now we got an data-ack-pair and all needed info
+                delta = time_ack - time_data
+                spacing_list.append([packet_no,
+                                     time_data,
+                                     time_ack,
+                                     delta,
+                                     len_data])
+                packet_no += 1
+                # if this is true, no match was found for a data-ack-pair
+                # this should never be true for a finished tcp flow -> error
+                if time_ack < 0.0000001:
+                    dumpfile_parsing_error = True
 
-            delta = time_ack - time_data
-            if time_data > 0.0000001:
-                spacing_list.append([time_data, time_ack, delta])
-
+        # assemble output
         output_str = str()
         sorted_spacing_list = sorted(spacing_list)
         for element in sorted_spacing_list:
-            output_str += " #    %.5f %.5f %.5f\n" % (element[0],
-                                                      element[1],
-                                                      element[2])
-        print("time  data    ack    delta")
-        print(output_str)
-
-        if not self.opts.stdio:
+            output_str += self.format_number_output(element[0], packet_no)[0]
+            output_str += "  |  %.6f   %.6f   %.6f   %04d\n" % (element[1],
+                                                                element[2],
+                                                                element[3],
+                                                                element[4])
+        offset_str = self.format_number_output(0, packet_no)[1]
+        output_str = output_str[:-1]
+        # write output
+        if self.opts.stdio:
+            print("#no"
+                  + offset_str +
+                  "   time-data  time-ack   delta      length")
+            print(output_str)
+            print("#no"
+                  + offset_str +
+                  "   time-data  time-ack   delta      length\n")
+        else:
+            for element in sorted_spacing_list:
+                self.gnuplot_out(element[1], element[3])
             self.close_data_files()
+
+        if dumpfile_parsing_error:
+            self.logger.critical("Warning: Error detected while parsing "
+                                 "dumpfile!")
 
 
 
@@ -5327,7 +5321,7 @@ class Captcp:
        "throughput":      [ "ThroughputMod", "Graph the throughput over time graph" ],
        "inflight":        [ "InFlightMod", "Visualize all packets in flight and not ACKed" ],
        "spacing":         [ "SpacingMod", "Time between packets and acks" ],
-       "spacing-data-ack":[ "SpacingDataAckMod", "Time between acks and their first corresponding data packets"],
+       "spacing-data-ack":[ "SpacingDataAckMod", "Time between data and their first corresp. ack packets"],
        "stacktrace":      [ "StackTraceMod", "Hook into Linux Kernel to trace cwnd, ssthresh, ..." ],
        "sound":           [ "SoundMod", "Play sound based on payload/ack packets" ],
        "animation":       [ "ConnectionAnimationMod", "Generate animation (html) of packet flow" ],
