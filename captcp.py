@@ -3334,14 +3334,23 @@ class SpuriousRetransmissionsMod(Mod):
         if self.opts.mode == "list":
             for segment in self.extended_timestamp_list:
                 output_str = str()
+                sorted_retr_list = sorted(retransmission_list)
                 # segment: timestamp, list, index
                 if segment[1] == "data":
                     pos_data = segment[2]
                     packet_no = self.get_abs_packet_no_by_timestamp(segment[0])
                     if packet_no in packet_no_of_spur_retr_list:
                         output_str += (self.color.color_palette["red"])
+                    # note: this blue-white colouring increases the problem
+                    # size by quite a bit
                     elif packet_no in packet_no_of_retr_list:
-                        output_str += (self.color.color_palette["blue"])
+                        for element in sorted_retr_list:
+                            # segment-ts == element-ts
+                            # there should always be a exactly one match here
+                            if segment[0] == element[0]:
+                                # element-ts == first-seq-transmission
+                                if element[0] == element[5]:
+                                    output_str += (self.color.color_palette["blue"])
                     else:
                         output_str += (self.color.color_palette["green"])
                     # packet_no, time, source > dst, len, seq, ack, win, tsval, tsecr
