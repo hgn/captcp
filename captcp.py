@@ -3389,7 +3389,7 @@ class SpuriousRetransmissionsMod(Mod):
 
         if self.opts.mode == "retransmissions":
             sys.stdout.write("#   no"
-                             "       time-retr"
+                             "       timestamp"
                              "   time-first"
                              "     time-ack"
                              "  seq-number"
