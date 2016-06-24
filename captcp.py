@@ -3351,6 +3351,7 @@ class SpuriousRetransmissionsMod(Mod):
                                 # element-ts == first-seq-transmission
                                 if element[0] == element[5]:
                                     output_str += (self.color.color_palette["blue"])
+                                break
                     else:
                         output_str += (self.color.color_palette["green"])
                     # packet_no, time, source > dst, len, seq, ack, win, tsval, tsecr
