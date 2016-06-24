@@ -3089,7 +3089,7 @@ class SpuriousRetransmissionsMod(Mod):
                           help="specify the number of the data flow (e.g. 1.1)")
         parser.add_option("-m", "--mode", dest="mode", default="list",
                           type="string",
-                          help="display aggregate summary [aggregate], display"
+                          help="display aggregate summary [summary], display"
                                " all segments which are spurious "
                                "retransmissions [spurious], display all "
                                "segments which are retransmissions "
@@ -3315,7 +3315,7 @@ class SpuriousRetransmissionsMod(Mod):
                              "  source > destination [flags]\n")
             sys.stdout.write(output_str)
 
-        if self.opts.mode == "aggregate":
+        if self.opts.mode == "summary":
             amount_packets = self.amount_packets
             amount_data_packets = len(self.data_packet_list)
             amount_ack_packets = len(self.ack_packet_list)
