@@ -427,10 +427,12 @@ class RainbowColor:
     def init_color_ansi(self):
         self.color_palette = {
                 'yellow':'\033[0;33;40m',
-                'foo':'\033[93m',
+                'real-yellow':'\033[93m',
                 'red':'\033[91m',
                 'green':'\033[92m',
                 'blue':'\033[94m',
+                'magenta':'\033[0;95;40m',
+                'cyan':'\033[0;96;40m',
                 'end':'\033[0m'
                 }
 
@@ -3087,6 +3089,18 @@ class SpuriousRetransmissionsMod(Mod):
                           default=None,
                           type="string",
                           help="specify the number of the data flow (e.g. 1.1)")
+        parser.add_option("-c", "--color", dest="color",
+                          default="on",
+                          type="string",
+                          help="use [off] to disable output colouring (default on)")
+        parser.add_option("-s", "--sequence", dest="seq_ack_absolute",
+                          default="false",
+                          type="string",
+                          help="use [true] to show absolute seq and ack values (default false)")
+        parser.add_option("-t", "--tsvals", dest="tsvals_absolute",
+                          default="true",
+                          type="string",
+                          help="use [false] to show relative seq and ack values (default true)")
         parser.add_option("-m", "--mode", dest="mode", default="list",
                           type="string",
                           help="display aggregate summary [summary], display"
@@ -3099,6 +3113,8 @@ class SpuriousRetransmissionsMod(Mod):
 
         self.opts, args = parser.parse_args(sys.argv[0:])
         self.set_opts_logevel()
+
+        self.mode_list = ["summary", "retransmissions", "spurious", "list"]
 
         if len(args) < 3:
             self.logger.error("no pcap file argument given, exiting")
@@ -3122,22 +3138,49 @@ class SpuriousRetransmissionsMod(Mod):
         else:
             raise ArgumentException("sub flow must be 1 or 2")
 
+        if self.opts.mode not in self.mode_list:
+            self.logger.error("No proper mode selected! "
+                              "Call \"captcp spurious-retransmissions -h for help\"")
+            sys.exit(ExitCodes.EXIT_CMD_LINE)
+
+        self.color = RainbowColor(mode=RainbowColor.ANSI)
+        if self.opts.color == "off":
+            self.color.color_palette = {'red':'', 'green':'', 'end':'',
+                                        'yellow':'', 'real-yellow':'',
+                                        'blue':'', 'magenta':'', 'cyan':''}
+
         sys.stderr.write("# module requirements:\n"
                          "#  - sender-side capture file\n")
         sys.stderr.write("#  - timestamps were enabled (Linux: default: on)\n")
-        sys.stderr.write("# detects: all data retransmissions >= "
-                         "tsval-resolution after original "
-                         "(current Linux: 4ms)\n")
-        sys.stderr.write("# this module analyses only one tcp flow direction "
-                         "at a time!\n")
+        sys.stderr.write("# only analyses segments carrying data for (spurious) retransmissions from flow 1\n")
+        sys.stderr.write("# only analyses duplicate acks from flow 2\n")
         sys.stderr.write("# if data flows bidirectional aggregate the "
                          "module results for both directions\n")
-        sys.stderr.write("# only analyses segments carrying data")
+        sys.stderr.write("# Types: T\n")
+        sys.stderr.write("#" + self.color.color_palette["green"] +
+                         "  - Data segments" +
+                         self.color.color_palette["end"] + "\n")
+        sys.stderr.write("#" + self.color.color_palette["real-yellow"] +
+                         "  - Original Transmissions:\tO" +
+                         self.color.color_palette["end"] + "\n")
+        sys.stderr.write("#" + self.color.color_palette["blue"] +
+                         "  - Retransmissions:\t\tR" +
+                         self.color.color_palette["end"] + "\n")
+        sys.stderr.write("#" + self.color.color_palette["red"] +
+                         "  - Spurious Retransmission:\tS" +
+                         self.color.color_palette["end"] + "\n")
+        sys.stderr.write("#  " + self.color.color_palette["yellow"] +
+                         "- ACK segments" +
+                         self.color.color_palette["end"] + "\n")
+        sys.stderr.write("#  " + self.color.color_palette["cyan"] +
+                         "- Original ACK segments:\tA" +
+                         self.color.color_palette["end"] + "\n")
+        sys.stderr.write("#  " + self.color.color_palette["magenta"] +
+                         "- Duplicate ACK segments:\tD" +
+                         self.color.color_palette["end"] + "\n")
         sys.stderr.write("# connection: %s (data flow: %s, ACK flow: %s)\n" %
                          (self.connection_id, self.data_flow_id,
                           self.ack_flow_id))
-
-        self.color = RainbowColor(mode=RainbowColor.ANSI)
 
     def pre_process_packet(self, ts, packet):
         sub_connection = self.cc.sub_connection_by_packet(packet)
@@ -3157,7 +3200,6 @@ class SpuriousRetransmissionsMod(Mod):
                                           pi.dport,
                                           pi.create_flag_brakets(),
                                           pi.ack,
-                                          pi.win,
                                           pi.options['tsecr']])
         elif sub_connection.sub_connection_id == int(self.ack_flow_id):
             self.ack_packet_list.append([time,
@@ -3169,10 +3211,9 @@ class SpuriousRetransmissionsMod(Mod):
                                          pi.dport,
                                          pi.create_flag_brakets(),
                                          pi.seq,
-                                         pi.ack,
-                                         pi.win,
                                          pi.options['tsval'],
-                                         len(packet.data.data)])
+                                         len(packet.data.data),
+                                         pi.win])
         else:
             raise InternalException
 
@@ -3189,6 +3230,7 @@ class SpuriousRetransmissionsMod(Mod):
             extended_timestamp_list.append([segment[0], "ack", index])
             timestamp_list.append(segment[0])
             index += 1
+        # segment: timestamp, list, index
         self.extended_timestamp_list = sorted(extended_timestamp_list)
         self.timestamp_list = sorted(timestamp_list)
         self.amount_packets = len(timestamp_list)
@@ -3196,54 +3238,123 @@ class SpuriousRetransmissionsMod(Mod):
     def get_abs_packet_no_by_timestamp(self, timestamp):
         return self.timestamp_list.index(timestamp) + 1
 
+    def get_rel_seq_no(self, seq_no):
+        rel_seq_no = seq_no - self.data_anchor
+        if rel_seq_no >= 0 and self.opts.seq_ack_absolute == "false":
+            return rel_seq_no
+        else:
+            return seq_no
+
+    def get_rel_ack_no(self, ack_no):
+        rel_ack_no = ack_no - self.ack_anchor
+        if rel_ack_no >= 0 and self.opts.seq_ack_absolute == "false":
+            return rel_ack_no
+        else:
+            return ack_no
+
+    def get_rel_data_tsval(self, tsval):
+        rel_tsval = tsval - self.data_tsval_anchor
+        if rel_tsval >= 0 and self.opts.tsvals_absolute == "false":
+            return rel_tsval
+        else:
+            return tsval
+
+    def get_rel_ack_tsval(self, tsval):
+        rel_tsval = tsval - self.ack_tsval_anchor
+        if rel_tsval >= 0 and self.opts.tsvals_absolute == "false":
+            return rel_tsval
+        else:
+            return tsval
+
+    def set_anchors(self, seq_pk, ack_pk):
+        self.data_anchor = seq_pk[1]
+        self.ack_anchor = ack_pk[8]
+        self.data_tsval_anchor = seq_pk[3]
+        self.ack_tsval_anchor = ack_pk[9]
+
     def process_final(self):
         self.create_timestamp_list()
         sorted_data_packet_list = sorted(self.data_packet_list)
         sorted_ack_packet_list = sorted(self.ack_packet_list)
+        # only use on sorted lists!
+        self.set_anchors(sorted_data_packet_list[0], sorted_ack_packet_list[0])
         spurious_retransmission_list = list()
         retransmission_list = list()
         packet_no_of_spur_retr_list = list()
         packet_no_of_retr_list = list()
+        # {seq: [[segment1], [segment2]], ...}
         data_packet_dict = dict()
+        # {"ack": [[segment1], ...], ...}
+        ack_packet_dict = dict()
+        # {timestamp: type} with type = "A" | "D"
+        dup_ack_dict = dict()
 
         dumpfile_parsing_error = False
         amount_retransmissions = 0
+        amount_duplicate_acks = 0
 
+        # fill ack packet dict: {"ack": [[segment1], ...], ...}
+        for ack_packet in sorted_ack_packet_list:
+            ack_seq_concat = str(ack_packet[1])
+            if ack_seq_concat not in ack_packet_dict:
+                ack_packet_dict[ack_seq_concat] = [ack_packet]
+            else:
+                ack_packet_dict[ack_seq_concat].append(ack_packet)
+        # ack packet logic
+        for ack_seq_concat in ack_packet_dict:
+            if not len(ack_packet_dict[ack_seq_concat]) < 2:
+                ack_list = sorted(ack_packet_dict[ack_seq_concat])
+                len_first_segment = 0
+                win_first_segment = 0
+                # here it gets a bit tricky:
+                # first elem has some ack, len, flags, win
+                # a later segment is a dup ack if:
+                # same ack, <= len, same flags (except for push), same win
+                # but: consider later ack with different win: -> no dup ack
+                # butbut: later ack with same different win: -> dup acks
+                # -> mark all of them
+                win_list = list()
+                first_segment = True
+                flags_first_segment = str()
+                # can't now beforehand
+                retransmissions_exist = False
+                for ack in ack_list:
+                    if first_segment:
+                        dup_ack_dict[ack[0]] = "A"
+                        len_first_segment = ack[10]
+                        flags_first_segment = ack[7].replace("P", "")
+                        win_first_segment = ack[11]
+                        first_segment = False
+                    # theory: seq and ack are the same as some previous seg.
+                    # if this retransmitted seg. has a len <= the original
+                    # -> dup ACK
+                    # except: push flag may vary
+                    # except: don't detect window updates as dup acks
+                    # -> win_1 != win_2
+                    elif not first_segment and ack[10] <= len_first_segment and ack[7].replace("P", "") == flags_first_segment and (ack[11] == win_first_segment or ack[11] in win_list):
+                        dup_ack_dict[ack[0]] = "D"
+                        amount_duplicate_acks += 1
+                        win_list.append(ack[11])
+                        retransmissions_exist = True
+                # remove prematurely marked element
+                if not retransmissions_exist:
+                    del dup_ack_dict[ack_list[0][0]]
+
+        # fill data packet dict: {seq: [[segment1], [segment2]], ...}
         for data_packet in sorted_data_packet_list:
-            time_data = data_packet[0]
             seq_data = data_packet[1]
             len_data = data_packet[2]
-            tsval_data = data_packet[3]
-            source_ip = data_packet[4]
-            source_port = data_packet[5]
-            dest_ip = data_packet[6]
-            dest_port = data_packet[7]
-            flags = data_packet[8]
             if len_data > 0:
                 if seq_data not in data_packet_dict:
-                    data_packet_dict[seq_data] = [[time_data,
-                                                   len_data,
-                                                   tsval_data,
-                                                   source_ip,
-                                                   source_port,
-                                                   dest_ip,
-                                                   dest_port,
-                                                   flags]]
+                    data_packet_dict[seq_data] = [data_packet]
                 else:
-                    data_packet_dict[seq_data].append([time_data,
-                                                       len_data,
-                                                       tsval_data,
-                                                       source_ip,
-                                                       source_port,
-                                                       dest_ip,
-                                                       dest_port,
-                                                       flags])
-
+                    data_packet_dict[seq_data].append(data_packet)
+        # data packet logic
         for seq in data_packet_dict:
             if not len(data_packet_dict[seq]) < 2:
                 # find the ack to ack this seq
                 data_list = sorted(data_packet_dict[seq])
-                len_data = data_list[0][1]
+                len_data = data_list[0][2]
                 time_first_data = data_list[0][0]
                 time_ack = float()
                 tsecr_ack = int(0)
@@ -3263,8 +3374,8 @@ class SpuriousRetransmissionsMod(Mod):
                 initial_transmission = True
                 for data_packet in data_list:
                     time_data = data_packet[0]
-                    len_data = data_packet[1]
-                    tsval_data = data_packet[2]
+                    len_data = data_packet[2]
+                    tsval_data = data_packet[3]
                     # don't count the first transmission as retransmission
                     if not initial_transmission:
                         amount_retransmissions += 1
@@ -3275,11 +3386,11 @@ class SpuriousRetransmissionsMod(Mod):
                                                seq,
                                                time_ack,
                                                time_first_data,
-                                               data_packet[3],
                                                data_packet[4],
                                                data_packet[5],
                                                data_packet[6],
-                                               data_packet[7]])
+                                               data_packet[7],
+                                               data_packet[8]])
                     packet_no_of_retr_list.append(self.get_abs_packet_no_by_timestamp(time_data))
                     if tsecr_ack < tsval_data:
                         spurious_retransmission_list.append([time_data,
@@ -3288,24 +3399,50 @@ class SpuriousRetransmissionsMod(Mod):
                                                              seq,
                                                              time_ack,
                                                              time_first_data,
-                                                             data_packet[3],
                                                              data_packet[4],
                                                              data_packet[5],
                                                              data_packet[6],
-                                                             data_packet[7]])
+                                                             data_packet[7],
+                                                             data_packet[8]])
                         packet_no_of_spur_retr_list.append(self.get_abs_packet_no_by_timestamp(time_data))
+
+        # retrieve output lengths for list formatting
+        data_elem = sorted_data_packet_list[len(sorted_data_packet_list) - 1]
+        ack_elem = sorted_ack_packet_list[len(sorted_ack_packet_list) - 1]
+        packets_len = len(str(len(sorted_data_packet_list) + len(sorted_ack_packet_list)))
+        time_len = len(str(data_elem[0]))
+        seq_len = len(str(data_elem[1]))
+        ack_len = len(str(data_elem[9]))
+        seq_ack_len = int()
+        if seq_len > ack_len and self.opts.seq_ack_absolute == "true":
+            seq_ack_len = seq_len
+        elif seq_len <= ack_len and self.opts.seq_ack_absolute == "true":
+            seq_ack_len = ack_len
+        else:
+            rel_seq_len = len(str(self.get_rel_seq_no(data_elem[1])))
+            rel_ack_len = len(str(self.get_rel_ack_no(ack_elem[8])))
+            if rel_seq_len > rel_ack_len:
+                seq_ack_len = rel_seq_len
+            else:
+                seq_ack_len = rel_ack_len
+        tsvals_len = int()
+        data_tsval_len = len(str(data_elem[3]))
+        ack_tsval_len = len(str(ack_elem[9]))
+        if data_tsval_len > ack_tsval_len and self.opts.tsvals_absolute == "true":
+            tsvals_len = data_tsval_len
+        elif data_tsval_len <= ack_tsval_len and self.opts.tsvals_absolute == "true":
+            tsvals_len = ack_tsval_len
+        else:
+            rel_data_tsval_len = len(str(self.get_rel_data_tsval(data_elem[3])))
+            rel_ack_tsval_len = len(str(self.get_rel_ack_tsval(ack_elem[9])))
+            if rel_data_tsval_len > rel_ack_tsval_len:
+                tsvals_len = rel_data_tsval_len
+            else:
+                tsvals_len = rel_ack_tsval_len
 
         # output
         if self.opts.mode == "spurious":
-            output_str = str()
-            sorted_spur_ret_list = sorted(spurious_retransmission_list)
-            for element in sorted_spur_ret_list:
-                packet_no = self.get_abs_packet_no_by_timestamp(element[0])
-                output_str += " %5d  |  %11.6f  %11.6f  %11.6f  %10d  %4d  %10d  %s:%d > %s:%d %s\n" % \
-                              (packet_no, element[0], element[5], element[4],
-                               element[3], element[2], element[1], element[6],
-                               element[7], element[8], element[9], element[10])
-            sys.stdout.write("#   no"
+            sys.stderr.write("#   no"
                              "       time-retr"
                              "   time-first"
                              "     time-ack"
@@ -3313,36 +3450,60 @@ class SpuriousRetransmissionsMod(Mod):
                              "   len"
                              "       tsval"
                              "  source > destination [flags]\n")
-            sys.stdout.write(output_str)
-
-        if self.opts.mode == "summary":
+            sorted_spur_ret_list = sorted(spurious_retransmission_list)
+            for element in sorted_spur_ret_list:
+                output_str = str()
+                packet_no = self.get_abs_packet_no_by_timestamp(element[0])
+                output_str += self.color.color_palette["red"]
+                output_str += " %5d  |  %11.6f  %11.6f  %11.6f  %10d  %4d  %10d  %s:%d > %s:%d %s" % \
+                              (packet_no, element[0], element[5], element[4],
+                               self.get_rel_seq_no(element[3]), element[2],
+                               self.get_rel_data_tsval(element[1]), element[6],
+                               element[7], element[8], element[9], element[10])
+                output_str += self.color.color_palette["end"]
+                sys.stdout.write(output_str + "\n")
+        elif self.opts.mode == "summary":
             amount_packets = self.amount_packets
             amount_data_packets = len(self.data_packet_list)
             amount_ack_packets = len(self.ack_packet_list)
             # amount retransmissions is known on method level
             amount_spurious_retrans = len(spurious_retransmission_list)
 
-            sys.stdout.write("#spurious-retransmissions  data-retransmissions "
-                             "     packets  data-packets   ack-packets\n")
-            sys.stdout.write(" %24d  %20d  %11d  %12d  %12d\n" %
-                             (amount_spurious_retrans,
-                              amount_retransmissions,
-                              amount_packets,
-                              amount_data_packets,
-                              amount_ack_packets))
-
-        if self.opts.mode == "list":
+            sys.stderr.write("#spurious-retransmissions  data-retransmissions "
+                             "    segments data-segments  ack-segments"
+                             "  duplicate-acks\n")
+            output_str = str()
+            output_str += self.color.color_palette["red"]
+            output_str += " %24d " % amount_spurious_retrans
+            output_str += self.color.color_palette["end"]
+            output_str += self.color.color_palette["blue"]
+            output_str += " %20d " % amount_retransmissions
+            output_str += self.color.color_palette["end"]
+            output_str += " %11d " % amount_packets
+            output_str += self.color.color_palette["green"]
+            output_str += " %12d " % amount_data_packets
+            output_str += self.color.color_palette["end"]
+            # hack for background color
+            output_str += " "
+            output_str += self.color.color_palette["yellow"]
+            output_str += "%12d" % amount_ack_packets
+            output_str += self.color.color_palette["end"]
+            output_str += "  "
+            output_str += self.color.color_palette["magenta"]
+            output_str += "%14d" % amount_duplicate_acks
+            output_str += self.color.color_palette["end"]
+            sys.stdout.write(output_str + "\n")
+        elif self.opts.mode == "list":
+            sorted_retr_list = sorted(retransmission_list)
             for segment in self.extended_timestamp_list:
                 output_str = str()
-                sorted_retr_list = sorted(retransmission_list)
                 # segment: timestamp, list, index
                 if segment[1] == "data":
                     pos_data = segment[2]
                     packet_no = self.get_abs_packet_no_by_timestamp(segment[0])
                     if packet_no in packet_no_of_spur_retr_list:
-                        output_str += (self.color.color_palette["red"])
-                    # note: this blue-white colouring increases the problem
-                    # size by quite a bit
+                        output_str += self.color.color_palette["red"]
+                        output_str += " S"
                     elif packet_no in packet_no_of_retr_list:
                         for element in sorted_retr_list:
                             # segment-ts == element-ts
@@ -3350,55 +3511,59 @@ class SpuriousRetransmissionsMod(Mod):
                             if segment[0] == element[0]:
                                 # element-ts == first-seq-transmission
                                 if element[0] == element[5]:
+                                    output_str += (self.color.color_palette["real-yellow"])
+                                    output_str += " O"
+                                else:
                                     output_str += (self.color.color_palette["blue"])
+                                    output_str += " R"
                                 break
                     else:
                         output_str += (self.color.color_palette["green"])
+                        output_str += "  "
                     # packet_no, time, source > dst, len, seq, ack, win, tsval, tsecr
-                    output_str += (" %5d %11.6f %s:%d > %s:%d %4s "
-                                   "len: %4d seq: %10d ack: %10d "
-                                   "tsval: %10d tsecr: %10d" %
-                                   (packet_no,
-                                    sorted_data_packet_list[pos_data][0],
-                                    sorted_data_packet_list[pos_data][4],
-                                    sorted_data_packet_list[pos_data][5],
-                                    sorted_data_packet_list[pos_data][6],
-                                    sorted_data_packet_list[pos_data][7],
-                                    sorted_data_packet_list[pos_data][8],
-                                    sorted_data_packet_list[pos_data][2],
-                                    sorted_data_packet_list[pos_data][1],
-                                    sorted_data_packet_list[pos_data][9],
-                                    sorted_data_packet_list[pos_data][3],
-                                    sorted_data_packet_list[pos_data][11]))
-                    output_str += (self.color["end"] + "\n")
+                    output_str += " %*d" % (packets_len, packet_no)
+                    output_str += "  %*.6f" % (time_len, sorted_data_packet_list[pos_data][0])
+                    output_str += "  %s:%d > %s:%d" % (sorted_data_packet_list[pos_data][4],
+                                                       sorted_data_packet_list[pos_data][5],
+                                                       sorted_data_packet_list[pos_data][6],
+                                                       sorted_data_packet_list[pos_data][7])
+                    output_str += " %-*s" % (5, sorted_data_packet_list[pos_data][8])
+                    output_str += " len: %*d" % (4, sorted_data_packet_list[pos_data][2])
+                    output_str += "  seq: %*d" % (seq_ack_len, self.get_rel_seq_no(sorted_data_packet_list[pos_data][1]))
+                    output_str += "  ack: %*d" % (seq_ack_len, self.get_rel_ack_no(sorted_data_packet_list[pos_data][9]))
+                    output_str += "  tsval: %*d" % (tsvals_len, self.get_rel_data_tsval(sorted_data_packet_list[pos_data][3]))
+                    output_str += "  tsecr: %*d" % (tsvals_len, self.get_rel_ack_tsval(sorted_data_packet_list[pos_data][10]))
+                    output_str += self.color["end"] + "\n"
                 elif segment[1] == "ack":
                     pos_ack = segment[2]
                     packet_no = self.get_abs_packet_no_by_timestamp(segment[0])
-                    if packet_no in packet_no_of_spur_retr_list:
-                        output_str += (self.color.color_palette["red"])
+                    if segment[0] in dup_ack_dict:
+                        if dup_ack_dict[segment[0]] == "A":
+                            output_str += self.color.color_palette["cyan"]
+                        else:
+                            output_str += self.color.color_palette["magenta"]
+                        output_str += " " + dup_ack_dict[segment[0]]
                     else:
-                        output_str += (self.color.color_palette["yellow"])
+                        output_str += self.color.color_palette["yellow"]
+                        output_str += "  "
                     # packet_no, time, source > dst, len, seq, ack, win, tsval, tsecr
-                    output_str += (" %5d %11.6f %s:%d > %s:%d %4s "
-                                   "len: %4d seq: %10d ack: %10d "
-                                   "tsval: %10d tsecr: %10d" %
-                                   (packet_no,
-                                    sorted_ack_packet_list[pos_ack][0],
-                                    sorted_ack_packet_list[pos_ack][3],
-                                    sorted_ack_packet_list[pos_ack][4],
-                                    sorted_ack_packet_list[pos_ack][5],
-                                    sorted_ack_packet_list[pos_ack][6],
-                                    sorted_ack_packet_list[pos_ack][7],
-                                    sorted_ack_packet_list[pos_ack][12],
-                                    sorted_ack_packet_list[pos_ack][8],
-                                    sorted_ack_packet_list[pos_ack][9],
-                                    sorted_ack_packet_list[pos_ack][11],
-                                    sorted_ack_packet_list[pos_ack][2]))
-                    output_str += (self.color["end"] + "\n")
+                    output_str += " %*d" % (packets_len, packet_no)
+                    output_str += "  %*.6f" % (time_len, sorted_ack_packet_list[pos_ack][0])
+                    output_str += "  %s:%d > %s:%d" % (sorted_ack_packet_list[pos_ack][3],
+                                                       sorted_ack_packet_list[pos_ack][4],
+                                                       sorted_ack_packet_list[pos_ack][5],
+                                                       sorted_ack_packet_list[pos_ack][6])
+                    output_str += " %-*s" % (5, sorted_ack_packet_list[pos_ack][7])
+                    output_str += " len: %*d" % (4, sorted_ack_packet_list[pos_ack][10])
+                    # the following four computing lines are not twisted
+                    output_str += "  seq: %*d" % (seq_ack_len, self.get_rel_ack_no(sorted_ack_packet_list[pos_ack][8]))
+                    output_str += "  ack: %*d" % (seq_ack_len, self.get_rel_seq_no(sorted_ack_packet_list[pos_ack][1]))
+                    output_str += "  tsval: %*d" % (tsvals_len, self.get_rel_ack_tsval(sorted_ack_packet_list[pos_ack][9]))
+                    output_str += "  tsecr: %*d" % (tsvals_len, self.get_rel_data_tsval(sorted_ack_packet_list[pos_ack][2]))
+                    output_str += self.color["end"] + "\n"
                 sys.stdout.write(output_str)
-
-        if self.opts.mode == "retransmissions":
-            sys.stdout.write("#   no"
+        elif self.opts.mode == "retransmissions":
+            sys.stderr.write("#T    no"
                              "       timestamp"
                              "   time-first"
                              "     time-ack"
@@ -3409,18 +3574,29 @@ class SpuriousRetransmissionsMod(Mod):
             sorted_retr_list = sorted(retransmission_list)
             for element in sorted_retr_list:
                 output_str = str()
-                # mark the first segment of a retransmission list blue
+                # mark the first segment of a retransmission list yellow
                 if element[0] == element[5]:
-                    output_str += (self.color.color_palette["blue"])
+                    output_str += self.color.color_palette["real-yellow"]
+                    output_str += " O"
+                else:
+                    is_spurious = False
+                    for spurious_ret in spurious_retransmission_list:
+                        if element[0] == spurious_ret[0]:
+                            output_str += self.color.color_palette["red"]
+                            output_str += " S"
+                            is_spurious = True
+                            break
+                    if not is_spurious:
+                        output_str += self.color.color_palette["blue"]
+                        output_str += " R"
                 packet_no = self.get_abs_packet_no_by_timestamp(element[0])
                 output_str += " %5d  |  %11.6f  %11.6f  %11.6f  %10d  %4d  %10d  %s:%d > %s:%d %s" % \
                                   (packet_no, element[0], element[5],
-                                   element[4], element[3], element[2],
-                                   element[1], element[6], element[7],
-                                   element[8], element[9], element[10])
-                if element[0] == element[5]:
-                    output_str += (self.color["end"])
-                output_str += ("\n")
+                                   element[4], self.get_rel_seq_no(element[3]),
+                                   element[2], element[1], element[6],
+                                   element[7], element[8], element[9],
+                                   element[10])
+                output_str += self.color["end"] + "\n"
                 sys.stdout.write(output_str)
 
         if dumpfile_parsing_error:
