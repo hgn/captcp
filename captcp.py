@@ -3365,46 +3365,56 @@ class SpuriousRetransmissionsMod(Mod):
                         time_ack = time_ack_packet
                         tsecr_ack = ack_packet[2]
                         break
-                if time_ack < 0.0000001 or tsecr_ack == 0:
-                    dumpfile_parsing_error = True
-                # now check if, and if so which, retransmissions are spurious
-                # theory: the first transmission can't be spurious
-                # every other transmission is spurious if
-                #  - the ack acking the seq contains a tsecr < tsval
-                initial_transmission = True
-                for data_packet in data_list:
-                    time_data = data_packet[0]
-                    len_data = data_packet[2]
-                    tsval_data = data_packet[3]
-                    # don't count the first transmission as retransmission
-                    if not initial_transmission:
-                        amount_retransmissions += 1
-                    initial_transmission = False
-                    retransmission_list.append([time_data,
-                                               tsval_data,
-                                               len_data,
-                                               seq,
-                                               time_ack,
-                                               time_first_data,
-                                               data_packet[4],
-                                               data_packet[5],
-                                               data_packet[6],
-                                               data_packet[7],
-                                               data_packet[8]])
-                    packet_no_of_retr_list.append(self.get_abs_packet_no_by_timestamp(time_data))
-                    if tsecr_ack < tsval_data:
-                        spurious_retransmission_list.append([time_data,
-                                                             tsval_data,
-                                                             len_data,
-                                                             seq,
-                                                             time_ack,
-                                                             time_first_data,
-                                                             data_packet[4],
-                                                             data_packet[5],
-                                                             data_packet[6],
-                                                             data_packet[7],
-                                                             data_packet[8]])
-                        packet_no_of_spur_retr_list.append(self.get_abs_packet_no_by_timestamp(time_data))
+                # this is a hack for connections closed by the receiver
+                # ignore seqs that are never acked,
+                # because obviously for these seqs there are no retransmissions
+                if not time_ack < 0.0000001:
+                    """
+                    if time_ack < 0.0000001 or tsecr_ack == 0:
+                        dumpfile_parsing_error = True
+                        self.logger.critical("Parsing error occurred. Dumping "
+                                             "segment tuple that can't be "
+                                             "interpreted:")
+                        self.logger.critical(str(data_list))
+                    """
+                    # now check if, and if so which, retransmissions are spurious
+                    # theory: the first transmission can't be spurious
+                    # every other transmission is spurious if
+                    #  - the ack acking the seq contains a tsecr < tsval
+                    initial_transmission = True
+                    for data_packet in data_list:
+                        time_data = data_packet[0]
+                        len_data = data_packet[2]
+                        tsval_data = data_packet[3]
+                        # don't count the first transmission as retransmission
+                        if not initial_transmission:
+                            amount_retransmissions += 1
+                        initial_transmission = False
+                        retransmission_list.append([time_data,
+                                                   tsval_data,
+                                                   len_data,
+                                                   seq,
+                                                   time_ack,
+                                                   time_first_data,
+                                                   data_packet[4],
+                                                   data_packet[5],
+                                                   data_packet[6],
+                                                   data_packet[7],
+                                                   data_packet[8]])
+                        packet_no_of_retr_list.append(self.get_abs_packet_no_by_timestamp(time_data))
+                        if tsecr_ack < tsval_data:
+                            spurious_retransmission_list.append([time_data,
+                                                                 tsval_data,
+                                                                 len_data,
+                                                                 seq,
+                                                                 time_ack,
+                                                                 time_first_data,
+                                                                 data_packet[4],
+                                                                 data_packet[5],
+                                                                 data_packet[6],
+                                                                 data_packet[7],
+                                                                 data_packet[8]])
+                            packet_no_of_spur_retr_list.append(self.get_abs_packet_no_by_timestamp(time_data))
 
         # retrieve output lengths for list formatting
         data_elem = sorted_data_packet_list[len(sorted_data_packet_list) - 1]
