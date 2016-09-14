@@ -3316,7 +3316,7 @@ class SpuriousRetransmissionsMod(Mod):
                 win_list = list()
                 first_segment = True
                 flags_first_segment = str()
-                # can't now beforehand
+                # can't know beforehand
                 retransmissions_exist = False
                 for ack in ack_list:
                     if first_segment:
@@ -3797,7 +3797,7 @@ class SpacingDataAckMod(Mod):
                            element[4])
         # write output
         if self.opts.stdio:
-            sys.stdout.write("#   no"
+            sys.stderr.write("#   no"
                              "       time-data"
                              "     time-ack"
                              "        delta"
