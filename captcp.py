@@ -2270,7 +2270,7 @@ class TcpConn:
         self.sipnum = ip.src
         self.dipnum = ip.dst
 
-        l = [ord(a) ^ ord(b) for a,b in zip(self.sipnum, self.dipnum)]
+        l = [(ord(a) << 8) | ord(b) if a > b else (ord(b) << 8) | ord(a) for a,b in zip(self.sipnum, self.dipnum)]
 
         sport = long(self.sport)
         dport = long(self.dport)
